@@ -137,3 +137,28 @@ export const outbox = pgTable("outbox", {
   link: text("link"),
   at: timestamp("at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+/** What a couple can choose to wipe in a reset. Their own login, names, date,
+    city and web address always stay. */
+export type ResetScope = {
+  guests: boolean;      // families, guests, invitations and their replies
+  rsvps: boolean;       // every reply, keeping the guest list
+  events: boolean;      // celebrations, back to the single wedding day
+  photos: boolean;      // gallery photos and their files
+  content: boolean;     // story, tagline, parents, travel, hashtag, contact, theme, RSVP settings
+  committee: boolean;   // other team members' logins
+};
+
+/** A destructive request waiting for its email confirmation. Only the
+    SHA-256 of the emailed token is stored; each one works once, briefly. */
+export const accountActions = pgTable("account_actions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tokenHash: text("token_hash").notNull().unique(),
+  kind: text("kind").$type<"delete" | "reset">().notNull(),
+  weddingId: uuid("wedding_id").notNull().references(() => weddings.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  scope: jsonb("scope").$type<ResetScope>(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});

@@ -11,6 +11,7 @@ import { ShareCard } from "../ShareCard";
 import { ThemeSwitcher } from "../ThemeSwitcher";
 import { SaveButton } from "./SaveButton";
 import { GalleryUploader } from "./GalleryUploader";
+import { DangerZone } from "../danger/DangerZone";
 import { galleryOf, photoStorageConfigured, MAX_GALLERY_PHOTOS } from "@/lib/gallery";
 import {
   saveDetails, saveRsvpSettings, saveTravel, saveEvent, addPresetEvent, toggleEvent, removeEvent, moveEventAction, sortEvents,
@@ -168,7 +169,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                         <form action={moveEventAction}>{wid}<input type="hidden" name="id" value={e.id} /><input type="hidden" name="dir" value="down" />
                           <button type="submit" className="portal-button-secondary" disabled={i === evs.length - 1}>↓ Move down</button></form>
                         <form action={removeEvent} className="ml-auto">{wid}<input type="hidden" name="id" value={e.id} />
-                          <button type="submit" className="portal-button-secondary text-red-700">Delete</button></form>
+                          <button type="submit" className="portal-button-secondary" style={{ color: "#b91c1c" }}>Delete</button></form>
                       </div>
                     </div>
                   </details>
@@ -244,7 +245,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                       <form action={moveGalleryPhotoAction}>{wid}<input type="hidden" name="pathname" value={ph.pathname} /><input type="hidden" name="dir" value="down" />
                         <button type="submit" disabled={i === gal.photos.length - 1} className="portal-badge disabled:opacity-30" aria-label={`Move photo ${i + 1} later`}>→</button></form>
                       <form action={removeGalleryPhotoAction} className="ml-auto">{wid}<input type="hidden" name="pathname" value={ph.pathname} />
-                        <button type="submit" className="portal-badge text-red-700" aria-label={`Remove photo ${i + 1}`}>Remove</button></form>
+                        <button type="submit" className="portal-badge" style={{ color: "#b91c1c" }} aria-label={`Remove photo ${i + 1}`}>Remove</button></form>
                     </div>
                   </li>
                 ))}
@@ -279,6 +280,9 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
               <SaveButton />
             </form>
           </section>
+
+          {/* only the couple themselves can reset or delete; admins have their own tools */}
+          {staff.role === "couple" && <DangerZone coupleNames={coupleNames} />}
 
           <p className="text-center text-xs text-neutral-400">
             Theme currently <span className="font-medium text-neutral-600">{THEME_META[w.theme as (typeof THEMES)[number]]?.label}</span>. Guest list and invites live in the <Link href="/committee" className="underline">committee view</Link>.

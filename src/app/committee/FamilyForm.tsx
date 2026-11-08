@@ -221,7 +221,7 @@ export function FamilyForm({
             <button
               type="button"
               onClick={() => setConfirmDelete(true)}
-              className="portal-button-secondary mr-auto text-red-700"
+              className="portal-button-secondary mr-auto" style={{ color: "#b91c1c" }}
             >
               Delete family
             </button>

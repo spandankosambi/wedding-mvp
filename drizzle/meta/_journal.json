@@ -36,6 +36,13 @@
       "when": 1794150415295,
       "tag": "0004_gallery",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794153231655,
+      "tag": "0005_account-actions",
+      "breakpoints": true
     }
   ]
 }
