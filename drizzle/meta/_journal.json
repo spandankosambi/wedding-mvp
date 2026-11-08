@@ -43,6 +43,13 @@
       "when": 1794153231655,
       "tag": "0005_account-actions",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794156874128,
+      "tag": "0006_per-guest",
+      "breakpoints": true
     }
   ]
 }

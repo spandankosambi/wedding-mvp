@@ -5,16 +5,19 @@ import { weddings, events, families, guests, eventInvites, rsvps, emailLog } fro
 import { requireRole } from "@/lib/authz";
 import { getRsvpSummary } from "@/lib/rsvp";
 import { FamilyTable } from "./FamilyTable";
+import { GuestTable } from "./GuestTable";
 
 export const dynamic = "force-dynamic";
 
 export default async function CommitteePage({
   searchParams,
 }: {
-  searchParams: Promise<{ wedding?: string }>;
+  searchParams: Promise<{ wedding?: string; view?: string }>;
 }) {
   const staff = await requireRole(["committee", "couple", "admin"]);
-  const requested = (await searchParams).wedding;
+  const sp = await searchParams;
+  const requested = sp.wedding;
+  const view = sp.view === "guests" ? "guests" : "families";
   let weddingId = staff.role === "admin" ? (requested ?? null) : staff.weddingId;
   if (staff.role === "admin" && !weddingId) {
     const [first] = await db.select().from(weddings).limit(1);
@@ -49,12 +52,12 @@ export default async function CommitteePage({
     diet: f.diet,
     source: f.source,
     members: allGuests.filter((g) => g.familyId === f.id)
-      .map((g) => ({ fullName: g.fullName, ageGroup: g.ageGroup })),
+      .map((g) => ({ id: g.id, fullName: g.fullName, ageGroup: g.ageGroup, details: g.details ?? {} })),
     eventIds: allInvites.filter((i) => i.familyId === f.id).map((i) => i.eventId),
     rsvpByEvent: Object.fromEntries(
       allRsvps.filter((r) => r.familyId === f.id)
-        .map((r) => [r.eventId, { status: r.status, headcount: r.headcount, note: r.note }]),
-    ) as Record<string, { status: "attending" | "declined"; headcount: number; note: string | null }>,
+        .map((r) => [r.eventId, { status: r.status, headcount: r.headcount, note: r.note, guestIds: r.guestIds ?? null }]),
+    ) as Record<string, { status: "attending" | "declined"; headcount: number; note: string | null; guestIds: string[] | null }>,
     lastEmail: (() => {
       const l = allLogs.find((x) => x.familyId === f.id);
       return l ? { type: l.type, status: l.status, sentAt: l.sentAt.toISOString() } : null;
@@ -107,11 +110,34 @@ export default async function CommitteePage({
         ))}
       </div>
 
-      <FamilyTable
-        weddingId={weddingId}
-        events={evs.map((e) => ({ id: e.id, name: e.name }))}
-        rows={rows}
-      />
+      {/* Families ⇄ Guests: same data, two ways to work through it */}
+      <nav className="mb-4 inline-flex rounded-lg border border-neutral-200 bg-white p-1 text-sm" aria-label="View">
+        {(["families", "guests"] as const).map((v) => {
+          const q = new URLSearchParams({ ...(staff.role === "admin" ? { wedding: weddingId } : {}), ...(v === "guests" ? { view: "guests" } : {}) });
+          const qs = q.toString();
+          return (
+            <Link key={v} href={`/committee${qs ? `?${qs}` : ""}`} aria-current={view === v ? "page" : undefined}
+              className={`rounded-md px-4 py-1.5 font-medium ${view === v ? "bg-stone-800 text-white" : "text-neutral-600 hover:text-neutral-900"}`}>
+              {v === "families" ? `Families · ${rows.length}` : `Guests · ${allGuests.length}`}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {view === "families" ? (
+        <FamilyTable
+          weddingId={weddingId}
+          events={evs.map((e) => ({ id: e.id, name: e.name }))}
+          rows={rows}
+        />
+      ) : (
+        <GuestTable
+          weddingId={weddingId}
+          events={evs.map((e) => ({ id: e.id, name: e.name }))}
+          rows={rows}
+          columns={wedding.guestColumns ?? []}
+        />
+      )}
       </div>
     </main>
   );

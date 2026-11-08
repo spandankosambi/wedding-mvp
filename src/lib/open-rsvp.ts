@@ -3,6 +3,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events, families, guests, eventInvites, rsvps } from "@/db/schema";
 import { generateInviteToken, tokenExpiry } from "@/lib/tokens";
+import { attendeesFromCount } from "@/lib/household";
 import { rateLimit } from "@/lib/ratelimit";
 import { normalizePhone } from "@/lib/slug";
 import { DIET_OPTIONS } from "@/lib/presets";
@@ -108,13 +109,15 @@ export async function submitOpenRsvp(input: unknown, clientKey = "local"): Promi
     .values(responded.map((eventId) => ({ eventId, familyId: family!.id })))
     .onConflictDoNothing();
 
+  const memberIds = (await db.select({ id: guests.id }).from(guests).where(eq(guests.familyId, family.id))).map((g) => g.id);
   for (const r of d.responses) {
     const headcount = r.status === "declined" ? 0 : r.headcount;
+    const guestIds = r.status === "declined" ? [] : attendeesFromCount(headcount, memberIds);
     await db.insert(rsvps)
-      .values({ eventId: r.eventId, familyId: family.id, status: r.status, headcount, note: d.note || null })
+      .values({ eventId: r.eventId, familyId: family.id, status: r.status, headcount, guestIds, note: d.note || null })
       .onConflictDoUpdate({
         target: [rsvps.eventId, rsvps.familyId],
-        set: { status: r.status, headcount, note: d.note || null, respondedAt: new Date() },
+        set: { status: r.status, headcount, guestIds, note: d.note || null, respondedAt: new Date() },
       });
   }
 

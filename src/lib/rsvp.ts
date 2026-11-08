@@ -4,6 +4,7 @@ import { db } from "@/db/client";
 import { weddings, events, families, guests, eventInvites, rsvps } from "@/db/schema";
 import { hashToken, isExpired } from "@/lib/tokens";
 import { rateLimit } from "@/lib/ratelimit";
+import { attendeesFromCount } from "@/lib/household";
 
 export async function getFamilyByToken(token: string) {
   const [family] = await db.select().from(families)
@@ -61,13 +62,15 @@ export async function submitRsvp(input: unknown, clientKey = "local"):
       return { ok: false, error: "headcount out of range" };
   }
 
+  const memberIds = fam.members.map((m) => m.id);
   for (const r of responses) {
     const headcount = r.status === "declined" ? 0 : r.headcount;
+    const guestIds = r.status === "declined" ? [] : attendeesFromCount(headcount, memberIds);
     await db.insert(rsvps)
-      .values({ eventId: r.eventId, familyId: fam.family.id, status: r.status, headcount, note: r.note })
+      .values({ eventId: r.eventId, familyId: fam.family.id, status: r.status, headcount, guestIds, note: r.note })
       .onConflictDoUpdate({
         target: [rsvps.eventId, rsvps.familyId],
-        set: { status: r.status, headcount, note: r.note ?? null, respondedAt: new Date() },
+        set: { status: r.status, headcount, guestIds, note: r.note ?? null, respondedAt: new Date() },
       });
   }
   return { ok: true };

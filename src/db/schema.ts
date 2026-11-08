@@ -18,6 +18,8 @@ export type TravelInfo = {
     `null` (every wedding before this existed) means: shown, no photos yet. */
 export type GalleryPhoto = { url: string; pathname: string; width: number; height: number };
 export type GalleryInfo = { enabled: boolean; photos: GalleryPhoto[] };
+/** Extra per-guest columns the couple or committee adds (Stay, Room no.…). */
+export type GuestColumn = { id: string; label: string };
 
 export const weddings = pgTable("weddings", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -37,6 +39,7 @@ export const weddings = pgTable("weddings", {
   rsvpDeadline: timestamp("rsvp_deadline", { withTimezone: true }),
   travel: jsonb("travel").$type<TravelInfo>(),
   gallery: jsonb("gallery").$type<GalleryInfo>(),
+  guestColumns: jsonb("guest_columns").$type<GuestColumn[]>(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -74,6 +77,8 @@ export const guests = pgTable("guests", {
   familyId: uuid("family_id").notNull().references(() => families.id, { onDelete: "cascade" }),
   fullName: text("full_name").notNull(),
   ageGroup: ageGroupEnum("age_group").notNull().default("adult"),
+  /** values for the wedding's guestColumns, keyed by column id */
+  details: jsonb("details").$type<Record<string, string>>(),
 });
 
 export const eventInvites = pgTable("event_invites", {
@@ -87,6 +92,10 @@ export const rsvps = pgTable("rsvps", {
   familyId: uuid("family_id").notNull().references(() => families.id, { onDelete: "cascade" }),
   status: rsvpStatusEnum("status").notNull(),
   headcount: integer("headcount").notNull().default(0),
+  /** Which of the family's guests are coming. Set whenever the committee or
+      couple answers (then headcount = its length). null = the family gave a
+      number without names (their own RSVP link), so who exactly is unknown. */
+  guestIds: jsonb("guest_ids").$type<string[]>(),
   note: text("note"),
   respondedAt: timestamp("responded_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [uniqueIndex("rsvp_event_family").on(t.eventId, t.familyId)]);

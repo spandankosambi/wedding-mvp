@@ -40,18 +40,52 @@ test("committee adds a family by name, records their RSVP, then deletes them", a
   const row = page.getByRole("row", { name: /The Desais/ });
   await expect(row).toBeVisible();
 
-  // ── RSVP on their behalf ───────────────────────────────────
+  // ── RSVP on their behalf: tick names; someone extra is added by name ──
   await row.getByRole("button", { name: /Record RSVP for The Desais/ }).click();
   const cards = page.getByTestId("committee-rsvp-event");
   await expect(cards).toHaveCount(2);
   await cards.nth(0).getByRole("radio", { name: "Attending", exact: true }).click();
-  await cards.nth(0).getByLabel(/headcount/).fill("2");
+  await expect(cards.nth(0).getByText("2 coming")).toBeVisible();
+  await page.getByLabel("New guest's full name").fill("Meera Desai");
+  await page.getByRole("button", { name: "+ Add guest" }).click();
+  await expect(cards.nth(0).getByText("3 coming")).toBeVisible();
+  await cards.nth(0).getByLabel("Asha Desai coming to Sangeet").uncheck();
   await cards.nth(1).getByRole("radio", { name: "Not attending" }).click();
-  if (shots) await page.screenshot({ path: `${shots}/rsvp-editor.png` });
+  if (shots) await page.screenshot({ path: `${shots}/rsvp-editor.png`, fullPage: true });
   await page.getByRole("button", { name: "Save RSVP" }).click();
   await expect(page.getByText("RSVP saved for The Desais")).toBeVisible();
   await expect(row.getByText("Sangeet ✓2")).toBeVisible();
   await expect(row.getByText("Reception ✗")).toBeVisible();
+  await expect(row.getByRole("cell", { name: "3", exact: true })).toBeVisible(); // Meera joined the family
+
+  // ── the same family in the Guests view, with a custom column ──
+  await page.getByRole("link", { name: /^Guests/ }).click();
+  await expect(page).toHaveURL(/view=guests/);
+  const nikhil = page.getByRole("row", { name: /Nikhil Desai/ });
+  await expect(nikhil.getByText("Sangeet ✓")).toBeVisible();
+  await expect(page.getByRole("row", { name: /Asha Desai/ }).getByText("Sangeet ✗")).toBeVisible();
+  await page.getByRole("button", { name: "+ Add column" }).click();
+  await page.getByLabel("New column name").fill("Room no.");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(page.getByRole("columnheader", { name: /Room no\./ })).toBeVisible();
+  const room = page.getByLabel("Room no. for Nikhil Desai");
+  await room.fill("204");
+  await room.press("Enter");
+  await expect(room).toHaveCSS("opacity", "1"); // save finished
+  // per-guest RSVP and multi-select
+  await page.getByLabel("Select Asha Desai").check();
+  await page.getByLabel("Select Meera Desai").check();
+  await page.getByRole("button", { name: "Mark RSVP…" }).click();
+  await page.getByRole("dialog").getByRole("radio").first().check();
+  if (shots) await page.screenshot({ path: `${shots}/bulk-rsvp.png` });
+  await page.getByRole("button", { name: "Mark 2 guests" }).click();
+  await expect(page.getByText("RSVP marked for 2 guests")).toBeVisible();
+  await expect(page.getByRole("row", { name: /Asha Desai/ }).getByText("Sangeet ✓")).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel("Room no. for Nikhil Desai")).toHaveValue("204");
+  if (shots) await page.screenshot({ path: `${shots}/guest-view.png`, fullPage: true });
+  await page.getByRole("link", { name: /^Families/ }).click();
+  await expect(row.getByText("Sangeet ✓3")).toBeVisible();
 
   // ── delete the family ──────────────────────────────────────
   await row.getByRole("button", { name: "edit" }).click();

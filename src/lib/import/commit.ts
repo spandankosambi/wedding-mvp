@@ -1,4 +1,5 @@
 import { eq, inArray } from "drizzle-orm";
+import { pruneAttendees } from "@/lib/household";
 import { db } from "@/db/client";
 import { events, families, guests, eventInvites } from "@/db/schema";
 import type { ImportRow, Member } from "./normalize";
@@ -111,6 +112,8 @@ export async function commitImport(weddingId: string, rows: ImportRow[], opts: C
     if (row.eventIds.length) {
       await db.insert(eventInvites).values(row.eventIds.map((eventId) => ({ eventId, familyId })));
     }
+    // a replaced household's old guests are gone: drop them from its RSVPs
+    if (match) await pruneAttendees(familyId);
   }
   return result;
 }

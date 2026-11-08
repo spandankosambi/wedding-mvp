@@ -9,7 +9,7 @@ export type FamilyDraft = {
   side: "bride" | "groom" | "both";
   relation: string;
   email: string;
-  members: { fullName: string; ageGroup: "adult" | "child" }[];
+  members: { id?: string; fullName: string; ageGroup: "adult" | "child" }[];
   eventIds: string[];
 };
 

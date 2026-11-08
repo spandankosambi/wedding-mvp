@@ -2,9 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { sendInvitesAction } from "./actions";
+import { sendInvitesAction, bulkFamilyRsvpAction } from "./actions";
 import { FamilyForm, type FamilyDraft } from "./FamilyForm";
 import { RsvpEditor, type RsvpTarget } from "./RsvpEditor";
+import { BulkRsvpDialog } from "./BulkRsvpDialog";
 
 export type Row = {
   id: string;
@@ -15,9 +16,9 @@ export type Row = {
   phone?: string | null;
   diet?: string | null;
   source?: "committee" | "import" | "guest";
-  members: { fullName: string; ageGroup: "adult" | "child" }[];
+  members: { id: string; fullName: string; ageGroup: "adult" | "child"; details: Record<string, string> }[];
   eventIds: string[];
-  rsvpByEvent: Record<string, { status: "attending" | "declined"; headcount: number; note: string | null }>;
+  rsvpByEvent: Record<string, { status: "attending" | "declined"; headcount: number; note: string | null; guestIds: string[] | null }>;
   lastEmail: { type: string; status: string; sentAt: string } | null;
 };
 
@@ -40,6 +41,7 @@ export function FamilyTable({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<FamilyDraft | "new" | null>(null);
   const [rsvpFor, setRsvpFor] = useState<RsvpTarget | null>(null);
+  const [bulk, setBulk] = useState(false);
   const [pending, startTransition] = useTransition();
   const [flash, setFlash] = useState<string | null>(null);
 
@@ -80,6 +82,13 @@ export function FamilyTable({
           Import guest list
         </a>
         <div className="mx-1 hidden h-6 w-px bg-neutral-200 sm:block" />
+        <button
+          disabled={!ids.length || pending}
+          onClick={() => setBulk(true)}
+          className="portal-button-secondary"
+        >
+          Mark RSVP…
+        </button>
         <button
           disabled={!ids.length || pending}
           onClick={() => send("invite", ids)}
@@ -208,7 +217,7 @@ export function FamilyTable({
                       setRsvpFor({
                         familyId: r.id,
                         name: r.name,
-                        memberCount: r.members.length,
+                        members: r.members,
                         events: events.filter((e) => r.eventIds.includes(e.id)),
                         current: r.rsvpByEvent,
                       })
@@ -226,7 +235,7 @@ export function FamilyTable({
                         side: r.side,
                         relation: r.relation ?? "",
                         email: r.email,
-                        members: r.members,
+                        members: r.members.map(({ id, fullName, ageGroup }) => ({ id, fullName, ageGroup })),
                         eventIds: r.eventIds,
                       })
                     }
@@ -248,6 +257,20 @@ export function FamilyTable({
           </tbody>
         </table>
       </div>
+
+      {bulk && (
+        <BulkRsvpDialog
+          count={ids.length}
+          noun="family"
+          events={events}
+          onSubmit={(eventIds, answer) =>
+            bulkFamilyRsvpAction({ weddingId, familyIds: ids, eventIds, answer: answer === "yes" ? "attending" : answer === "no" ? "declined" : "none" })}
+          onClose={(saved) => {
+            setBulk(false);
+            if (saved) { setFlash(`RSVP marked for ${ids.length} famil${ids.length === 1 ? "y" : "ies"}`); setSelected(new Set()); router.refresh(); }
+          }}
+        />
+      )}
 
       {rsvpFor && (
         <RsvpEditor
