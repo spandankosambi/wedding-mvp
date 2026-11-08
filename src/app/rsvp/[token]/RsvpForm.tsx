@@ -11,36 +11,40 @@ type EventProp = {
   venueName: string;
   address: string;
   dressCode: string | null;
-  rsvp: { status: "attending" | "declined"; headcount: number; note: string | null } | null;
+  rsvp: { status: "attending" | "declined"; headcount: number; note: string | null; guestIds: string[] | null } | null;
 };
 
 type Status = "attending" | "declined" | null;
 
 export function RsvpForm({
   token,
-  memberCount,
+  members,
   events,
 }: {
   token: string;
-  memberCount: number;
+  members: { id: string; fullName: string }[];
   events: EventProp[];
 }) {
-  const maxHeads = memberCount + 2;
+  const everyone = members.map((m) => m.id);
   const [statuses, setStatuses] = useState<Record<string, Status>>(
     () => Object.fromEntries(events.map((e) => [e.id, e.rsvp?.status ?? null])),
   );
-  const [heads, setHeads] = useState<Record<string, number>>(
+  // who's coming to each event: their earlier answer, else the whole household
+  const [who, setWho] = useState<Record<string, string[]>>(
     () => Object.fromEntries(events.map((e) => [
       e.id,
-      e.rsvp && e.rsvp.status === "attending" && e.rsvp.headcount > 0 ? e.rsvp.headcount : memberCount,
+      e.rsvp?.status === "attending" && e.rsvp.guestIds ? e.rsvp.guestIds.filter((id) => everyone.includes(id)) : everyone,
     ])),
   );
+  const toggle = (eventId: string, id: string) =>
+    setWho((w) => ({ ...w, [eventId]: w[eventId].includes(id) ? w[eventId].filter((x) => x !== id) : [...w[eventId], id] }));
   const [note, setNote] = useState<string>(() => events.find((e) => e.rsvp?.note)?.rsvp?.note ?? "");
   const [pending, startTransition] = useTransition();
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const answered = events.filter((e) => statuses[e.id] !== null);
+  const nobodyTicked = events.find((e) => statuses[e.id] === "attending" && who[e.id].length === 0);
   const firstAttending = events.find((e) => statuses[e.id] === "attending");
 
   function submit() {
@@ -51,7 +55,7 @@ export function RsvpForm({
         responses: answered.map((e) => ({
           eventId: e.id,
           status: statuses[e.id] as "attending" | "declined",
-          headcount: statuses[e.id] === "attending" ? heads[e.id] : 0,
+          guestIds: statuses[e.id] === "attending" ? who[e.id] : [],
           note: note.trim() ? note.trim() : undefined,
         })),
       });
@@ -126,35 +130,44 @@ export function RsvpForm({
                   Decline
                 </button>
 
-                {status === "attending" && (
-                  <div
-                    className="ml-auto flex items-center gap-4 rounded-full px-4 py-1.5"
-                    style={{ border: "1px solid var(--hairline)" }}
-                  >
-                    <button
-                      type="button"
-                      aria-label={`Fewer guests for ${e.name}`}
-                      onClick={() => setHeads((h) => ({ ...h, [e.id]: Math.max(1, h[e.id] - 1) }))}
-                      className="text-lg leading-none"
-                      style={{ color: "var(--accent-2)" }}
-                    >
-                      −
-                    </button>
-                    <span className="min-w-10 text-center text-sm">
-                      {heads[e.id]} {heads[e.id] === 1 ? "guest" : "guests"}
-                    </span>
-                    <button
-                      type="button"
-                      aria-label={`More guests for ${e.name}`}
-                      onClick={() => setHeads((h) => ({ ...h, [e.id]: Math.min(maxHeads, h[e.id] + 1) }))}
-                      className="text-lg leading-none"
-                      style={{ color: "var(--accent-2)" }}
-                    >
-                      +
-                    </button>
-                  </div>
-                )}
               </div>
+
+              {status === "attending" && (
+                <fieldset className="mt-5">
+                  <legend className="kicker" style={{ letterSpacing: "0.18em" }}>
+                    Who&apos;s coming · {who[e.id].length} of {members.length}
+                  </legend>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {members.map((m) => {
+                      const on = who[e.id].includes(m.id);
+                      return (
+                        <label
+                          key={m.id}
+                          className="flex cursor-pointer items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors"
+                          style={on
+                            ? { background: "var(--accent)", color: "var(--surface)", border: "1px solid var(--accent)" }
+                            : { border: "1px solid var(--hairline)", color: "var(--ink-soft)" }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={on}
+                            onChange={() => toggle(e.id, m.id)}
+                            aria-label={`${m.fullName} is coming to ${e.name}`}
+                            className="sr-only"
+                          />
+                          <span aria-hidden>{on ? "✓" : "+"}</span>
+                          {m.fullName}
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {who[e.id].length === 0 && (
+                    <p className="mt-3 text-xs" style={{ color: "var(--accent-2)" }}>
+                      Tick who&apos;s coming, or choose Decline.
+                    </p>
+                  )}
+                </fieldset>
+              )}
             </li>
           );
         })}
@@ -167,7 +180,7 @@ export function RsvpForm({
           onChange={(ev) => setNote(ev.target.value)}
           maxLength={500}
           rows={3}
-          placeholder="Dietary needs, arrival times, wheelchair access…"
+          placeholder="Someone missing from the list? Dietary needs, arrival times, wheelchair access…"
           className="mt-3 w-full resize-none p-4 text-sm outline-none"
           style={{ background: "var(--surface)", border: "1px solid var(--hairline)", color: "var(--ink)" }}
         />
@@ -183,7 +196,7 @@ export function RsvpForm({
 
       <button
         type="button"
-        disabled={answered.length === 0 || pending}
+        disabled={answered.length === 0 || pending || !!nobodyTicked}
         onClick={submit}
         className="mt-8 w-full px-8 py-4 text-sm tracking-[0.2em] uppercase transition-opacity disabled:opacity-40"
         style={{ background: "var(--accent)", color: "var(--surface)" }}

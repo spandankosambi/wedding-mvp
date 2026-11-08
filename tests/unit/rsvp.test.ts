@@ -44,8 +44,8 @@ describe("submitRsvp", () => {
     const res = await submitRsvp({ token, responses: [{ eventId: eventB, status: "attending", headcount: 2 }] });
     expect(res).toEqual({ ok: false, error: "not invited to event" });
   });
-  it("rejects out-of-range headcount (members+2 max)", async () => {
-    const res = await submitRsvp({ token, responses: [{ eventId: eventA, status: "attending", headcount: 5 }] });
+  it("rejects a headcount bigger than the household (2 members)", async () => {
+    const res = await submitRsvp({ token, responses: [{ eventId: eventA, status: "attending", headcount: 3 }] });
     expect(res).toEqual({ ok: false, error: "headcount out of range" });
   });
   it("accepts a valid RSVP and upserts on resubmit", async () => {

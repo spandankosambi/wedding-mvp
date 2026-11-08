@@ -27,7 +27,7 @@ export async function getFamilyByToken(token: string) {
     events: evs.map((e) => {
       const r = existing.find((x) => x.eventId === e.id);
       return { id: e.id, name: e.name, startsAt: e.startsAt, venueName: e.venueName, address: e.address, mapUrl: e.mapUrl, dressCode: e.dressCode,
-        rsvp: r ? { status: r.status, headcount: r.headcount, note: r.note } : null };
+        rsvp: r ? { status: r.status, headcount: r.headcount, note: r.note, guestIds: r.guestIds ?? null } : null };
     }),
   };
 }
@@ -37,7 +37,10 @@ const submitSchema = z.object({
   responses: z.array(z.object({
     eventId: z.string().uuid(),
     status: z.enum(["attending", "declined"]),
-    headcount: z.number().int().min(0).max(50),
+    /** who is coming, by name — the form sends this; headcount follows from it */
+    guestIds: z.array(z.string().uuid()).max(50).optional(),
+    /** older clients sent only a number */
+    headcount: z.number().int().min(0).max(50).optional(),
     note: z.string().max(500).optional(),
   })).min(1),
 });
@@ -55,17 +58,23 @@ export async function submitRsvp(input: unknown, clientKey = "local"):
   if (!fam) return { ok: false, error: "invalid token" };
 
   const invitedIds = new Set(fam.events.map((e) => e.id));
-  const maxHeadcount = fam.members.length + 2;
+  const memberIds = fam.members.map((m) => m.id);
+  const members = new Set(memberIds);
+  // A household can only answer for the people on its list: by name, or a
+  // number no bigger than the list. Anyone missing goes in the note.
   for (const r of responses) {
     if (!invitedIds.has(r.eventId)) return { ok: false, error: "not invited to event" };
-    if (r.status === "attending" && (r.headcount < 1 || r.headcount > maxHeadcount))
+    if (r.status !== "attending") continue;
+    if (r.guestIds) {
+      if (r.guestIds.length < 1 || !r.guestIds.every((id) => members.has(id))) return { ok: false, error: "headcount out of range" };
+    } else if (r.headcount === undefined || r.headcount < 1 || r.headcount > Math.max(memberIds.length, 1)) {
       return { ok: false, error: "headcount out of range" };
+    }
   }
 
-  const memberIds = fam.members.map((m) => m.id);
   for (const r of responses) {
-    const headcount = r.status === "declined" ? 0 : r.headcount;
-    const guestIds = r.status === "declined" ? [] : attendeesFromCount(headcount, memberIds);
+    const guestIds = r.status === "declined" ? [] : r.guestIds ? [...new Set(r.guestIds)] : attendeesFromCount(r.headcount!, memberIds);
+    const headcount = r.status === "declined" ? 0 : r.guestIds ? guestIds!.length : r.headcount!;
     await db.insert(rsvps)
       .values({ eventId: r.eventId, familyId: fam.family.id, status: r.status, headcount, guestIds, note: r.note })
       .onConflictDoUpdate({

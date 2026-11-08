@@ -59,7 +59,7 @@ export default async function RsvpPage({
 
         <RsvpForm
           token={token}
-          memberCount={members.length}
+          members={members.map((m) => ({ id: m.id, fullName: m.fullName }))}
           events={events.map((e) => ({
             id: e.id,
             name: e.name,
