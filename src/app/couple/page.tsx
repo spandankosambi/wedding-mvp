@@ -34,7 +34,7 @@ export default async function CouplePage({
   const famIds = fams.map((f) => f.id);
   const [allGuests, allRsvps] = famIds.length
     ? await Promise.all([
-        db.select().from(guests).where(inArray(guests.familyId, famIds)),
+        db.select().from(guests).where(inArray(guests.familyId, famIds)).orderBy(guests.seq),
         db.select().from(rsvps).where(inArray(rsvps.familyId, famIds)),
       ])
     : [[], []];

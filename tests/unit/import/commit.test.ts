@@ -46,7 +46,7 @@ describe("commitImport", () => {
     expect(res).toEqual({ created: 2, updated: 0, skipped: 0, errors: [] });
     const [fam] = await db.select().from(families).where(eq(families.email, "sharma@x.com"));
     expect(fam).toMatchObject({ weddingId, name: "Sharma Family", side: "bride", relation: "Parents" });
-    const members = await db.select().from(guests).where(eq(guests.familyId, fam.id));
+    const members = await db.select().from(guests).where(eq(guests.familyId, fam.id)).orderBy(guests.seq);
     expect(members.map((m) => [m.fullName, m.ageGroup])).toEqual([["Rajesh Sharma", "adult"], ["Aarav Sharma", "child"]]);
     const invites = await db.select().from(eventInvites).where(eq(eventInvites.familyId, fam.id));
     expect(invites.map((i) => i.eventId).sort()).toEqual([sangeet, pheras].sort());

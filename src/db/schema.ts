@@ -74,9 +74,16 @@ export const families = pgTable("families", {
 
 export const guests = pgTable("guests", {
   id: uuid("id").defaultRandom().primaryKey(),
+  /** insertion order — lists show guests in the order they were added */
+  seq: integer("seq").generatedByDefaultAsIdentity(),
   familyId: uuid("family_id").notNull().references(() => families.id, { onDelete: "cascade" }),
   fullName: text("full_name").notNull(),
   ageGroup: ageGroupEnum("age_group").notNull().default("adult"),
+  email: text("email"),
+  phone: text("phone"),
+  /** The household's primary adult: invites by email or WhatsApp go to them.
+      The family's own email/phone columns mirror this guest's. */
+  isPrimary: boolean("is_primary").notNull().default(false),
   /** values for the wedding's guestColumns, keyed by column id */
   details: jsonb("details").$type<Record<string, string>>(),
 });

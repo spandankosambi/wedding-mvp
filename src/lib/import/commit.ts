@@ -1,5 +1,6 @@
 import { eq, inArray } from "drizzle-orm";
 import { pruneAttendees } from "@/lib/household";
+import { syncHousehold } from "@/lib/primary";
 import { db } from "@/db/client";
 import { events, families, guests, eventInvites } from "@/db/schema";
 import type { ImportRow, Member } from "./normalize";
@@ -20,7 +21,7 @@ export async function findExistingFamilies(weddingId: string): Promise<ExistingF
     .from(families).where(eq(families.weddingId, weddingId));
   if (!fams.length) return [];
   const members = await db.select({ familyId: guests.familyId, fullName: guests.fullName })
-    .from(guests).where(inArray(guests.familyId, fams.map((f) => f.id)));
+    .from(guests).where(inArray(guests.familyId, fams.map((f) => f.id))).orderBy(guests.seq);
   return fams.map((f) => ({
     id: f.id, name: f.name, email: f.email,
     members: members.filter((m) => m.familyId === f.id).map((m) => m.fullName),
@@ -86,6 +87,7 @@ export async function commitImport(weddingId: string, rows: ImportRow[], opts: C
       if (newEvents.length) await db.insert(eventInvites).values(newEvents.map((eventId) => ({ eventId, familyId: ex.id })));
 
       if (!ex.email && email) ex.email = email;
+      await syncHousehold(ex.id, { email: email || null });
       result.updated++;
       continue;
     }
@@ -114,6 +116,7 @@ export async function commitImport(weddingId: string, rows: ImportRow[], opts: C
     }
     // a replaced household's old guests are gone: drop them from its RSVPs
     if (match) await pruneAttendees(familyId);
+    await syncHousehold(familyId, { email: email || null });
   }
   return result;
 }

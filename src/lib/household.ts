@@ -2,6 +2,7 @@ import { z } from "zod";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { families, guests, eventInvites, rsvps, weddings, type GuestColumn } from "@/db/schema";
+import { syncHousehold } from "@/lib/primary";
 
 /* Committee-side household operations. Callers pass a weddingId they have
    already scoped to the signed-in staff member; every function re-checks that
@@ -87,6 +88,7 @@ export async function recordRsvpForFamily(weddingId: string, input: unknown): Pr
   const added = addGuests.length
     ? await db.insert(guests).values(addGuests.map((g) => ({ familyId, fullName: g.fullName, ageGroup: g.ageGroup }))).returning()
     : [];
+  if (added.length) await syncHousehold(familyId);
   const resolve = (id: string) => (id.startsWith("new:") ? added[Number(id.slice(4))].id : id);
 
   for (const r of responses) {
@@ -111,7 +113,7 @@ export async function bulkFamilyRsvp(weddingId: string, input: unknown): Promise
     .where(and(eq(families.weddingId, weddingId), inArray(families.id, familyIds)));
   if (fams.length !== new Set(familyIds).size) return { ok: false, error: "family not found" };
   const invites = await db.select().from(eventInvites).where(inArray(eventInvites.familyId, familyIds));
-  const members = await db.select({ id: guests.id, familyId: guests.familyId }).from(guests).where(inArray(guests.familyId, familyIds));
+  const members = await db.select({ id: guests.id, familyId: guests.familyId }).from(guests).where(inArray(guests.familyId, familyIds)).orderBy(guests.seq);
   let updated = 0;
   for (const inv of invites) {
     if (!eventIds.includes(inv.eventId)) continue;
@@ -148,7 +150,7 @@ export async function setGuestRsvp(weddingId: string, input: unknown): Promise<{
   const famIds = [...byFamily.keys()];
   const invites = await db.select().from(eventInvites).where(inArray(eventInvites.familyId, famIds));
   const existing = await db.select().from(rsvps).where(inArray(rsvps.familyId, famIds));
-  const allMembers = await db.select({ id: guests.id, familyId: guests.familyId }).from(guests).where(inArray(guests.familyId, famIds));
+  const allMembers = await db.select({ id: guests.id, familyId: guests.familyId }).from(guests).where(inArray(guests.familyId, famIds)).orderBy(guests.seq);
 
   let updated = 0;
   for (const [familyId, chosen] of byFamily) {

@@ -6,6 +6,7 @@ import { sendInvitesAction, bulkFamilyRsvpAction } from "./actions";
 import { FamilyForm, draftFromFamily, type FamilyDraft } from "./FamilyForm";
 import { RsvpEditor, type RsvpTarget } from "./RsvpEditor";
 import { BulkRsvpDialog } from "./BulkRsvpDialog";
+import { openWhatsAppInvite } from "./whatsapp";
 
 export type Row = {
   id: string;
@@ -16,7 +17,7 @@ export type Row = {
   phone?: string | null;
   diet?: string | null;
   source?: "committee" | "import" | "guest";
-  members: { id: string; fullName: string; ageGroup: "adult" | "child"; details: Record<string, string> }[];
+  members: { id: string; fullName: string; ageGroup: "adult" | "child"; details: Record<string, string>; email: string | null; phone: string | null; isPrimary: boolean }[];
   eventIds: string[];
   rsvpByEvent: Record<string, { status: "attending" | "declined"; headcount: number; note: string | null; guestIds: string[] | null }>;
   lastEmail: { type: string; status: string; sentAt: string } | null;
@@ -131,10 +132,10 @@ export function FamilyTable({
                 />
               </th>
               <th className="p-3">Family</th>
-              <th className="p-3">Contact</th>
+              <th className="p-3">Primary contact</th>
               <th className="p-3">Members</th>
               <th className="p-3">RSVP by event</th>
-              <th className="p-3">Last email</th>
+              <th className="p-3">Last sent</th>
               <th className="p-3" />
             </tr>
           </thead>
@@ -161,13 +162,19 @@ export function FamilyTable({
                   </p>
                 </td>
                 <td className="text-neutral-600">
-                  {r.email || (r.phone ? <span className="tabular-nums">{r.phone}</span> : null)}
-                  {r.email && r.phone && <p className="mt-0.5 text-xs tabular-nums text-neutral-400">{r.phone}</p>}
-                  {!r.email && (
-                    <p className={r.phone ? "mt-0.5" : ""}>
-                      <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-700">no email</span>
-                    </p>
-                  )}
+                  {(() => {
+                    const p = r.members.find((m) => m.isPrimary);
+                    return (
+                      <>
+                        {p && <p className="text-xs font-medium text-neutral-800">{p.fullName}</p>}
+                        {r.email && <p className="text-xs">{r.email}</p>}
+                        {r.phone && <p className="text-xs tabular-nums">{r.phone}</p>}
+                        {!r.email && !r.phone && (
+                          <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-700">no contact</span>
+                        )}
+                      </>
+                    );
+                  })()}
                 </td>
                 <td className="tabular-nums">{r.members.length}</td>
                 <td>
@@ -196,7 +203,9 @@ export function FamilyTable({
                 </td>
                 <td>
                   {r.lastEmail ? (
-                    r.lastEmail.status === "sent" ? (
+                    r.lastEmail.status === "whatsapp" ? (
+                      <span className="portal-badge">invite · WhatsApp</span>
+                    ) : r.lastEmail.status === "sent" ? (
                       <span className="portal-badge">
                         {r.lastEmail.type} · sent
                       </span>
@@ -217,6 +226,21 @@ export function FamilyTable({
                   )}
                 </td>
                 <td className="whitespace-nowrap text-right">
+                  <button
+                    onClick={async () => {
+                      setFlash(null);
+                      const res = await openWhatsAppInvite(weddingId, r.id);
+                      setFlash(res.ok
+                        ? res.to ? `WhatsApp opened for ${r.name}` : `WhatsApp opened for ${r.name} — no phone saved, pick the contact`
+                        : `Couldn't prepare the WhatsApp message: ${res.error}`);
+                      if (res.ok) router.refresh();
+                    }}
+                    className="portal-link mr-4"
+                    style={{ color: "#128c7e" }}
+                    aria-label={`Share invitation with ${r.name} on WhatsApp`}
+                  >
+                    WhatsApp
+                  </button>
                   <button
                     onClick={() =>
                       setRsvpFor({

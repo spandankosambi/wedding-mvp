@@ -12,7 +12,7 @@ export async function getFamilyByToken(token: string) {
   if (!family || isExpired(family.tokenExpiresAt)) return null;
 
   const [wedding] = await db.select().from(weddings).where(eq(weddings.id, family.weddingId));
-  const members = await db.select().from(guests).where(eq(guests.familyId, family.id));
+  const members = await db.select().from(guests).where(eq(guests.familyId, family.id)).orderBy(guests.seq);
   const invites = await db.select().from(eventInvites).where(eq(eventInvites.familyId, family.id));
   const eventIds = invites.map((i) => i.eventId);
   const evs = eventIds.length

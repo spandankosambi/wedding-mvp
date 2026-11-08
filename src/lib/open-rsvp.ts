@@ -4,6 +4,7 @@ import { db } from "@/db/client";
 import { weddings, events, families, guests, eventInvites, rsvps } from "@/db/schema";
 import { generateInviteToken, tokenExpiry } from "@/lib/tokens";
 import { attendeesFromCount } from "@/lib/household";
+import { syncHousehold } from "@/lib/primary";
 import { rateLimit } from "@/lib/ratelimit";
 import { normalizePhone } from "@/lib/slug";
 import { DIET_OPTIONS } from "@/lib/presets";
@@ -104,12 +105,15 @@ export async function submitOpenRsvp(input: unknown, clientKey = "local"): Promi
     await db.insert(guests).values(names.map((fullName) => ({ familyId: family!.id, fullName })));
   }
 
+  // whoever filled in the form is reachable at what they typed
+  await syncHousehold(family.id, { email, phone });
+
   const responded = d.responses.map((r) => r.eventId);
   await db.insert(eventInvites)
     .values(responded.map((eventId) => ({ eventId, familyId: family!.id })))
     .onConflictDoNothing();
 
-  const memberIds = (await db.select({ id: guests.id }).from(guests).where(eq(guests.familyId, family.id))).map((g) => g.id);
+  const memberIds = (await db.select({ id: guests.id }).from(guests).where(eq(guests.familyId, family.id)).orderBy(guests.seq)).map((g) => g.id);
   for (const r of d.responses) {
     const headcount = r.status === "declined" ? 0 : r.headcount;
     const guestIds = r.status === "declined" ? [] : attendeesFromCount(headcount, memberIds);

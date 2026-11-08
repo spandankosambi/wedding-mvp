@@ -7,6 +7,7 @@ import { guestAnswer, type GuestAnswer } from "@/lib/attendance";
 import { guestRsvpAction, addGuestColumnAction, removeGuestColumnAction, setGuestDetailAction } from "./actions";
 import { BulkRsvpDialog } from "./BulkRsvpDialog";
 import { FamilyForm, draftFromFamily, type FamilyDraft } from "./FamilyForm";
+import { openWhatsAppInvite } from "./whatsapp";
 import type { Row } from "./FamilyTable";
 
 const SIDE_BADGE: Record<Row["side"], string> = {
@@ -49,6 +50,7 @@ export function GuestTable({
   const q = query.trim().toLowerCase();
   const shown = q
     ? guests.filter((g) => g.fullName.toLowerCase().includes(q) || g.family.name.toLowerCase().includes(q)
+        || (g.email ?? "").toLowerCase().includes(q) || (g.phone ?? "").replace(/\s/g, "").includes(q.replace(/\s/g, ""))
         || Object.values(g.details).some((v) => v.toLowerCase().includes(q)))
     : guests;
   const ids = [...selected];
@@ -84,7 +86,7 @@ export function GuestTable({
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Find a guest, family or room…"
+            placeholder="Find a guest, family, phone or room…"
             aria-label="Find a guest"
             className="portal-input"
             style={{ width: "16rem", maxWidth: "100%" }}
@@ -135,6 +137,7 @@ export function GuestTable({
                 />
               </th>
               <th className="p-3">Guest</th>
+              <th className="p-3">Contact</th>
               <th className="p-3">Family</th>
               <th className="p-3">RSVP by event</th>
               {columns.map((c) => (
@@ -165,12 +168,19 @@ export function GuestTable({
                   </td>
                   <td>
                     <p className="font-medium">{g.fullName}</p>
-                    {g.ageGroup === "child" && <span className="mt-1 inline-block rounded border border-neutral-200 px-1.5 py-0.5 text-xs text-neutral-500">child</span>}
+                    <span className="mt-1 flex flex-wrap gap-1">
+                      {g.isPrimary && <span className="rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-800">primary</span>}
+                      {g.ageGroup === "child" && <span className="rounded border border-neutral-200 px-1.5 py-0.5 text-xs text-neutral-500">child</span>}
+                    </span>
+                  </td>
+                  <td className="text-xs text-neutral-600">
+                    {g.email && <p>{g.email}</p>}
+                    {g.phone && <p className="tabular-nums">{g.phone}</p>}
+                    {!g.email && !g.phone && <span className="text-neutral-300">—</span>}
                   </td>
                   <td>
                     <p>{f.name}</p>
                     <span className={`mt-1 inline-block rounded border px-1.5 py-0.5 text-xs font-medium ${SIDE_BADGE[f.side]}`}>{f.side}</span>
-                    {f.phone && <span className="ml-2 text-xs tabular-nums text-neutral-500">{f.phone}</span>}
                   </td>
                   <td>
                     <div className="flex flex-wrap gap-1.5">
@@ -192,6 +202,20 @@ export function GuestTable({
                     </td>
                   ))}
                   <td className="whitespace-nowrap text-right">
+                    {g.isPrimary && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const res = await openWhatsAppInvite(weddingId, f.id);
+                          setFlash(res.ok ? `WhatsApp opened for ${g.fullName}` : `Couldn't prepare the WhatsApp message: ${res.error}`);
+                        }}
+                        className="portal-link mr-4"
+                        style={{ color: "#128c7e" }}
+                        aria-label={`Share invitation with ${g.fullName} on WhatsApp`}
+                      >
+                        WhatsApp
+                      </button>
+                    )}
                     <button type="button" onClick={() => setRsvpFor({ ids: [g.id], label: g.fullName })} className="portal-link mr-4" aria-label={`Record RSVP for ${g.fullName}`}>
                       RSVP
                     </button>
@@ -204,7 +228,7 @@ export function GuestTable({
             })}
             {shown.length === 0 && (
               <tr>
-                <td colSpan={5 + columns.length} className="p-10 text-center text-sm text-neutral-400">
+                <td colSpan={6 + columns.length} className="p-10 text-center text-sm text-neutral-400">
                   {guests.length ? "No guest matches that search." : "No guests yet — add a family in the Families view."}
                 </td>
               </tr>

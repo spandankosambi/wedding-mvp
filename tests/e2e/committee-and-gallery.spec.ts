@@ -27,7 +27,7 @@ test("committee adds a family by name, records their RSVP, then deletes them", a
   // ── add a family: the guest name box is usable ─────────────
   await page.getByRole("button", { name: "Add family" }).click();
   await page.fill("input[placeholder='Sharma Family']", "The Desais");
-  await page.fill("input[type=email]", "desai@example.com");
+  await page.getByLabel("Guest 1 email").fill("desai@example.com");
   const name1 = page.getByLabel("Guest 1 name");
   expect((await name1.boundingBox())!.width).toBeGreaterThan(200);
   await name1.fill("Nikhil Desai");
@@ -137,14 +137,36 @@ test("a family can be saved without an email", async ({ page }) => {
   await expect(save).toBeEnabled();
   await save.click();
   const row = page.getByRole("row", { name: /Wadiker Family/ });
-  await expect(row.getByText("no email")).toBeVisible();
+  await expect(row.getByText("no contact")).toBeVisible();
 
-  // a phone number, also optional
+  // contact details live on each guest; the primary adult's are the family's
   await row.getByRole("button", { name: "edit" }).click();
-  await page.fill("input[type=tel]", "+91 98765 43210");
-  if (shots) await page.getByRole("dialog").screenshot({ path: `${shots}/family-phone.png` });
+  await page.getByText("+ add another guest").click();
+  await page.getByLabel("Guest 2 name").fill("Sonu");
+  await page.getByLabel("Guest 2 phone").fill("+91 98765 43210");
+  await page.getByLabel("Guest 2 is the primary adult").check();
+  await page.getByLabel("Guest 2 age group").selectOption("child"); // a child can't stay primary…
+  await expect(page.getByLabel("Guest 1 is the primary adult")).toBeChecked(); // …it moves to an adult
+  await page.getByLabel("Guest 2 age group").selectOption("adult");
+  await page.getByLabel("Guest 2 is the primary adult").check();
+  if (shots) await page.getByRole("dialog").screenshot({ path: `${shots}/family-primary.png` });
   await page.getByRole("button", { name: "Save family" }).click();
+  await expect(row.getByText("Sonu")).toBeVisible();
   await expect(row.getByText("+91 98765 43210")).toBeVisible();
+
+  // WhatsApp goes to the primary adult, with the invitation typed out
+  // (answer wa.me locally: the test checks the link we build, not WhatsApp)
+  await page.context().route(/wa\.me|whatsapp\.com/, (r) => r.fulfill({ body: "whatsapp" }));
+  const [tab] = await Promise.all([
+    page.context().waitForEvent("page"),
+    row.getByRole("button", { name: /on WhatsApp/ }).click(),
+  ]);
+  await expect.poll(() => tab.url()).toMatch(/^https:\/\/wa\.me\/919876543210\?text=/);
+  const text = decodeURIComponent(new URL(tab.url()).searchParams.get("text") ?? "");
+  expect(text).toContain("Namaste Sonu!");
+  expect(text).toMatch(/\/rsvp\/[\w-]{20,}/);
+  await tab.close();
+  await expect(row.getByText("invite · WhatsApp")).toBeVisible();
 });
 
 test("a guest can be edited from the Guests view", async ({ page }) => {

@@ -35,7 +35,7 @@ export default async function CommitteePage({
   const famIds = fams.map((f) => f.id);
   const [allGuests, allInvites, allRsvps, allLogs] = famIds.length
     ? await Promise.all([
-        db.select().from(guests).where(inArray(guests.familyId, famIds)),
+        db.select().from(guests).where(inArray(guests.familyId, famIds)).orderBy(guests.seq),
         db.select().from(eventInvites).where(inArray(eventInvites.familyId, famIds)),
         db.select().from(rsvps).where(inArray(rsvps.familyId, famIds)),
         db.select().from(emailLog).where(inArray(emailLog.familyId, famIds)).orderBy(desc(emailLog.sentAt)),
@@ -52,7 +52,7 @@ export default async function CommitteePage({
     diet: f.diet,
     source: f.source,
     members: allGuests.filter((g) => g.familyId === f.id)
-      .map((g) => ({ id: g.id, fullName: g.fullName, ageGroup: g.ageGroup, details: g.details ?? {} })),
+      .map((g) => ({ id: g.id, fullName: g.fullName, ageGroup: g.ageGroup, details: g.details ?? {}, email: g.email, phone: g.phone, isPrimary: g.isPrimary })),
     eventIds: allInvites.filter((i) => i.familyId === f.id).map((i) => i.eventId),
     rsvpByEvent: Object.fromEntries(
       allRsvps.filter((r) => r.familyId === f.id)

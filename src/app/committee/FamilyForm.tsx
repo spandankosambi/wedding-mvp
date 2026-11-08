@@ -8,26 +8,28 @@ export type FamilyDraft = {
   name: string;
   side: "bride" | "groom" | "both";
   relation: string;
-  email: string;
-  phone: string;
-  members: { id?: string; fullName: string; ageGroup: "adult" | "child" }[];
+  members: DraftMember[];
   eventIds: string[];
 };
 
+type DraftMember = { id?: string; fullName: string; ageGroup: "adult" | "child"; email: string; phone: string; isPrimary: boolean };
+
 /** The edit-dialog draft for a family row, from either the Families or the Guests view. */
 export function draftFromFamily(r: {
-  id: string; name: string; side: FamilyDraft["side"]; relation: string | null; email: string; phone?: string | null;
-  members: { id: string; fullName: string; ageGroup: "adult" | "child" }[]; eventIds: string[];
+  id: string; name: string; side: FamilyDraft["side"]; relation: string | null;
+  members: { id: string; fullName: string; ageGroup: "adult" | "child"; email: string | null; phone: string | null; isPrimary: boolean }[];
+  eventIds: string[];
 }): FamilyDraft {
   return {
-    familyId: r.id, name: r.name, side: r.side, relation: r.relation ?? "", email: r.email, phone: r.phone ?? "",
-    members: r.members.map(({ id, fullName, ageGroup }) => ({ id, fullName, ageGroup })), eventIds: r.eventIds,
+    familyId: r.id, name: r.name, side: r.side, relation: r.relation ?? "",
+    members: r.members.map(({ id, fullName, ageGroup, email, phone, isPrimary }) => ({ id, fullName, ageGroup, email: email ?? "", phone: phone ?? "", isPrimary })),
+    eventIds: r.eventIds,
   };
 }
 
 const EMPTY: FamilyDraft = {
-  name: "", side: "bride", relation: "", email: "", phone: "",
-  members: [{ fullName: "", ageGroup: "adult" }], eventIds: [],
+  name: "", side: "bride", relation: "",
+  members: [{ fullName: "", ageGroup: "adult", email: "", phone: "", isPrimary: true }], eventIds: [],
 };
 
 export function FamilyForm({
@@ -53,6 +55,21 @@ export function FamilyForm({
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  /* Exactly one primary, always an adult when there is one */
+  const withPrimary = (members: DraftMember[]): DraftMember[] => {
+    const keep = members.findIndex((m) => m.isPrimary && m.ageGroup === "adult");
+    const pick = keep >= 0 ? keep : Math.max(0, members.findIndex((m) => m.ageGroup === "adult"));
+    return members.map((m, j) => ({ ...m, isPrimary: j === pick }));
+  };
+  const setMember = (i: number, patch: Partial<DraftMember>) =>
+    setForm((f) => ({ ...f, members: f.members.map((m, j) => (j === i ? { ...m, ...patch } : m)) }));
+  const setAge = (i: number, ageGroup: "adult" | "child") =>
+    setForm((f) => ({ ...f, members: withPrimary(f.members.map((m, j) => (j === i ? { ...m, ageGroup } : m))) }));
+  const setPrimary = (i: number) =>
+    setForm((f) => ({ ...f, members: f.members.map((m, j) => ({ ...m, isPrimary: j === i })) }));
+  const removeMember = (i: number) =>
+    setForm((f) => ({ ...f, members: withPrimary(f.members.filter((_, j) => j !== i)) }));
+
   function save() {
     setError(null);
     startTransition(async () => {
@@ -62,14 +79,13 @@ export function FamilyForm({
         name: form.name.trim(),
         side: form.side,
         relation: form.relation.trim() || undefined,
-        email: form.email.trim(),
-        phone: form.phone.trim(),
-        members: form.members.filter((m) => m.fullName.trim()),
+        members: form.members.filter((m) => m.fullName.trim())
+          .map((m) => ({ ...m, email: m.email.trim(), phone: m.phone.trim() })),
         eventIds: form.eventIds,
       });
       if (res.ok) onClose(true);
       else setError(res.error === "invalid input"
-        ? "Check the details: a family name and at least one guest are needed; an email, if you add one, must be a full address, and a phone number needs at least 8 digits."
+        ? "Check the details: a family name and at least one guest are needed; any email must be a full address, and any phone number needs at least 8 digits."
         : res.error ?? "failed");
     });
   }
@@ -130,77 +146,87 @@ export function FamilyForm({
             </label>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block">
-              <span className="text-xs font-medium uppercase tracking-wide text-neutral-500">Email <span className="normal-case tracking-normal text-neutral-400">— optional</span></span>
-              <input
-                type="email"
-                value={form.email}
-                onChange={(e) => set("email", e.target.value)}
-                placeholder="sharma@example.com"
-                className="portal-input mt-1"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs font-medium uppercase tracking-wide text-neutral-500">Phone <span className="normal-case tracking-normal text-neutral-400">— optional</span></span>
-              <input
-                type="tel"
-                inputMode="tel"
-                value={form.phone}
-                onChange={(e) => set("phone", e.target.value)}
-                placeholder="+91 98765 43210"
-                maxLength={30}
-                className="portal-input mt-1"
-              />
-            </label>
-          </div>
-          <p className="-mt-2 text-xs text-neutral-500">Both optional. An email is needed only to email them their invite link.</p>
-
           <fieldset>
             <legend className="text-xs font-medium uppercase tracking-wide text-neutral-500">Guests in this household</legend>
-            <div className="mt-1 space-y-2">
+            <p className="mt-1 text-xs text-neutral-500">
+              Email and phone are optional for everyone. The <span className="font-medium text-neutral-700">primary adult</span> is who the invite goes to, by email or WhatsApp.
+            </p>
+            <div className="mt-2 space-y-2">
               {form.members.map((m, i) => (
-                <div key={i} className="flex gap-2">
-                  {/* .portal-input sets width:100% outside Tailwind's layers, so
-                      utility widths lose to it; size these two explicitly or the
-                      select swallows the row and the name box collapses */}
-                  <input
-                    value={m.fullName}
-                    onChange={(e) =>
-                      set("members", form.members.map((x, j) => (j === i ? { ...x, fullName: e.target.value } : x)))
-                    }
-                    placeholder={`Guest ${i + 1} — full name`}
-                    autoFocus={!!focusGuestId && m.id === focusGuestId}
-                    aria-label={`Guest ${i + 1} name`}
-                    className="portal-input"
-                    style={{ flex: "1 1 auto", minWidth: 0 }}
-                  />
-                  <select
-                    value={m.ageGroup}
-                    onChange={(e) =>
-                      set("members", form.members.map((x, j) => (j === i ? { ...x, ageGroup: e.target.value as "adult" | "child" } : x)))
-                    }
-                    aria-label={`Guest ${i + 1} age group`}
-                    className="portal-input"
-                    style={{ width: "7.5rem", flex: "0 0 auto" }}
-                  >
-                    <option value="adult">Adult</option>
-                    <option value="child">Child</option>
-                  </select>
-                  <button
-                    type="button"
-                    aria-label="Remove member"
-                    onClick={() => set("members", form.members.filter((_, j) => j !== i))}
-                    disabled={form.members.length === 1}
-                    className="portal-icon-button h-auto w-10 text-neutral-400 hover:text-neutral-700 disabled:opacity-30"
-                  >
-                    ×
-                  </button>
+                <div key={i} className={`rounded-xl border p-2.5 ${m.isPrimary ? "border-amber-300 bg-amber-50/40" : "border-neutral-200 bg-white"}`}>
+                  <div className="flex gap-2">
+                    {/* .portal-input sets width:100% outside Tailwind's layers, so
+                        utility widths lose to it; size these two explicitly or the
+                        select swallows the row and the name box collapses */}
+                    <input
+                      value={m.fullName}
+                      onChange={(e) => setMember(i, { fullName: e.target.value })}
+                      placeholder={`Guest ${i + 1} — full name`}
+                      autoFocus={!!focusGuestId && m.id === focusGuestId}
+                      aria-label={`Guest ${i + 1} name`}
+                      className="portal-input"
+                      style={{ flex: "1 1 auto", minWidth: 0 }}
+                    />
+                    <select
+                      value={m.ageGroup}
+                      onChange={(e) => setAge(i, e.target.value as "adult" | "child")}
+                      aria-label={`Guest ${i + 1} age group`}
+                      className="portal-input"
+                      style={{ width: "7.5rem", flex: "0 0 auto" }}
+                    >
+                      <option value="adult">Adult</option>
+                      <option value="child">Child</option>
+                    </select>
+                    <button
+                      type="button"
+                      aria-label={`Remove guest ${i + 1}`}
+                      onClick={() => removeMember(i)}
+                      disabled={form.members.length === 1}
+                      className="portal-icon-button h-auto w-10 text-neutral-400 hover:text-neutral-700 disabled:opacity-30"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <input
+                      type="email"
+                      value={m.email}
+                      onChange={(e) => setMember(i, { email: e.target.value })}
+                      placeholder="Email (optional)"
+                      aria-label={`Guest ${i + 1} email`}
+                      className="portal-input"
+                      style={{ flex: "1 1 11rem", minWidth: 0, padding: "0.5rem 0.65rem", fontSize: "0.8125rem" }}
+                    />
+                    <input
+                      type="tel"
+                      inputMode="tel"
+                      value={m.phone}
+                      onChange={(e) => setMember(i, { phone: e.target.value })}
+                      placeholder="Phone (optional)"
+                      maxLength={30}
+                      aria-label={`Guest ${i + 1} phone`}
+                      className="portal-input"
+                      style={{ flex: "1 1 9rem", minWidth: 0, padding: "0.5rem 0.65rem", fontSize: "0.8125rem" }}
+                    />
+                    <label className={`flex items-center gap-1.5 whitespace-nowrap text-xs ${m.ageGroup === "child" ? "text-neutral-300" : "text-neutral-700"}`}
+                      title={m.ageGroup === "child" ? "The primary must be an adult" : undefined}>
+                      <input
+                        type="radio"
+                        name="primary-guest"
+                        checked={m.isPrimary}
+                        disabled={m.ageGroup === "child"}
+                        onChange={() => setPrimary(i)}
+                        aria-label={`Guest ${i + 1} is the primary adult`}
+                        className="h-4 w-4"
+                      />
+                      Primary adult
+                    </label>
+                  </div>
                 </div>
               ))}
               <button
                 type="button"
-                onClick={() => set("members", [...form.members, { fullName: "", ageGroup: "adult" }])}
+                onClick={() => set("members", [...form.members, { fullName: "", ageGroup: "adult", email: "", phone: "", isPrimary: !form.members.some((x) => x.isPrimary) }])}
                 className="portal-link"
               >
                 + add another guest

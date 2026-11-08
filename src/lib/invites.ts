@@ -1,9 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { weddings, families, eventInvites, rsvps } from "@/db/schema";
+import { weddings, families, guests, eventInvites, rsvps, emailLog } from "@/db/schema";
 import { generateInviteToken, tokenExpiry } from "@/lib/tokens";
 import { sendInvite } from "@/lib/mailer";
 import { appOrigin } from "@/lib/origin";
+import { fmtWeddingDate } from "@/lib/format";
 
 export type InviteType = "invite" | "resend" | "remind";
 
@@ -64,4 +65,47 @@ export async function issueInvites(
     results.push(res.ok ? { familyId, ok: true } : { familyId, ok: false, error: res.error });
   }
   return results;
+}
+
+/** WhatsApp wants the full international number, digits only. Indian
+    numbers are often saved without the 91; add it to a bare 10-digit one. */
+export function whatsappNumber(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  let d = raw.replace(/\D/g, "");
+  if (d.length === 11 && d.startsWith("0")) d = d.slice(1);
+  if (d.length === 10) d = `91${d}`;
+  return d.length >= 8 ? d : null;
+}
+
+/**
+ * The household's invitation as a WhatsApp message to their primary adult:
+ * mints a fresh personal RSVP link (like a resend, the previous link stops
+ * working), logs it as sent, and returns a wa.me link that opens the chat
+ * with the message typed. No phone saved → WhatsApp asks who to send it to.
+ */
+export async function whatsappInvite(weddingId: string, familyId: string): Promise<
+  { ok: true; url: string; to: string | null } | { ok: false; error: string }
+> {
+  const [wedding] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
+  const [family] = await db.select().from(families).where(and(eq(families.id, familyId), eq(families.weddingId, weddingId)));
+  if (!wedding || !family) return { ok: false, error: "family not found" };
+  const [primary] = await db.select().from(guests).where(and(eq(guests.familyId, familyId), eq(guests.isPrimary, true)));
+
+  const { token, tokenHash } = generateInviteToken();
+  await db.update(families)
+    .set({ inviteTokenHash: tokenHash, tokenExpiresAt: tokenExpiry(wedding.weddingDate) })
+    .where(eq(families.id, familyId));
+  await db.insert(emailLog).values({ familyId, type: "invite", status: "whatsapp" });
+
+  const link = `${await appOrigin()}/rsvp/${token}`;
+  const first = primary?.fullName.trim().split(/\s+/)[0];
+  const text = [
+    `${first ? `Namaste ${first}!` : "Namaste!"}`,
+    "",
+    `${wedding.brideName} & ${wedding.groomName} are getting married on ${fmtWeddingDate(wedding.weddingDate)}${wedding.city ? ` in ${wedding.city}` : ""}, and would love to celebrate with ${family.name}.`,
+    "",
+    `See the celebrations and RSVP here: ${link}`,
+  ].join("\n");
+  const number = whatsappNumber(primary?.phone ?? family.phone);
+  return { ok: true, url: `https://wa.me/${number ?? ""}?text=${encodeURIComponent(text)}`, to: number };
 }

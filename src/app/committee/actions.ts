@@ -6,8 +6,9 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { families, guests, eventInvites, events } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
-import { issueInvites } from "@/lib/invites";
+import { issueInvites, whatsappInvite } from "@/lib/invites";
 import * as household from "@/lib/household";
+import { syncHousehold } from "@/lib/primary";
 
 /* Admin may act on any wedding (passes it explicitly); committee is pinned
    to their own. Every action re-resolves this server-side — never trust input. */
@@ -17,21 +18,25 @@ async function scopedWeddingId(requested: string): Promise<string | null> {
   return staff.weddingId;
 }
 
+// Contact details are per guest and all optional (plenty of households are
+// WhatsApp-only). A typed email must be valid; a phone needs 8+ digits.
+const optionalEmail = z.union([z.string().trim().toLowerCase().email().max(254), z.literal("")]).optional().default("");
+const optionalPhone = z.string().trim().max(30).optional().default("")
+  .refine((v) => !v || v.replace(/\D/g, "").length >= 8, "phone");
+
 const familySchema = z.object({
   weddingId: z.string().uuid(),
   familyId: z.string().uuid().optional(),
   name: z.string().min(1).max(120),
   side: z.enum(["bride", "groom", "both"]),
   relation: z.string().max(120).optional(),
-  // optional: plenty of households are WhatsApp-only; invites skip them
-  email: z.union([z.string().trim().toLowerCase().email().max(254), z.literal("")]),
-  // optional too; kept as typed (matching normalises), but needs a real number of digits
-  phone: z.string().trim().max(30).optional().default("")
-    .refine((v) => !v || (v.replace(/\D/g, "").length >= 8), "phone"),
   members: z.array(z.object({
     id: z.string().uuid().optional(),
     fullName: z.string().min(1).max(120),
     ageGroup: z.enum(["adult", "child"]),
+    email: optionalEmail,
+    phone: optionalPhone,
+    isPrimary: z.boolean().optional().default(false),
   })).min(1).max(30),
   eventIds: z.array(z.string().uuid()).max(50),
 });
@@ -41,7 +46,14 @@ export async function upsertFamily(input: unknown): Promise<{ ok: boolean; error
   if (!parsed.success) return { ok: false, error: "invalid input" };
   const weddingId = await scopedWeddingId(parsed.data.weddingId);
   if (!weddingId) return { ok: false, error: "forbidden" };
-  const { name, side, relation, email, phone, members, eventIds } = parsed.data;
+  const { name, side, relation, eventIds } = parsed.data;
+  // one primary at most from the form; syncHousehold settles the rest
+  let primarySeen = false;
+  const members = parsed.data.members.map((m) => {
+    const isPrimary = m.isPrimary && !primarySeen;
+    if (isPrimary) primarySeen = true;
+    return { ...m, email: m.email || null, phone: m.phone || null, isPrimary };
+  });
 
   const validEvents = new Set(
     (await db.select().from(events).where(eq(events.weddingId, weddingId))).map((e) => e.id),
@@ -53,30 +65,29 @@ export async function upsertFamily(input: unknown): Promise<{ ok: boolean; error
     const [fam] = await db.select().from(families)
       .where(and(eq(families.id, familyId), eq(families.weddingId, weddingId)));
     if (!fam) return { ok: false, error: "family not found" };
-    await db.update(families).set({ name, side, relation: relation ?? null, email, phone: phone || null })
-      .where(eq(families.id, familyId));
+    await db.update(families).set({ name, side, relation: relation ?? null }).where(eq(families.id, familyId));
     // Update guests in place — their ids carry RSVP answers and custom columns
     const current = await db.select().from(guests).where(eq(guests.familyId, familyId));
     const keep = new Set(members.filter((m) => m.id).map((m) => m.id!));
     for (const g of current) if (!keep.has(g.id)) await db.delete(guests).where(eq(guests.id, g.id));
     for (const m of members) {
-      if (m.id && current.some((g) => g.id === m.id)) {
-        await db.update(guests).set({ fullName: m.fullName, ageGroup: m.ageGroup }).where(eq(guests.id, m.id));
-      } else {
-        await db.insert(guests).values({ familyId, fullName: m.fullName, ageGroup: m.ageGroup });
-      }
+      const fields = { fullName: m.fullName, ageGroup: m.ageGroup, email: m.email, phone: m.phone, isPrimary: m.isPrimary };
+      if (m.id && current.some((g) => g.id === m.id)) await db.update(guests).set(fields).where(eq(guests.id, m.id));
+      else await db.insert(guests).values({ familyId, ...fields });
     }
     await db.delete(eventInvites).where(eq(eventInvites.familyId, familyId));
   } else {
-    const [f] = await db.insert(families)
-      .values({ weddingId, name, side, relation: relation ?? null, email, phone: phone || null }).returning();
+    const [f] = await db.insert(families).values({ weddingId, name, side, relation: relation ?? null, email: "" }).returning();
     familyId = f.id;
-    await db.insert(guests).values(members.map((m) => ({ familyId: familyId!, fullName: m.fullName, ageGroup: m.ageGroup })));
+    await db.insert(guests).values(members.map((m) => ({
+      familyId: familyId!, fullName: m.fullName, ageGroup: m.ageGroup, email: m.email, phone: m.phone, isPrimary: m.isPrimary,
+    })));
   }
 
   if (eventIds.length) {
     await db.insert(eventInvites).values(eventIds.map((eventId) => ({ eventId, familyId: familyId! })));
   }
+  await syncHousehold(familyId);
   await household.pruneAttendees(familyId);
   revalidatePath("/committee");
   return { ok: true };
@@ -167,4 +178,13 @@ export async function setGuestDetailAction(input: { weddingId: string; guestId: 
   const weddingId = await scopedFrom(input);
   if (!weddingId) return { ok: false as const, error: "forbidden" };
   return household.setGuestDetail(weddingId, String(input.guestId ?? ""), String(input.columnId ?? ""), String(input.value ?? ""));
+}
+
+export async function whatsappInviteAction(input: { weddingId: string; familyId: string }) {
+  const weddingId = await scopedFrom(input);
+  if (!weddingId) return { ok: false as const, error: "forbidden" };
+  if (!z.string().uuid().safeParse(input.familyId).success) return { ok: false as const, error: "invalid input" };
+  const r = await whatsappInvite(weddingId, input.familyId);
+  revalidatePath("/committee");
+  return r;
 }

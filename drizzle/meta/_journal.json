@@ -50,6 +50,13 @@
       "when": 1794156874128,
       "tag": "0006_per-guest",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794160819587,
+      "tag": "0007_guest-contact",
+      "breakpoints": true
     }
   ]
 }

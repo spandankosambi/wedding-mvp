@@ -1,6 +1,7 @@
 import { closeDb, db, migrateDb } from "@/db/client";
 import { weddings, events, families, guests, eventInvites, rsvps, users } from "@/db/schema";
 import { generateInviteToken, tokenExpiry } from "@/lib/tokens";
+import { syncHousehold } from "@/lib/primary";
 import { eq, inArray, or } from "drizzle-orm";
 
 // Seeded staff logins in role order: [admin, couple, committee, committee], plus a
@@ -102,7 +103,8 @@ async function main() {
       weddingId: w.id, name, side, relation, email,
       inviteTokenHash: tokenHash, tokenExpiresAt: tokenExpiry(WEDDING_DATE),
     }).returning();
-    await db.insert(guests).values(members.map((m) => ({ familyId: f.id, fullName: m })));
+    await db.insert(guests).values(members.map((m, i) => ({ familyId: f.id, fullName: m, isPrimary: i === 0, email: i === 0 ? email : null })));
+    await syncHousehold(f.id);
     const invited = close ? evs : mainThree;
     await db.insert(eventInvites).values(invited.map((e) => ({ eventId: e.id, familyId: f.id })));
     // Pre-seed RSVPs for the first 7 families so dashboards look alive
@@ -112,6 +114,7 @@ async function main() {
         eventId: e.id, familyId: f.id,
         status: (idx === 5 && i > 0 ? "declined" : "attending") as "attending" | "declined",
         headcount: idx === 5 && i > 0 ? 0 : members.length,
+        guestIds: null,
         note: idx === 2 ? "Nani needs a wheelchair-friendly seat" : null,
       })));
     }
@@ -144,7 +147,8 @@ async function main() {
       weddingId: w2.id, name, side, relation, email,
       inviteTokenHash: tokenHash, tokenExpiresAt: tokenExpiry(GK_WEDDING_DATE),
     }).returning();
-    await db.insert(guests).values(members.map((m) => ({ familyId: f.id, fullName: m })));
+    await db.insert(guests).values(members.map((m, i) => ({ familyId: f.id, fullName: m, isPrimary: i === 0, email: i === 0 ? email : null })));
+    await syncHousehold(f.id);
     const invited = close ? gkEvs : gkMain;
     await db.insert(eventInvites).values(invited.map((e) => ({ eventId: e.id, familyId: f.id })));
     // First 3 families pre-answered so the second dashboard isn't empty
