@@ -52,7 +52,9 @@ export function FamilyForm({
         eventIds: form.eventIds,
       });
       if (res.ok) onClose(true);
-      else setError(res.error ?? "failed");
+      else setError(res.error === "invalid input"
+        ? "Check the details: a family name and at least one guest are needed, and an email, if you add one, must be a full address."
+        : res.error ?? "failed");
     });
   }
 
@@ -113,7 +115,7 @@ export function FamilyForm({
           </div>
 
           <label className="block">
-            <span className="text-xs font-medium uppercase tracking-wide text-neutral-500">Email (one per household)</span>
+            <span className="text-xs font-medium uppercase tracking-wide text-neutral-500">Email <span className="normal-case tracking-normal text-neutral-400">— optional, one per household; needed only to email them the invite</span></span>
             <input
               type="email"
               value={form.email}
@@ -234,7 +236,7 @@ export function FamilyForm({
           </button>
           <button
             onClick={save}
-            disabled={pending || !form.name.trim() || !form.email.trim() || !form.members.some((m) => m.fullName.trim())}
+            disabled={pending || !form.name.trim() || !form.members.some((m) => m.fullName.trim())}
             className="portal-button disabled:opacity-40"
           >
             {pending ? "Saving…" : "Save family"}

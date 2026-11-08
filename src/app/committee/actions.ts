@@ -23,7 +23,8 @@ const familySchema = z.object({
   name: z.string().min(1).max(120),
   side: z.enum(["bride", "groom", "both"]),
   relation: z.string().max(120).optional(),
-  email: z.string().email().max(254),
+  // optional: plenty of households are WhatsApp-only; invites skip them
+  email: z.union([z.string().trim().toLowerCase().email().max(254), z.literal("")]),
   members: z.array(z.object({
     id: z.string().uuid().optional(),
     fullName: z.string().min(1).max(120),

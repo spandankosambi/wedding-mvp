@@ -126,3 +126,16 @@ test("the couple can get from the guest list back to their dashboard", async ({ 
   await page.getByRole("link", { name: "← Back to dashboard" }).click();
   await expect(page).toHaveURL(/\/couple$/);
 });
+
+test("a family can be saved without an email", async ({ page }) => {
+  await signIn(page, "committee@example.com");
+  await page.goto("/committee");
+  await page.getByRole("button", { name: "Add family" }).click();
+  await page.fill("input[placeholder='Sharma Family']", "Wadiker Family");
+  await page.getByLabel("Guest 1 name").fill("Wadiker masa");
+  const save = page.getByRole("button", { name: "Save family" });
+  await expect(save).toBeEnabled();
+  await save.click();
+  const row = page.getByRole("row", { name: /Wadiker Family/ });
+  await expect(row.getByText("no email")).toBeVisible();
+});
