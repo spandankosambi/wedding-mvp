@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { sendInvitesAction, bulkFamilyRsvpAction } from "./actions";
-import { FamilyForm, type FamilyDraft } from "./FamilyForm";
+import { FamilyForm, draftFromFamily, type FamilyDraft } from "./FamilyForm";
 import { RsvpEditor, type RsvpTarget } from "./RsvpEditor";
 import { BulkRsvpDialog } from "./BulkRsvpDialog";
 
@@ -131,7 +131,7 @@ export function FamilyTable({
                 />
               </th>
               <th className="p-3">Family</th>
-              <th className="p-3">Email</th>
+              <th className="p-3">Contact</th>
               <th className="p-3">Members</th>
               <th className="p-3">RSVP by event</th>
               <th className="p-3">Last email</th>
@@ -161,8 +161,13 @@ export function FamilyTable({
                   </p>
                 </td>
                 <td className="text-neutral-600">
-                  {r.email || (r.phone ? <span className="tabular-nums">{r.phone}</span> : <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-700">no email</span>)}
+                  {r.email || (r.phone ? <span className="tabular-nums">{r.phone}</span> : null)}
                   {r.email && r.phone && <p className="mt-0.5 text-xs tabular-nums text-neutral-400">{r.phone}</p>}
+                  {!r.email && (
+                    <p className={r.phone ? "mt-0.5" : ""}>
+                      <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-700">no email</span>
+                    </p>
+                  )}
                 </td>
                 <td className="tabular-nums">{r.members.length}</td>
                 <td>
@@ -228,17 +233,7 @@ export function FamilyTable({
                     RSVP
                   </button>
                   <button
-                    onClick={() =>
-                      setEditing({
-                        familyId: r.id,
-                        name: r.name,
-                        side: r.side,
-                        relation: r.relation ?? "",
-                        email: r.email,
-                        members: r.members.map(({ id, fullName, ageGroup }) => ({ id, fullName, ageGroup })),
-                        eventIds: r.eventIds,
-                      })
-                    }
+                    onClick={() => setEditing(draftFromFamily(r))}
                     className="portal-link"
                   >
                     edit

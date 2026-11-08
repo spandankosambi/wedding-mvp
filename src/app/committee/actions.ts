@@ -25,6 +25,9 @@ const familySchema = z.object({
   relation: z.string().max(120).optional(),
   // optional: plenty of households are WhatsApp-only; invites skip them
   email: z.union([z.string().trim().toLowerCase().email().max(254), z.literal("")]),
+  // optional too; kept as typed (matching normalises), but needs a real number of digits
+  phone: z.string().trim().max(30).optional().default("")
+    .refine((v) => !v || (v.replace(/\D/g, "").length >= 8), "phone"),
   members: z.array(z.object({
     id: z.string().uuid().optional(),
     fullName: z.string().min(1).max(120),
@@ -38,7 +41,7 @@ export async function upsertFamily(input: unknown): Promise<{ ok: boolean; error
   if (!parsed.success) return { ok: false, error: "invalid input" };
   const weddingId = await scopedWeddingId(parsed.data.weddingId);
   if (!weddingId) return { ok: false, error: "forbidden" };
-  const { name, side, relation, email, members, eventIds } = parsed.data;
+  const { name, side, relation, email, phone, members, eventIds } = parsed.data;
 
   const validEvents = new Set(
     (await db.select().from(events).where(eq(events.weddingId, weddingId))).map((e) => e.id),
@@ -50,7 +53,7 @@ export async function upsertFamily(input: unknown): Promise<{ ok: boolean; error
     const [fam] = await db.select().from(families)
       .where(and(eq(families.id, familyId), eq(families.weddingId, weddingId)));
     if (!fam) return { ok: false, error: "family not found" };
-    await db.update(families).set({ name, side, relation: relation ?? null, email })
+    await db.update(families).set({ name, side, relation: relation ?? null, email, phone: phone || null })
       .where(eq(families.id, familyId));
     // Update guests in place — their ids carry RSVP answers and custom columns
     const current = await db.select().from(guests).where(eq(guests.familyId, familyId));
@@ -66,7 +69,7 @@ export async function upsertFamily(input: unknown): Promise<{ ok: boolean; error
     await db.delete(eventInvites).where(eq(eventInvites.familyId, familyId));
   } else {
     const [f] = await db.insert(families)
-      .values({ weddingId, name, side, relation: relation ?? null, email }).returning();
+      .values({ weddingId, name, side, relation: relation ?? null, email, phone: phone || null }).returning();
     familyId = f.id;
     await db.insert(guests).values(members.map((m) => ({ familyId: familyId!, fullName: m.fullName, ageGroup: m.ageGroup })));
   }

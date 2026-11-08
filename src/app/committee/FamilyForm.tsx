@@ -9,12 +9,24 @@ export type FamilyDraft = {
   side: "bride" | "groom" | "both";
   relation: string;
   email: string;
+  phone: string;
   members: { id?: string; fullName: string; ageGroup: "adult" | "child" }[];
   eventIds: string[];
 };
 
+/** The edit-dialog draft for a family row, from either the Families or the Guests view. */
+export function draftFromFamily(r: {
+  id: string; name: string; side: FamilyDraft["side"]; relation: string | null; email: string; phone?: string | null;
+  members: { id: string; fullName: string; ageGroup: "adult" | "child" }[]; eventIds: string[];
+}): FamilyDraft {
+  return {
+    familyId: r.id, name: r.name, side: r.side, relation: r.relation ?? "", email: r.email, phone: r.phone ?? "",
+    members: r.members.map(({ id, fullName, ageGroup }) => ({ id, fullName, ageGroup })), eventIds: r.eventIds,
+  };
+}
+
 const EMPTY: FamilyDraft = {
-  name: "", side: "bride", relation: "", email: "",
+  name: "", side: "bride", relation: "", email: "", phone: "",
   members: [{ fullName: "", ageGroup: "adult" }], eventIds: [],
 };
 
@@ -22,11 +34,14 @@ export function FamilyForm({
   weddingId,
   events,
   draft,
+  focusGuestId,
   onClose,
 }: {
   weddingId: string;
   events: { id: string; name: string }[];
   draft: FamilyDraft | null;
+  /** opened from the Guests view: put the cursor in this guest's name */
+  focusGuestId?: string;
   onClose: (saved: boolean) => void;
 }) {
   const [form, setForm] = useState<FamilyDraft>(draft ?? EMPTY);
@@ -48,12 +63,13 @@ export function FamilyForm({
         side: form.side,
         relation: form.relation.trim() || undefined,
         email: form.email.trim(),
+        phone: form.phone.trim(),
         members: form.members.filter((m) => m.fullName.trim()),
         eventIds: form.eventIds,
       });
       if (res.ok) onClose(true);
       else setError(res.error === "invalid input"
-        ? "Check the details: a family name and at least one guest are needed, and an email, if you add one, must be a full address."
+        ? "Check the details: a family name and at least one guest are needed; an email, if you add one, must be a full address, and a phone number needs at least 8 digits."
         : res.error ?? "failed");
     });
   }
@@ -114,16 +130,31 @@ export function FamilyForm({
             </label>
           </div>
 
-          <label className="block">
-            <span className="text-xs font-medium uppercase tracking-wide text-neutral-500">Email <span className="normal-case tracking-normal text-neutral-400">— optional, one per household; needed only to email them the invite</span></span>
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => set("email", e.target.value)}
-              placeholder="sharma@example.com"
-              className="portal-input mt-1"
-            />
-          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-xs font-medium uppercase tracking-wide text-neutral-500">Email <span className="normal-case tracking-normal text-neutral-400">— optional</span></span>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => set("email", e.target.value)}
+                placeholder="sharma@example.com"
+                className="portal-input mt-1"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-medium uppercase tracking-wide text-neutral-500">Phone <span className="normal-case tracking-normal text-neutral-400">— optional</span></span>
+              <input
+                type="tel"
+                inputMode="tel"
+                value={form.phone}
+                onChange={(e) => set("phone", e.target.value)}
+                placeholder="+91 98765 43210"
+                maxLength={30}
+                className="portal-input mt-1"
+              />
+            </label>
+          </div>
+          <p className="-mt-2 text-xs text-neutral-500">Both optional. An email is needed only to email them their invite link.</p>
 
           <fieldset>
             <legend className="text-xs font-medium uppercase tracking-wide text-neutral-500">Guests in this household</legend>
@@ -139,6 +170,7 @@ export function FamilyForm({
                       set("members", form.members.map((x, j) => (j === i ? { ...x, fullName: e.target.value } : x)))
                     }
                     placeholder={`Guest ${i + 1} — full name`}
+                    autoFocus={!!focusGuestId && m.id === focusGuestId}
                     aria-label={`Guest ${i + 1} name`}
                     className="portal-input"
                     style={{ flex: "1 1 auto", minWidth: 0 }}

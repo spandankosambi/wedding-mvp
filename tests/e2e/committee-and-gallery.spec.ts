@@ -138,4 +138,24 @@ test("a family can be saved without an email", async ({ page }) => {
   await save.click();
   const row = page.getByRole("row", { name: /Wadiker Family/ });
   await expect(row.getByText("no email")).toBeVisible();
+
+  // a phone number, also optional
+  await row.getByRole("button", { name: "edit" }).click();
+  await page.fill("input[type=tel]", "+91 98765 43210");
+  if (shots) await page.getByRole("dialog").screenshot({ path: `${shots}/family-phone.png` });
+  await page.getByRole("button", { name: "Save family" }).click();
+  await expect(row.getByText("+91 98765 43210")).toBeVisible();
+});
+
+test("a guest can be edited from the Guests view", async ({ page }) => {
+  await signIn(page, "committee@example.com");
+  await page.goto("/committee?view=guests");
+  await page.getByRole("button", { name: "Edit Padma Iyer" }).click();
+  const name = page.getByLabel(/Guest \d name/).and(page.locator(":focus"));
+  await expect(name).toHaveValue("Padma Iyer"); // the cursor lands on her
+  await name.fill("Padma K Iyer");
+  await page.getByRole("button", { name: "Save family" }).click();
+  await expect(page.getByText("Saved Padma Iyer's household")).toBeVisible();
+  await expect(page.getByRole("row", { name: /Padma K Iyer/ })).toBeVisible();
+  await expect(page).toHaveURL(/view=guests/);
 });

@@ -6,6 +6,7 @@ import type { GuestColumn } from "@/db/schema";
 import { guestAnswer, type GuestAnswer } from "@/lib/attendance";
 import { guestRsvpAction, addGuestColumnAction, removeGuestColumnAction, setGuestDetailAction } from "./actions";
 import { BulkRsvpDialog } from "./BulkRsvpDialog";
+import { FamilyForm, draftFromFamily, type FamilyDraft } from "./FamilyForm";
 import type { Row } from "./FamilyTable";
 
 const SIDE_BADGE: Record<Row["side"], string> = {
@@ -41,6 +42,7 @@ export function GuestTable({
   const [flash, setFlash] = useState<string | null>(null);
   const [newColumn, setNewColumn] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [editing, setEditing] = useState<{ draft: FamilyDraft; guestId: string; name: string } | null>(null);
   const [pending, startTransition] = useTransition();
 
   const guests = useMemo(() => rows.flatMap((f) => f.members.map((m) => ({ ...m, family: f }))), [rows]);
@@ -168,6 +170,7 @@ export function GuestTable({
                   <td>
                     <p>{f.name}</p>
                     <span className={`mt-1 inline-block rounded border px-1.5 py-0.5 text-xs font-medium ${SIDE_BADGE[f.side]}`}>{f.side}</span>
+                    {f.phone && <span className="ml-2 text-xs tabular-nums text-neutral-500">{f.phone}</span>}
                   </td>
                   <td>
                     <div className="flex flex-wrap gap-1.5">
@@ -189,8 +192,11 @@ export function GuestTable({
                     </td>
                   ))}
                   <td className="whitespace-nowrap text-right">
-                    <button type="button" onClick={() => setRsvpFor({ ids: [g.id], label: g.fullName })} className="portal-link" aria-label={`Record RSVP for ${g.fullName}`}>
+                    <button type="button" onClick={() => setRsvpFor({ ids: [g.id], label: g.fullName })} className="portal-link mr-4" aria-label={`Record RSVP for ${g.fullName}`}>
                       RSVP
+                    </button>
+                    <button type="button" onClick={() => setEditing({ draft: draftFromFamily(f), guestId: g.id, name: g.fullName })} className="portal-link" aria-label={`Edit ${g.fullName}`}>
+                      edit
                     </button>
                   </td>
                 </tr>
@@ -206,6 +212,20 @@ export function GuestTable({
           </tbody>
         </table>
       </div>
+
+      {editing && (
+        <FamilyForm
+          weddingId={weddingId}
+          events={events}
+          draft={editing.draft}
+          focusGuestId={editing.guestId}
+          onClose={(saved) => {
+            const name = editing.name;
+            setEditing(null);
+            if (saved) { setFlash(`Saved ${name}'s household`); router.refresh(); }
+          }}
+        />
+      )}
 
       {rsvpFor && (
         <BulkRsvpDialog
