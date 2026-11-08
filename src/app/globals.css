@@ -310,6 +310,47 @@ html.fx .rule-grow.is-in::before { transform: scaleX(1); }
   box-shadow: 0 20px 44px -20px rgba(0, 0, 0, 0.3);
 }
 
+/* The couple's own photos: justified rows. PhotoGallery plans the rows in
+   JS once it knows the width (lib/justify.ts); the rules below are the
+   first-paint fallback before that measurement. Each tile grows in proportion to
+   its aspect ratio from a basis of ratio × row height (+ the plate's mat,
+   --mat), so every photo in a row lands at the same height and the row fills
+   the width. The ::after soaks up the last row's slack so its photos keep
+   their natural size instead of ballooning. */
+.photo-rows { --row-h: 260px; --mat: 20px; display: flex; flex-wrap: wrap; gap: 16px; }
+.photo-rows::after { content: ""; flex-grow: 1000000; }
+.photo-rows.is-planned::after { display: none; }
+@media (max-width: 640px) { .photo-rows { --row-h: 210px; --mat: 10px; gap: 8px; } }
+.photo-tile { display: block; min-width: 0; cursor: zoom-in; font: inherit; color: inherit; }
+.photo-tile img { display: block; width: 100%; height: auto; object-fit: cover; }
+.photo-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 640px) { .photo-tile { padding: 5px; } }
+
+/* Full-screen viewer — always dark, whatever the theme, so photos read true */
+.lightbox {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(8, 6, 6, 0.94);
+  padding: max(56px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(56px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  animation: lightbox-in 0.2s ease-out;
+}
+.lightbox-img { max-width: min(100%, 1400px); max-height: 100%; width: auto; height: auto; object-fit: contain; box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.8); }
+.lightbox-btn {
+  position: absolute; display: grid; place-items: center;
+  width: 48px; height: 48px; border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25); background: rgba(0, 0, 0, 0.45); color: #fff;
+  font: 400 30px/1 system-ui, sans-serif; cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+.lightbox-btn:hover { background: rgba(255, 255, 255, 0.15); border-color: rgba(255, 255, 255, 0.6); }
+.lightbox-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.lightbox-close { top: max(12px, env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); }
+.lightbox-prev { left: max(12px, env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%); }
+.lightbox-next { right: max(12px, env(safe-area-inset-right, 0px)); top: 50%; transform: translateY(-50%); }
+.lightbox-count { position: absolute; bottom: max(16px, env(safe-area-inset-bottom, 0px)); left: 0; right: 0; text-align: center; color: rgba(255, 255, 255, 0.75); font: 500 13px/1 system-ui, sans-serif; letter-spacing: 0.08em; font-variant-numeric: tabular-nums; }
+@keyframes lightbox-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .lightbox { animation: none; } }
+
 /* Tapered section-header rule: fades out so it never doubles a border */
 .rule-taper {
   height: 1px;
