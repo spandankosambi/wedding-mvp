@@ -28,8 +28,13 @@ test("a couple signs up, edits their site, and a guest RSVPs from the shared lin
   await page.goto(signInUrl(email));
   await expect(page).toHaveURL(/\/couple\/site/);
   await expect(page.getByRole("heading", { name: /edit your invitation/i })).toBeVisible();
-  // the five starter ceremonies exist
-  await expect(page.getByText("5 events")).toBeVisible();
+  // a new wedding starts with only the wedding day…
+  await expect(page.getByText("1 event", { exact: true })).toBeVisible();
+  // …and the couple adds the rest of the week from the picker
+  await page.getByRole("button", { name: "+ Haldi" }).click();
+  await expect(page).toHaveURL(/saved=event-/);
+  await page.getByRole("button", { name: "+ Mehendi" }).click();
+  await expect(page.getByText("3 events", { exact: true })).toBeVisible();
 
   // ── hide one event from the public site ────────────────────
   const haldi = page.locator("details", { has: page.locator("input[name=name][value=Haldi]") });

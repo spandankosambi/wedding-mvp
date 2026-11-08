@@ -22,7 +22,8 @@ export type SignupResult =
   | { ok: false; error: string };
 
 /**
- * Self-serve: one form creates the wedding, five starter events around the date,
+ * Self-serve: one form creates the wedding, a single wedding-day event (the couple
+ * adds the rest of the week themselves),
  * and the couple's login. An email that already has a login is simply signed in
  * again — never a second wedding. The caller sends the magic link.
  */

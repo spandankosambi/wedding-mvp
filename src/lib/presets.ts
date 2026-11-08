@@ -1,29 +1,27 @@
 /** Indian wedding ceremonies a couple can add with one tap. `dayOffset` is
-    relative to the wedding day; `hour` is IST. Used to prefill a brand-new site
-    and by the "add event" picker in the editor. */
+    relative to the wedding day; `hour` is IST. Used by the "add event" picker
+    in the editor. */
 export type EventPreset = {
   name: string;
   blurb: string;
   dressCode: string;
   dayOffset: number;
   hour: number;
-  /** included when a new wedding is created */
-  starter?: boolean;
 };
 
 export const EVENT_PRESETS: EventPreset[] = [
   { name: "Roka", blurb: "The families meet and the match is sealed with sweets and blessings.", dressCode: "Festive Indian", dayOffset: -30, hour: 12 },
   { name: "Engagement", blurb: "Rings exchanged, promises made, dinner to follow.", dressCode: "Cocktail", dayOffset: -14, hour: 19 },
   { name: "Ganesh Puja", blurb: "We begin by asking for the remover of obstacles to bless the days ahead.", dressCode: "Traditional", dayOffset: -3, hour: 10 },
-  { name: "Haldi", blurb: "Turmeric, laughter and a lot of yellow. Wear something you don't mind staining.", dressCode: "Yellows", dayOffset: -2, hour: 10, starter: true },
-  { name: "Mehendi", blurb: "Henna on hands, chai on the lawn, and the dhol arrives after lunch.", dressCode: "Greens & florals", dayOffset: -2, hour: 16, starter: true },
-  { name: "Sangeet", blurb: "Both families take the stage. Practised dances, unpractised ones, and dinner at the end.", dressCode: "Shimmer & silk", dayOffset: -1, hour: 19, starter: true },
+  { name: "Haldi", blurb: "Turmeric, laughter and a lot of yellow. Wear something you don't mind staining.", dressCode: "Yellows", dayOffset: -2, hour: 10 },
+  { name: "Mehendi", blurb: "Henna on hands, chai on the lawn, and the dhol arrives after lunch.", dressCode: "Greens & florals", dayOffset: -2, hour: 16 },
+  { name: "Sangeet", blurb: "Both families take the stage. Practised dances, unpractised ones, and dinner at the end.", dressCode: "Shimmer & silk", dayOffset: -1, hour: 19 },
   { name: "Baraat", blurb: "The groom arrives — with the band, the horse, and everyone dancing in front of it.", dressCode: "Traditional", dayOffset: 0, hour: 9 },
-  { name: "Pheras", blurb: "Seven rounds of the sacred fire. The moment the whole week is for.", dressCode: "Traditional", dayOffset: 0, hour: 10, starter: true },
+  { name: "Pheras", blurb: "Seven rounds of the sacred fire. The moment the whole week is for.", dressCode: "Traditional", dayOffset: 0, hour: 10 },
   { name: "Nikah", blurb: "The nikah ceremony, followed by lunch with both families.", dressCode: "Traditional", dayOffset: 0, hour: 11 },
   { name: "Muhurtham", blurb: "The auspicious hour. Mangalsutra, the fire, and blessings from every elder present.", dressCode: "Traditional / silks", dayOffset: 0, hour: 9 },
   { name: "Anand Karaj", blurb: "The wedding ceremony at the gurudwara, followed by langar.", dressCode: "Traditional — heads covered", dayOffset: 0, hour: 10 },
-  { name: "Reception", blurb: "The celebration dinner — come dressed up, stay for the dance floor.", dressCode: "Formal", dayOffset: 0, hour: 19, starter: true },
+  { name: "Reception", blurb: "The celebration dinner — come dressed up, stay for the dance floor.", dressCode: "Formal", dayOffset: 0, hour: 19 },
   { name: "Walima", blurb: "The wedding feast hosted by the groom's family.", dressCode: "Formal", dayOffset: 1, hour: 19 },
   { name: "Vidaai", blurb: "The bride's farewell from her parents' home.", dressCode: "Traditional", dayOffset: 1, hour: 11 },
   { name: "Griha Pravesh", blurb: "Welcoming the bride into her new home.", dressCode: "Traditional", dayOffset: 1, hour: 17 },
@@ -45,8 +43,20 @@ export function presetStart(preset: Pick<EventPreset, "dayOffset" | "hour">, wed
   return new Date(`${ymd}T${String(preset.hour).padStart(2, "0")}:00:00${IST}`);
 }
 
+/** What a brand-new wedding starts with: just the day the couple told us at
+    sign-up. The name is deliberately faith-neutral; they can rename it (Pheras,
+    Nikah, Anand Karaj…) and add the rest of the week from the picker. */
+export const STARTER_EVENT: EventPreset = {
+  name: "Wedding",
+  blurb: "The day itself — the ceremony the whole celebration is for.",
+  dressCode: "Traditional",
+  dayOffset: 0,
+  hour: 10,
+};
+
 export function starterEvents(weddingDate: Date, city: string) {
-  return EVENT_PRESETS.filter((p) => p.starter).map((p, i) => ({
+  const p = STARTER_EVENT;
+  return [{
     name: p.name,
     startsAt: presetStart(p, weddingDate),
     venueName: "Venue to be announced",
@@ -54,6 +64,6 @@ export function starterEvents(weddingDate: Date, city: string) {
     dressCode: p.dressCode,
     description: p.blurb,
     isPublished: true,
-    sortOrder: i,
-  }));
+    sortOrder: 0,
+  }];
 }

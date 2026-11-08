@@ -3,9 +3,11 @@ import { EVENT_PRESETS, presetStart, starterEvents } from "@/lib/presets";
 import { slugify, uniqueSlug, normalizePhone } from "@/lib/slug";
 
 describe("presets", () => {
-  it("starter set is the classic five in order", () => {
-    expect(starterEvents(new Date("2026-11-20T10:00:00+05:30"), "Mumbai").map((e) => e.name))
-      .toEqual(["Haldi", "Mehendi", "Sangeet", "Pheras", "Reception"]);
+  it("a new wedding starts with just the wedding day", () => {
+    const evs = starterEvents(new Date("2026-11-20T10:00:00+05:30"), "Mumbai");
+    expect(evs.map((e) => e.name)).toEqual(["Wedding"]);
+    expect(evs[0].startsAt.toISOString()).toBe("2026-11-20T04:30:00.000Z"); // 10:00 IST on the day
+    expect(evs[0].address).toBe("Mumbai");
   });
   it("presetStart lands on the right IST day and hour", () => {
     const d = presetStart({ dayOffset: -2, hour: 16 }, new Date("2026-11-20T10:00:00+05:30"));

@@ -9,12 +9,12 @@ beforeAll(async () => { await migrateDb(); });
 const input = { brideName: "Meera", groomName: "Dev", weddingDate: "2027-02-14", city: "Jaipur", email: "Meera@Example.com" };
 
 describe("createWeddingForCouple", () => {
-  it("creates wedding, starter events and couple login", async () => {
+  it("creates wedding, the wedding-day event and couple login", async () => {
     const r = await createWeddingForCouple(input);
     expect(r).toMatchObject({ ok: true, created: true, slug: "meera-weds-dev", email: "meera@example.com" });
     if (!r.ok || !r.created) return;
     const evs = await db.select().from(events).where(eq(events.weddingId, r.weddingId));
-    expect(evs.map((e) => e.name)).toEqual(["Haldi", "Mehendi", "Sangeet", "Pheras", "Reception"]);
+    expect(evs.map((e) => e.name)).toEqual(["Wedding"]);
     expect(evs.every((e) => e.address === "Jaipur" && e.isPublished)).toBe(true);
     const [u] = await db.select().from(users).where(eq(users.email, "meera@example.com"));
     expect(u).toMatchObject({ role: "couple", weddingId: r.weddingId });
