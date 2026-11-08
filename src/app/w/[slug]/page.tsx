@@ -11,6 +11,7 @@ import { TravelStay } from "./sections/TravelStay";
 import { Gallery } from "./sections/Gallery";
 import { RsvpCta } from "./sections/RsvpCta";
 import { fmtWeddingDate } from "@/lib/format";
+import { galleryOf } from "@/lib/gallery";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +57,8 @@ export default async function WeddingPage({
   const storyNo = wedding.story ? no() : "";
   const eventsNo = no();
   const travelNo = hasTravel ? no() : "";
-  const galleryNo = no();
+  const gallery = galleryOf(wedding);
+  const galleryNo = gallery.enabled ? no() : "";
 
   return (
     <main data-theme={wedding.theme} className="themed flex-1">
@@ -69,7 +71,7 @@ export default async function WeddingPage({
       <Story theme={wedding.theme} story={wedding.story} no={storyNo} />
       <EventTimeline theme={wedding.theme} events={events} no={eventsNo} />
       <TravelStay travel={wedding.travel} no={travelNo} />
-      <Gallery theme={wedding.theme} no={galleryNo} />
+      {gallery.enabled && <Gallery theme={wedding.theme} no={galleryNo} photos={gallery.photos} />}
       <RsvpCta slug={wedding.slug} open={window.open} deadline={wedding.rsvpDeadline} contactPhone={wedding.contactPhone} />
       <footer className="hairline-t px-6 py-10 text-center">
         <p className="kicker">

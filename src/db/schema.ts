@@ -14,6 +14,11 @@ export type TravelInfo = {
   gettingThere: string;
 };
 
+/** The couple's own photos for the Gallery section, stored in Vercel Blob.
+    `null` (every wedding before this existed) means: shown, no photos yet. */
+export type GalleryPhoto = { url: string; pathname: string; width: number; height: number };
+export type GalleryInfo = { enabled: boolean; photos: GalleryPhoto[] };
+
 export const weddings = pgTable("weddings", {
   id: uuid("id").defaultRandom().primaryKey(),
   slug: text("slug").notNull().unique(),
@@ -31,6 +36,7 @@ export const weddings = pgTable("weddings", {
   rsvpOpen: boolean("rsvp_open").notNull().default(true),
   rsvpDeadline: timestamp("rsvp_deadline", { withTimezone: true }),
   travel: jsonb("travel").$type<TravelInfo>(),
+  gallery: jsonb("gallery").$type<GalleryInfo>(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

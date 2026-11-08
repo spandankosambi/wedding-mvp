@@ -8,6 +8,8 @@ import { weddings } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
 import * as editor from "@/lib/editor";
 import { EVENT_PRESETS, presetStart } from "@/lib/presets";
+import { put, del } from "@vercel/blob";
+import * as gallery from "@/lib/gallery";
 
 /* Every action re-resolves the wedding server-side: a couple is pinned to
    their own; admin passes one explicitly. Then the site + editor revalidate
@@ -113,4 +115,51 @@ export async function sortEvents(formData: FormData) {
   const ctx = await scoped(formData);
   await editor.sortEventsByTime(ctx.weddingId);
   done(ctx, "events");
+}
+
+/* ── Gallery ──────────────────────────────────────────────────────── */
+
+export async function saveGallerySettings(formData: FormData) {
+  const ctx = await scoped(formData);
+  const r = await gallery.setGalleryEnabled(ctx.weddingId, formData.get("galleryEnabled") === "on");
+  done(ctx, "gallery", r.ok ? undefined : r.error);
+}
+
+export async function removeGalleryPhotoAction(formData: FormData) {
+  const ctx = await scoped(formData);
+  const r = await gallery.detachPhoto(ctx.weddingId, str(formData, "pathname"));
+  // the list is the source of truth; a file left behind in storage is harmless
+  if (r.ok && gallery.photoStorageConfigured()) await del(r.photo.url).catch(() => {});
+  done(ctx, "gallery", r.ok ? undefined : r.error);
+}
+
+export async function moveGalleryPhotoAction(formData: FormData) {
+  const ctx = await scoped(formData);
+  const r = await gallery.movePhoto(ctx.weddingId, str(formData, "pathname"), str(formData, "dir") === "up" ? "up" : "down");
+  done(ctx, "gallery", r.ok ? undefined : r.error);
+}
+
+/** One photo per call, already resized in the browser. Returns instead of
+    redirecting so the uploader can work through a batch and report progress. */
+export async function uploadGalleryPhoto(formData: FormData): Promise<{ ok: boolean; error?: string }> {
+  const ctx = await scoped(formData);
+  if (!gallery.photoStorageConfigured()) return { ok: false, error: "photo uploads aren't switched on for this site yet" };
+  const file = formData.get("photo");
+  if (!(file instanceof File) || file.size === 0) return { ok: false, error: "no photo received" };
+  if (!(gallery.PHOTO_TYPES as readonly string[]).includes(file.type)) return { ok: false, error: "use a JPG, PNG or WebP photo" };
+  if (file.size > gallery.MAX_PHOTO_BYTES) return { ok: false, error: "that photo is too large" };
+  const width = Math.round(Number(formData.get("width")));
+  const height = Math.round(Number(formData.get("height")));
+  const room = await gallery.canAddPhoto(ctx.weddingId);
+  if (!room.ok) return room;
+
+  const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  const blob = await put(`weddings/${ctx.weddingId}/gallery/${crypto.randomUUID()}.${ext}`, file, {
+    access: "public", contentType: file.type,
+  });
+  const r = await gallery.appendPhoto(ctx.weddingId, { url: blob.url, pathname: blob.pathname, width, height });
+  if (!r.ok) { await del(blob.url).catch(() => {}); return r; }
+  revalidatePath(`/w/${ctx.slug}`);
+  revalidatePath("/couple/site");
+  return { ok: true };
 }

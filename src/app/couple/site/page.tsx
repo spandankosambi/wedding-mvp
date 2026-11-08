@@ -10,8 +10,11 @@ import { THEMES, THEME_META } from "@/themes/catalog";
 import { ShareCard } from "../ShareCard";
 import { ThemeSwitcher } from "../ThemeSwitcher";
 import { SaveButton } from "./SaveButton";
+import { GalleryUploader } from "./GalleryUploader";
+import { galleryOf, photoStorageConfigured, MAX_GALLERY_PHOTOS } from "@/lib/gallery";
 import {
   saveDetails, saveRsvpSettings, saveTravel, saveEvent, addPresetEvent, toggleEvent, removeEvent, moveEventAction, sortEvents,
+  saveGallerySettings, removeGalleryPhotoAction, moveGalleryPhotoAction,
 } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +45,8 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
   const stays = [...(w.travel?.stays ?? [])];
   while (stays.length < 3) stays.push({ name: "", note: "", url: "" });
   const dateParts = istParts(w.weddingDate);
+  const gal = galleryOf(w);
+  const uploadsOn = photoStorageConfigured();
 
   return (
     <main className="portal-page">
@@ -204,6 +209,55 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
               </Field>
               <SaveButton />
             </form>
+          </section>
+
+          {/* ── Gallery ─────────────────────────────────────────── */}
+          <section id="gallery" className="portal-panel p-6">
+            <p className="portal-eyebrow">Gallery</p>
+            <h2 className="mt-1 font-semibold">Your photos{gal.photos.length ? ` · ${gal.photos.length}` : ""}</h2>
+            <p className="mt-1 text-sm text-neutral-500">
+              {gal.photos.length
+                ? "These appear on your site in this order."
+                : "Until you add photos, your site shows decorative illustrations here instead."}
+            </p>
+
+            <form action={saveGallerySettings} className="mt-5 flex flex-wrap items-center gap-4">
+              {wid}
+              <label className="flex items-start gap-3 text-sm">
+                <input type="checkbox" name="galleryEnabled" defaultChecked={gal.enabled} className="mt-0.5 h-4 w-4" />
+                <span>
+                  <span className="font-medium">Show the gallery on your site</span>
+                  <span className="block text-xs text-neutral-500">Off hides the whole section. Your photos stay saved here.</span>
+                </span>
+              </label>
+              <SaveButton />
+            </form>
+
+            {gal.photos.length > 0 && (
+              <ul className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                {gal.photos.map((ph, i) => (
+                  <li key={ph.pathname} className="overflow-hidden rounded-xl border border-neutral-200 bg-white" data-testid="gallery-photo">
+                    <img src={ph.url} alt={`Gallery photo ${i + 1}`} width={ph.width} height={ph.height} loading="lazy" className="aspect-square w-full object-cover" />
+                    <div className="flex items-center gap-1 p-2">
+                      <form action={moveGalleryPhotoAction}>{wid}<input type="hidden" name="pathname" value={ph.pathname} /><input type="hidden" name="dir" value="up" />
+                        <button type="submit" disabled={i === 0} className="portal-badge disabled:opacity-30" aria-label={`Move photo ${i + 1} earlier`}>←</button></form>
+                      <form action={moveGalleryPhotoAction}>{wid}<input type="hidden" name="pathname" value={ph.pathname} /><input type="hidden" name="dir" value="down" />
+                        <button type="submit" disabled={i === gal.photos.length - 1} className="portal-badge disabled:opacity-30" aria-label={`Move photo ${i + 1} later`}>→</button></form>
+                      <form action={removeGalleryPhotoAction} className="ml-auto">{wid}<input type="hidden" name="pathname" value={ph.pathname} />
+                        <button type="submit" className="portal-badge text-red-700" aria-label={`Remove photo ${i + 1}`}>Remove</button></form>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="mt-6 rounded-xl border border-dashed border-neutral-300 p-4">
+              {uploadsOn ? (
+                <GalleryUploader weddingId={weddingId} admin={staff.role === "admin"} remaining={MAX_GALLERY_PHOTOS - gal.photos.length} />
+              ) : (
+                <p className="text-sm text-neutral-500">Photo uploads aren&apos;t switched on for this site yet.</p>
+              )}
+            </div>
           </section>
 
           {/* ── RSVP ────────────────────────────────────────────── */}
