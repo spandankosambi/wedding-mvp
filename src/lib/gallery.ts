@@ -7,7 +7,7 @@ import { weddings, type GalleryInfo, type GalleryPhoto } from "@/db/schema";
    Files live in Vercel Blob (public, unguessable URLs — the same exposure as
    the wedding site itself); this module only keeps the list on the wedding. */
 
-export const MAX_GALLERY_PHOTOS = 24;
+export const MAX_GALLERY_PHOTOS = 15;
 /** Photos are resized in the browser before upload, so real ones land well
     under this; it guards against a raw upload that skipped the resize. */
 export const MAX_PHOTO_BYTES = 4 * 1024 * 1024;
