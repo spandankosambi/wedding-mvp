@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { upsertFamily } from "./actions";
+import { upsertFamily, deleteFamilyAction } from "./actions";
 
 export type FamilyDraft = {
   familyId?: string;
@@ -32,6 +32,7 @@ export function FamilyForm({
   const [form, setForm] = useState<FamilyDraft>(draft ?? EMPTY);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   function set<K extends keyof FamilyDraft>(key: K, value: FamilyDraft[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -50,6 +51,16 @@ export function FamilyForm({
         members: form.members.filter((m) => m.fullName.trim()),
         eventIds: form.eventIds,
       });
+      if (res.ok) onClose(true);
+      else setError(res.error ?? "failed");
+    });
+  }
+
+  function remove() {
+    if (!form.familyId) return;
+    setError(null);
+    startTransition(async () => {
+      const res = await deleteFamilyAction({ weddingId, familyId: form.familyId });
       if (res.ok) onClose(true);
       else setError(res.error ?? "failed");
     });
@@ -113,24 +124,31 @@ export function FamilyForm({
           </label>
 
           <fieldset>
-            <legend className="text-xs font-medium uppercase tracking-wide text-neutral-500">Members</legend>
+            <legend className="text-xs font-medium uppercase tracking-wide text-neutral-500">Guests in this household</legend>
             <div className="mt-1 space-y-2">
               {form.members.map((m, i) => (
                 <div key={i} className="flex gap-2">
+                  {/* .portal-input sets width:100% outside Tailwind's layers, so
+                      utility widths lose to it; size these two explicitly or the
+                      select swallows the row and the name box collapses */}
                   <input
                     value={m.fullName}
                     onChange={(e) =>
                       set("members", form.members.map((x, j) => (j === i ? { ...x, fullName: e.target.value } : x)))
                     }
-                    placeholder="Full name"
-                    className="portal-input flex-1"
+                    placeholder={`Guest ${i + 1} — full name`}
+                    aria-label={`Guest ${i + 1} name`}
+                    className="portal-input"
+                    style={{ flex: "1 1 auto", minWidth: 0 }}
                   />
                   <select
                     value={m.ageGroup}
                     onChange={(e) =>
                       set("members", form.members.map((x, j) => (j === i ? { ...x, ageGroup: e.target.value as "adult" | "child" } : x)))
                     }
-                    className="portal-input w-auto"
+                    aria-label={`Guest ${i + 1} age group`}
+                    className="portal-input"
+                    style={{ width: "7.5rem", flex: "0 0 auto" }}
                   >
                     <option value="adult">Adult</option>
                     <option value="child">Child</option>
@@ -151,7 +169,7 @@ export function FamilyForm({
                 onClick={() => set("members", [...form.members, { fullName: "", ageGroup: "adult" }])}
                 className="portal-link"
               >
-                + add member
+                + add another guest
               </button>
             </div>
           </fieldset>
@@ -185,7 +203,29 @@ export function FamilyForm({
 
         {error && <p className="mt-4 text-sm text-red-600" role="alert">{error}</p>}
 
-        <div className="mt-6 flex justify-end gap-2">
+        {confirmDelete && (
+          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900" role="alertdialog" aria-labelledby="delete-family-q">
+            <p id="delete-family-q" className="font-medium">Delete {form.name || "this family"}?</p>
+            <p className="mt-1 text-red-800">Their guests, invitations and any RSVPs they sent are removed for good. Links already emailed to them stop working.</p>
+            <div className="mt-3 flex gap-2">
+              <button type="button" onClick={remove} disabled={pending} className="portal-button disabled:opacity-40" style={{ background: "#b91c1c" }}>
+                {pending ? "Deleting…" : "Yes, delete family"}
+              </button>
+              <button type="button" onClick={() => setConfirmDelete(false)} disabled={pending} className="portal-button-secondary">Keep</button>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-6 flex flex-wrap justify-end gap-2">
+          {form.familyId && !confirmDelete && (
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              className="portal-button-secondary mr-auto text-red-700"
+            >
+              Delete family
+            </button>
+          )}
           <button
             onClick={() => onClose(false)}
             className="portal-button-secondary"

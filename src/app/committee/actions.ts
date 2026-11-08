@@ -7,6 +7,7 @@ import { db } from "@/db/client";
 import { families, guests, eventInvites, events } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
 import { issueInvites } from "@/lib/invites";
+import { deleteFamily, recordRsvpForFamily } from "@/lib/household";
 
 /* Admin may act on any wedding (passes it explicitly); committee is pinned
    to their own. Every action re-resolves this server-side — never trust input. */
@@ -79,4 +80,28 @@ export async function sendInvitesAction(input: unknown) {
   const results = await issueInvites(weddingId, parsed.data.familyIds, parsed.data.type);
   revalidatePath("/committee");
   return { ok: true as const, results };
+}
+
+const idsSchema = z.object({ weddingId: z.string().uuid(), familyId: z.string().uuid() });
+
+export async function deleteFamilyAction(input: unknown): Promise<{ ok: boolean; error?: string }> {
+  const parsed = idsSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "invalid input" };
+  const weddingId = await scopedWeddingId(parsed.data.weddingId);
+  if (!weddingId) return { ok: false, error: "forbidden" };
+  const res = await deleteFamily(weddingId, parsed.data.familyId);
+  revalidatePath("/committee");
+  revalidatePath("/couple");
+  return res;
+}
+
+export async function recordRsvpAction(input: { weddingId: string } & Record<string, unknown>): Promise<{ ok: boolean; error?: string }> {
+  const weddingParsed = z.string().uuid().safeParse(input?.weddingId);
+  if (!weddingParsed.success) return { ok: false, error: "invalid input" };
+  const weddingId = await scopedWeddingId(weddingParsed.data);
+  if (!weddingId) return { ok: false, error: "forbidden" };
+  const res = await recordRsvpForFamily(weddingId, input);
+  revalidatePath("/committee");
+  revalidatePath("/couple");
+  return res;
 }

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { sendInvitesAction } from "./actions";
 import { FamilyForm, type FamilyDraft } from "./FamilyForm";
+import { RsvpEditor, type RsvpTarget } from "./RsvpEditor";
 
 export type Row = {
   id: string;
@@ -38,6 +39,7 @@ export function FamilyTable({
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<FamilyDraft | "new" | null>(null);
+  const [rsvpFor, setRsvpFor] = useState<RsvpTarget | null>(null);
   const [pending, startTransition] = useTransition();
   const [flash, setFlash] = useState<string | null>(null);
 
@@ -200,7 +202,22 @@ export function FamilyTable({
                     <span className="text-xs text-neutral-400">never</span>
                   )}
                 </td>
-                <td className="text-right">
+                <td className="whitespace-nowrap text-right">
+                  <button
+                    onClick={() =>
+                      setRsvpFor({
+                        familyId: r.id,
+                        name: r.name,
+                        memberCount: r.members.length,
+                        events: events.filter((e) => r.eventIds.includes(e.id)),
+                        current: r.rsvpByEvent,
+                      })
+                    }
+                    className="portal-link mr-4"
+                    aria-label={`Record RSVP for ${r.name}`}
+                  >
+                    RSVP
+                  </button>
                   <button
                     onClick={() =>
                       setEditing({
@@ -231,6 +248,17 @@ export function FamilyTable({
           </tbody>
         </table>
       </div>
+
+      {rsvpFor && (
+        <RsvpEditor
+          weddingId={weddingId}
+          target={rsvpFor}
+          onClose={(saved) => {
+            setRsvpFor(null);
+            if (saved) { setFlash(`RSVP saved for ${rsvpFor.name}`); router.refresh(); }
+          }}
+        />
+      )}
 
       {editing && (
         <FamilyForm
