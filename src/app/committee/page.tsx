@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { eq, inArray, desc } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events, families, guests, eventInvites, rsvps, emailLog } from "@/db/schema";
@@ -24,6 +25,7 @@ export default async function CommitteePage({
   }
 
   const [wedding] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
+  const coupleHref = staff.role === "admin" ? `/couple?wedding=${weddingId}` : "/couple";
   const evs = await db.select().from(events).where(eq(events.weddingId, weddingId)).orderBy(events.sortOrder);
   const summary = await getRsvpSummary(weddingId);
   const fams = await db.select().from(families).where(eq(families.weddingId, weddingId)).orderBy(families.createdAt);
@@ -64,15 +66,32 @@ export default async function CommitteePage({
       <div className="portal-shell">
       <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3">
         <div className="max-w-2xl">
-          <p className="portal-eyebrow">Guest operations</p>
+          {/* couples and admins arrive here from their dashboard; give them the way back.
+              Committee members live here — /couple isn't theirs, so no link. */}
+          {staff.role === "committee" ? (
+            <p className="portal-eyebrow">Guest operations</p>
+          ) : (
+            <p className="portal-eyebrow">
+              {staff.role === "admin" && (
+                <><Link href="/admin" className="hover:text-stone-950">All weddings</Link><span className="mx-1 text-stone-300">/</span></>
+              )}
+              <Link href={coupleHref} className="hover:text-stone-950">{wedding.brideName} &amp; {wedding.groomName}</Link>
+              <span className="mx-1 text-stone-300">/</span> guest list
+            </p>
+          )}
           <h1 className="portal-heading mt-2">{wedding.brideName} &amp; {wedding.groomName}</h1>
           <p className="portal-subheading mt-3">
             Keep households, invitations, and event headcounts in one place. The couple sees the totals; you have the detail.
           </p>
         </div>
-        <a href={`/w/${wedding.slug}`} className="portal-button-secondary" target="_blank" rel="noreferrer">
-          View wedding site ↗
-        </a>
+        <div className="flex flex-wrap gap-2">
+          {staff.role !== "committee" && (
+            <Link href={coupleHref} className="portal-button-secondary">← Back to dashboard</Link>
+          )}
+          <a href={`/w/${wedding.slug}`} className="portal-button-secondary" target="_blank" rel="noreferrer">
+            View wedding site ↗
+          </a>
+        </div>
       </header>
 
       {/* per-event summary strip */}

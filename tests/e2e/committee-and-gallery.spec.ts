@@ -85,3 +85,10 @@ test("the couple can switch the gallery off and back on", async ({ page }) => {
   await page.goto("/w/ananya-weds-arjun");
   await expect(page.getByRole("heading", { name: "Gallery" })).toBeVisible();
 });
+
+test("the couple can get from the guest list back to their dashboard", async ({ page }) => {
+  await signIn(page, "couple@example.com");
+  await page.goto("/committee");
+  await page.getByRole("link", { name: "← Back to dashboard" }).click();
+  await expect(page).toHaveURL(/\/couple$/);
+});
