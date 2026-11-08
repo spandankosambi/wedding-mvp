@@ -143,12 +143,19 @@ test("a family can be saved without an email", async ({ page }) => {
   await row.getByRole("button", { name: "edit" }).click();
   await page.getByText("+ add another guest").click();
   await page.getByLabel("Guest 2 name").fill("Sonu");
+  await expect(page.getByLabel("Guest 2 phone")).toHaveCount(0); // contact opens on demand
+  await page.getByLabel("Guest 2 contact details").click();
+  await expect(page.getByLabel("Guest 2 phone")).toBeVisible();
+  await page.getByLabel("Guest 2 is the primary adult").check({ force: true }); // the visible ★ covers the radio
   await page.getByLabel("Guest 2 phone").fill("+91 98765 43210");
-  await page.getByLabel("Guest 2 is the primary adult").check();
+  await page.getByText("+ add another guest").click();
+  await page.getByLabel("Guest 3 name").fill("Swara");
+  await page.getByText("+ add another guest").click();
+  await page.getByLabel("Guest 4 name").fill("Sanjay");
   await page.getByLabel("Guest 2 age group").selectOption("child"); // a child can't stay primary…
   await expect(page.getByLabel("Guest 1 is the primary adult")).toBeChecked(); // …it moves to an adult
   await page.getByLabel("Guest 2 age group").selectOption("adult");
-  await page.getByLabel("Guest 2 is the primary adult").check();
+  await page.getByLabel("Guest 2 is the primary adult").check({ force: true }); // the visible ★ covers the radio
   if (shots) await page.getByRole("dialog").screenshot({ path: `${shots}/family-primary.png` });
   await page.getByRole("button", { name: "Save family" }).click();
   await expect(row.getByText("Sonu")).toBeVisible();

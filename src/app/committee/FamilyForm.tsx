@@ -12,6 +12,8 @@ export type FamilyDraft = {
   eventIds: string[];
 };
 
+const COMPACT = { padding: "0.45rem 0.6rem", fontSize: "0.875rem" } as const;
+
 type DraftMember = { id?: string; fullName: string; ageGroup: "adult" | "child"; email: string; phone: string; isPrimary: boolean };
 
 /** The edit-dialog draft for a family row, from either the Families or the Guests view. */
@@ -50,6 +52,10 @@ export function FamilyForm({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // contact rows opened by hand (the primary's, and any with details, always show)
+  const [openContact, setOpenContact] = useState<Set<number>>(new Set());
+  const toggleContact = (i: number) =>
+    setOpenContact((o) => { const n = new Set(o); if (n.has(i)) n.delete(i); else n.add(i); return n; });
 
   function set<K extends keyof FamilyDraft>(key: K, value: FamilyDraft[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -67,8 +73,10 @@ export function FamilyForm({
     setForm((f) => ({ ...f, members: withPrimary(f.members.map((m, j) => (j === i ? { ...m, ageGroup } : m))) }));
   const setPrimary = (i: number) =>
     setForm((f) => ({ ...f, members: f.members.map((m, j) => ({ ...m, isPrimary: j === i })) }));
-  const removeMember = (i: number) =>
+  const removeMember = (i: number) => {
     setForm((f) => ({ ...f, members: withPrimary(f.members.filter((_, j) => j !== i)) }));
+    setOpenContact((o) => new Set([...o].filter((j) => j !== i).map((j) => (j > i ? j - 1 : j))));
+  };
 
   function save() {
     setError(null);
@@ -147,91 +155,116 @@ export function FamilyForm({
           </div>
 
           <fieldset>
-            <legend className="text-xs font-medium uppercase tracking-wide text-neutral-500">Guests in this household</legend>
-            <p className="mt-1 text-xs text-neutral-500">
-              Email and phone are optional for everyone. The <span className="font-medium text-neutral-700">primary adult</span> is who the invite goes to, by email or WhatsApp.
-            </p>
-            <div className="mt-2 space-y-2">
-              {form.members.map((m, i) => (
-                <div key={i} className={`rounded-xl border p-2.5 ${m.isPrimary ? "border-amber-300 bg-amber-50/40" : "border-neutral-200 bg-white"}`}>
-                  <div className="flex gap-2">
-                    {/* .portal-input sets width:100% outside Tailwind's layers, so
-                        utility widths lose to it; size these two explicitly or the
-                        select swallows the row and the name box collapses */}
-                    <input
-                      value={m.fullName}
-                      onChange={(e) => setMember(i, { fullName: e.target.value })}
-                      placeholder={`Guest ${i + 1} — full name`}
-                      autoFocus={!!focusGuestId && m.id === focusGuestId}
-                      aria-label={`Guest ${i + 1} name`}
-                      className="portal-input"
-                      style={{ flex: "1 1 auto", minWidth: 0 }}
-                    />
-                    <select
-                      value={m.ageGroup}
-                      onChange={(e) => setAge(i, e.target.value as "adult" | "child")}
-                      aria-label={`Guest ${i + 1} age group`}
-                      className="portal-input"
-                      style={{ width: "7.5rem", flex: "0 0 auto" }}
-                    >
-                      <option value="adult">Adult</option>
-                      <option value="child">Child</option>
-                    </select>
-                    <button
-                      type="button"
-                      aria-label={`Remove guest ${i + 1}`}
-                      onClick={() => removeMember(i)}
-                      disabled={form.members.length === 1}
-                      className="portal-icon-button h-auto w-10 text-neutral-400 hover:text-neutral-700 disabled:opacity-30"
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <input
-                      type="email"
-                      value={m.email}
-                      onChange={(e) => setMember(i, { email: e.target.value })}
-                      placeholder="Email (optional)"
-                      aria-label={`Guest ${i + 1} email`}
-                      className="portal-input"
-                      style={{ flex: "1 1 11rem", minWidth: 0, padding: "0.5rem 0.65rem", fontSize: "0.8125rem" }}
-                    />
-                    <input
-                      type="tel"
-                      inputMode="tel"
-                      value={m.phone}
-                      onChange={(e) => setMember(i, { phone: e.target.value })}
-                      placeholder="Phone (optional)"
-                      maxLength={30}
-                      aria-label={`Guest ${i + 1} phone`}
-                      className="portal-input"
-                      style={{ flex: "1 1 9rem", minWidth: 0, padding: "0.5rem 0.65rem", fontSize: "0.8125rem" }}
-                    />
-                    <label className={`flex items-center gap-1.5 whitespace-nowrap text-xs ${m.ageGroup === "child" ? "text-neutral-300" : "text-neutral-700"}`}
-                      title={m.ageGroup === "child" ? "The primary must be an adult" : undefined}>
-                      <input
-                        type="radio"
-                        name="primary-guest"
-                        checked={m.isPrimary}
-                        disabled={m.ageGroup === "child"}
-                        onChange={() => setPrimary(i)}
-                        aria-label={`Guest ${i + 1} is the primary adult`}
-                        className="h-4 w-4"
-                      />
-                      Primary adult
-                    </label>
-                  </div>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => set("members", [...form.members, { fullName: "", ageGroup: "adult", email: "", phone: "", isPrimary: !form.members.some((x) => x.isPrimary) }])}
-                className="portal-link"
-              >
-                + add another guest
-              </button>
+            <div className="flex items-baseline justify-between gap-3">
+              <legend className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                Guests in this household <span className="normal-case tracking-normal text-neutral-400">· {form.members.length}</span>
+              </legend>
+              <span className="text-xs text-neutral-400">★ primary adult gets the invite</span>
             </div>
+            <ul className="mt-2 divide-y divide-neutral-100 overflow-hidden rounded-xl border border-neutral-200 bg-white">
+              {form.members.map((m, i) => {
+                const showContact = m.isPrimary || openContact.has(i) || !!m.email || !!m.phone;
+                return (
+                  <li key={i} className={m.isPrimary ? "bg-amber-50/50" : ""}>
+                    <div className="flex items-center gap-1.5 px-2 py-1.5">
+                      {/* .portal-input sets width:100% outside Tailwind's layers, so size
+                          these explicitly or the select swallows the row */}
+                      <input
+                        value={m.fullName}
+                        onChange={(e) => setMember(i, { fullName: e.target.value })}
+                        placeholder={`Guest ${i + 1} — full name`}
+                        autoFocus={!!focusGuestId && m.id === focusGuestId}
+                        aria-label={`Guest ${i + 1} name`}
+                        className="portal-input"
+                        style={{ ...COMPACT, flex: "1 1 auto", minWidth: 0, borderColor: "transparent", background: "transparent" }}
+                        onFocus={(e) => { e.currentTarget.style.borderColor = "#d9d5cd"; e.currentTarget.style.background = "#fff"; }}
+                        onBlur={(e) => { e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.background = "transparent"; }}
+                      />
+                      <select
+                        value={m.ageGroup}
+                        onChange={(e) => setAge(i, e.target.value as "adult" | "child")}
+                        aria-label={`Guest ${i + 1} age group`}
+                        className="portal-input"
+                        style={{ ...COMPACT, width: "5.75rem", flex: "0 0 auto", color: m.ageGroup === "child" ? "#8a837a" : undefined }}
+                      >
+                        <option value="adult">Adult</option>
+                        <option value="child">Child</option>
+                      </select>
+                      <label
+                        title={m.ageGroup === "child" ? "The primary must be an adult" : m.isPrimary ? "Primary adult — gets the invite" : "Make primary adult"}
+                        className={`relative grid h-8 w-8 flex-none place-items-center rounded-lg text-base ${
+                          m.ageGroup === "child" ? "cursor-not-allowed text-neutral-200"
+                            : m.isPrimary ? "cursor-pointer text-amber-500" : "cursor-pointer text-neutral-300 hover:bg-neutral-50 hover:text-amber-400"}`}
+                      >
+                        <input
+                          type="radio"
+                          name="primary-guest"
+                          checked={m.isPrimary}
+                          disabled={m.ageGroup === "child"}
+                          onChange={() => setPrimary(i)}
+                          aria-label={`Guest ${i + 1} is the primary adult`}
+                          className="peer sr-only"
+                        />
+                        <span aria-hidden className="rounded peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2">{m.isPrimary ? "★" : "☆"}</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => toggleContact(i)}
+                        disabled={m.isPrimary}
+                        aria-expanded={showContact}
+                        aria-label={`Guest ${i + 1} contact details`}
+                        title={m.isPrimary ? "The primary adult's contact is shown below" : "Email or phone"}
+                        className={`grid h-8 w-8 flex-none place-items-center rounded-lg text-sm ${
+                          m.email || m.phone ? "text-neutral-700" : "text-neutral-300"} hover:bg-neutral-50 disabled:cursor-default disabled:hover:bg-transparent`}
+                      >
+                        ✉
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Remove guest ${i + 1}`}
+                        onClick={() => removeMember(i)}
+                        disabled={form.members.length === 1}
+                        className="grid h-8 w-8 flex-none place-items-center rounded-lg text-neutral-400 hover:bg-neutral-50 hover:text-neutral-700 disabled:opacity-30"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    {showContact && (
+                      <div className="flex flex-wrap items-center gap-1.5 px-2 pb-2" style={{ paddingLeft: "0.75rem" }}>
+                        {m.isPrimary && <span className="w-full text-[11px] font-medium text-amber-800">Invite goes here — email, WhatsApp or both (optional)</span>}
+                        <input
+                          type="email"
+                          value={m.email}
+                          onChange={(e) => setMember(i, { email: e.target.value })}
+                          placeholder="Email"
+                          aria-label={`Guest ${i + 1} email`}
+                          className="portal-input"
+                          style={{ ...COMPACT, flex: "1 1 12rem", minWidth: 0 }}
+                        />
+                        <input
+                          type="tel"
+                          inputMode="tel"
+                          value={m.phone}
+                          onChange={(e) => setMember(i, { phone: e.target.value })}
+                          placeholder="Phone / WhatsApp"
+                          maxLength={30}
+                          aria-label={`Guest ${i + 1} phone`}
+                          className="portal-input"
+                          style={{ ...COMPACT, flex: "1 1 9rem", minWidth: 0 }}
+                        />
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+            <button
+              type="button"
+              onClick={() => set("members", [...form.members, { fullName: "", ageGroup: "adult", email: "", phone: "", isPrimary: !form.members.some((x) => x.isPrimary) }])}
+              className="portal-link mt-2"
+            >
+              + add another guest
+            </button>
           </fieldset>
 
           <fieldset>
