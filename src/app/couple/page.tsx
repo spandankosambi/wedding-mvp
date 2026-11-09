@@ -68,6 +68,9 @@ export default async function CouplePage({
           <PrintInvitation
             weddingId={weddingId}
             admin={staff.role === "admin"}
+            theme={wedding.theme}
+            brideName={wedding.brideName}
+            groomName={wedding.groomName}
             brideParents={wedding.brideParents}
             groomParents={wedding.groomParents}
             contactPhone={wedding.contactPhone}

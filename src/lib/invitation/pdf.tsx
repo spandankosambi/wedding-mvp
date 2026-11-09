@@ -1,9 +1,18 @@
 import path from "node:path";
 import QRCode from "qrcode";
-import { Document, Page, View, Text, Image, Svg, Line as SvgLine, Path, Font, renderToBuffer } from "@react-pdf/renderer";
+import {
+  Document, Page, View, Text, Image, Svg, Line as SvgLine, Path, Circle, Font, renderToBuffer,
+} from "@react-pdf/renderer";
+import type { Style } from "@react-pdf/stylesheet";
 import type { Theme } from "@/themes/catalog";
 import type { Invitation, EventCard, InsertCard, Details, Line } from "./content";
 import { BLEED_MM, SAFE_MM, trimSize, type InvitationOptions } from "./options";
+import {
+  paletteFor, topMotif, dividerMotif, cornerMotif, toranMotif, borderMotif, archPath, crest, scriptRuns, ARCH_CROWN,
+  type Motif, type Ink, type Palette,
+} from "./motifs";
+
+export { paletteFor };
 
 /* ── fonts (bundled, SIL Open Font Licence) ───────────────────── */
 const FONT_DIR = path.join(process.cwd(), "src/lib/invitation/fonts");
@@ -27,30 +36,22 @@ function registerFonts() {
       { src: f("cinzel-latin-600-normal.woff"), fontWeight: 600 },
     ],
   });
+  // Devanagari (Hindi, Marathi, Sanskrit): one face, answering every weight
+  const deva = f("tiro-devanagari-sanskrit-devanagari-400-normal.woff");
+  const devaIt = f("tiro-devanagari-sanskrit-devanagari-400-italic.woff");
+  Font.register({
+    family: "Tiro",
+    fonts: [400, 500, 600, 700].flatMap((fontWeight) => [
+      { src: deva, fontWeight },
+      { src: devaIt, fontWeight, fontStyle: "italic" as const },
+    ]),
+  });
+  Font.register({
+    family: "GreatVibes",
+    fonts: [400, 500, 600, 700].map((fontWeight) => ({ src: f("great-vibes-latin-400-normal.woff"), fontWeight })),
+  });
   Font.registerHyphenationCallback((w) => [w]); // never split names
   fontsReady = true;
-}
-
-/* ── colours: each website theme, as card stock or as ink on white ── */
-type Palette = { bg: string; ink: string; accent: string; soft: string };
-const THEME_CARD: Record<Theme, Palette> = {
-  "ivory-editorial": { bg: "#faf8f4", ink: "#232323", accent: "#b5730a", soft: "#5d5a55" },
-  "raj-mahal": { bg: "#2a0a10", ink: "#f5ead6", accent: "#d4a439", soft: "#d9c8aa" },
-  "gulaab-rococo": { bg: "#fdf2f6", ink: "#4a2b3a", accent: "#c2447a", soft: "#7a5a69" },
-  "mehfil-noor": { bg: "#0d1220", ink: "#e8ecf7", accent: "#d3aa5e", soft: "#aeb7cc" },
-  "pichwai-bagh": { bg: "#0e2b22", ink: "#f1e9d6", accent: "#c9a145", soft: "#c9c0a8" },
-  "neel-chhapa": { bg: "#f6f6f0", ink: "#22335e", accent: "#b8492d", soft: "#4f5b78" },
-};
-const LIGHT_INK: Record<Theme, Omit<Palette, "bg">> = {
-  "ivory-editorial": { ink: "#232323", accent: "#b5730a", soft: "#5d5a55" },
-  "raj-mahal": { ink: "#4a0f1a", accent: "#9a6f1a", soft: "#6b4a42" },
-  "gulaab-rococo": { ink: "#4a2b3a", accent: "#c2447a", soft: "#7a5a69" },
-  "mehfil-noor": { ink: "#1a2440", accent: "#8a6a2a", soft: "#4f5870" },
-  "pichwai-bagh": { ink: "#0e3b2c", accent: "#8f6f22", soft: "#4c5f55" },
-  "neel-chhapa": { ink: "#22335e", accent: "#b8492d", soft: "#4f5b78" },
-};
-export function paletteFor(theme: Theme, colours: InvitationOptions["colours"]): Palette {
-  return colours === "theme" ? THEME_CARD[theme] : { bg: "#ffffff", ...LIGHT_INK[theme] };
 }
 
 /* ── geometry ─────────────────────────────────────────────────── */
@@ -78,8 +79,38 @@ export function sheetFor(o: InvitationOptions): Sheet & { trim: [number, number]
   return { trim, page: [w + 2 * (BLEED_MM + slug), h + 2 * (BLEED_MM + slug)], x: slug, y: slug, bleed: BLEED_MM, marks: o.cropMarks };
 }
 
-/* ── drawing ──────────────────────────────────────────────────── */
-type Ctx = { p: Palette; s: number; trim: [number, number]; sheet: Sheet };
+/* ── drawing context ──────────────────────────────────────────── */
+type Ctx = { p: Palette; s: number; trim: [number, number]; sheet: Sheet; theme: Theme; o: InvitationOptions; script: boolean };
+const ink = (p: Palette, k?: Ink) => (k ? p[k === "hair" ? "hair" : k] : undefined);
+
+/** Text that switches to the Devanagari face for Hindi/Marathi/Sanskrit runs. */
+function Tx({ style, children }: { style?: Style; children: string }) {
+  const runs = scriptRuns(children);
+  if (runs.length === 1 && !runs[0].deva) return <Text style={style}>{children}</Text>;
+  return (
+    <Text style={style}>
+      {runs.map((r, i) => (r.deva ? <Text key={i} style={{ fontFamily: "Tiro", letterSpacing: 0 }}>{r.text}</Text> : r.text))}
+    </Text>
+  );
+}
+
+/** A motif at `width` points wide (height follows), in the card's colours. */
+function Draw({ m, width, p, style }: { m: Motif; width: number; p: Palette; style?: Style }) {
+  const height = (width * m.h) / m.w;
+  return (
+    <Svg width={width} height={height} viewBox={`0 0 ${m.w} ${m.h}`} style={style}>
+      {m.shapes.map((sh, i) => {
+        const paint = {
+          fill: ink(p, sh.fill) ?? "none", stroke: ink(p, sh.stroke), strokeWidth: sh.sw,
+          ...(sh.op !== undefined ? { opacity: sh.op } : {}),
+        };
+        if (sh.k === "circle") return <Circle key={i} cx={sh.cx} cy={sh.cy} r={sh.r} {...paint} />;
+        if (sh.k === "line") return <SvgLine key={i} x1={sh.x1} y1={sh.y1} x2={sh.x2} y2={sh.y2} stroke={paint.stroke ?? p.hair} strokeWidth={sh.sw ?? 1} {...(sh.op !== undefined ? { opacity: sh.op } : {})} />;
+        return <Path key={i} d={sh.d} {...paint} />;
+      })}
+    </Svg>
+  );
+}
 
 function CropMarks({ sheet, trim }: { sheet: Sheet; trim: [number, number] }) {
   const [pw, ph] = sheet.page;
@@ -102,30 +133,62 @@ function CropMarks({ sheet, trim }: { sheet: Sheet; trim: [number, number] }) {
   );
 }
 
-function Divider({ c, width = 60 }: { c: Ctx; width?: number }) {
-  const w = width * c.s, d = 3.2 * c.s;
-  return (
-    <Svg width={w} height={d * 2 + 2} style={{ marginVertical: 5 * c.s }}>
-      <SvgLine x1={0} y1={d + 1} x2={w / 2 - d - 3} y2={d + 1} stroke={c.p.accent} strokeWidth={0.6} />
-      <Path d={`M ${w / 2} 1 L ${w / 2 + d} ${d + 1} L ${w / 2} ${2 * d + 1} L ${w / 2 - d} ${d + 1} Z`} fill={c.p.accent} />
-      <SvgLine x1={w / 2 + d + 3} y1={d + 1} x2={w} y2={d + 1} stroke={c.p.accent} strokeWidth={0.6} />
-    </Svg>
-  );
+/** Insets (pt, from the bleed edge) where the frame and the content sit. */
+function layout(c: Ctx, withToran: boolean) {
+  const { sheet, trim, o, s } = c;
+  const bleedW = pt(trim[0] + 2 * sheet.bleed), bleedH = pt(trim[1] + 2 * sheet.bleed);
+  const frame = pt(sheet.bleed + SAFE_MM * 0.55);
+  const band = o.patternBorder ? pt(Math.min(trim[0], trim[1]) * 0.035 + 1.5) : 0;
+  const inside = frame + (band || pt(1.4)); // just inside the border / the double rule
+  const pad = pt(3) * Math.min(1.3, s);
+  const toranH = withToran ? toranMotif(bleedW - 2 * inside, s).h : 0;
+  const archBox = { x: inside + pt(2), y: inside + pt(2) + toranH * 0.35, w: bleedW - 2 * (inside + pt(2)), h: bleedH - 2 * (inside + pt(2)) - toranH * 0.35 };
+  const crown = o.frame === "arch" ? archBox.w * ARCH_CROWN * 0.62 : 0;
+  const content = {
+    left: inside + pad + (o.frame === "arch" ? pt(2) : 0),
+    right: inside + pad + (o.frame === "arch" ? pt(2) : 0),
+    top: inside + pad + Math.max(toranH * 0.9, crown) + (o.frame === "arch" && toranH ? toranH * 0.35 : 0),
+    bottom: inside + pad + (o.frame === "arch" ? pt(2) : 0),
+  };
+  return { bleedW, bleedH, frame, band, inside, toranH, archBox, content };
 }
 
-/** One card: background to the bleed, a double frame, content centred inside. */
-function Card({ c, children }: { c: Ctx; children: React.ReactNode }) {
-  const { sheet, trim, p } = c;
-  const bleedW = trim[0] + 2 * sheet.bleed, bleedH = trim[1] + 2 * sheet.bleed;
-  const frame = sheet.bleed + SAFE_MM * 0.55;
-  const inner = sheet.bleed + SAFE_MM + 3;
+/** One card: background to the bleed, frame and ornaments, content centred inside. */
+function Card({ c, children, toran = c.o.toran }: { c: Ctx; children: React.ReactNode; toran?: boolean }) {
+  const { sheet, trim, p, o, theme, s } = c;
+  const L = layout(c, toran);
+  const cornerW = Math.min(pt(13), pt(Math.min(trim[0], trim[1]) * 0.1)) * Math.max(0.8, Math.min(1.2, s));
+  const ci = L.inside + pt(1);
   return (
     <Page size={[pt(sheet.page[0]), pt(sheet.page[1])]} style={{ backgroundColor: sheet.marks ? "#ffffff" : p.bg }}>
-      <View style={{ position: "absolute", left: pt(sheet.x), top: pt(sheet.y), width: pt(bleedW), height: pt(bleedH), backgroundColor: p.bg }}>
-        <View style={{ position: "absolute", left: pt(frame), top: pt(frame), right: pt(frame), bottom: pt(frame), borderWidth: 0.9, borderColor: p.accent }} />
-        <View style={{ position: "absolute", left: pt(frame + 1.4), top: pt(frame + 1.4), right: pt(frame + 1.4), bottom: pt(frame + 1.4), borderWidth: 0.35, borderColor: p.accent }} />
+      <View style={{ position: "absolute", left: pt(sheet.x), top: pt(sheet.y), width: L.bleedW, height: L.bleedH, backgroundColor: p.bg }}>
+        {/* edge: a patterned band, or the classic double rule */}
+        {o.patternBorder ? (
+          <Draw m={borderMotif(L.bleedW - 2 * L.frame, L.bleedH - 2 * L.frame, L.band)} width={L.bleedW - 2 * L.frame} p={p} style={{ position: "absolute", left: L.frame, top: L.frame }} />
+        ) : (
+          <>
+            <View style={{ position: "absolute", left: L.frame, top: L.frame, right: L.frame, bottom: L.frame, borderWidth: 0.9, borderColor: p.accent }} />
+            <View style={{ position: "absolute", left: L.frame + pt(1.4), top: L.frame + pt(1.4), right: L.frame + pt(1.4), bottom: L.frame + pt(1.4), borderWidth: 0.35, borderColor: p.accent }} />
+          </>
+        )}
+        {/* the arch, double-ruled */}
+        {o.frame === "arch" && (
+          <Svg style={{ position: "absolute", left: 0, top: 0 }} width={L.bleedW} height={L.bleedH}>
+            <Path d={archPath(L.archBox.x, L.archBox.y, L.archBox.w, L.archBox.h)} stroke={p.accent} strokeWidth={1} fill="none" />
+            <Path d={archPath(L.archBox.x + pt(1.6), L.archBox.y + pt(2.4), L.archBox.w - pt(3.2), L.archBox.h - pt(2.4))} stroke={p.accent} strokeWidth={0.4} fill="none" />
+            <Circle cx={L.archBox.x + L.archBox.w / 2} cy={L.archBox.y - pt(1.2)} r={pt(0.9)} fill={p.accent2} />
+          </Svg>
+        )}
+        {/* the theme's corners */}
+        {([[false, false], [true, false], [false, true], [true, true]] as const).filter(([, fy]) => !toran || fy).map(([fx, fy], i) => (
+          <Draw key={i} m={cornerMotif(theme, fx, fy)} width={cornerW} p={p}
+            style={{ position: "absolute", left: fx ? L.bleedW - ci - cornerW : ci, top: fy ? L.bleedH - ci - cornerW : ci }} />
+        ))}
+        {toran && (
+          <Draw m={toranMotif(L.bleedW - 2 * L.inside, s)} width={L.bleedW - 2 * L.inside} p={p} style={{ position: "absolute", left: L.inside, top: L.inside }} />
+        )}
         <View style={{
-          position: "absolute", left: pt(inner), top: pt(inner), right: pt(inner), bottom: pt(inner),
+          position: "absolute", left: L.content.left, top: L.content.top, right: L.content.right, bottom: L.content.bottom,
           alignItems: "center", justifyContent: "center", color: p.ink, fontFamily: "Cormorant", fontWeight: 500, textAlign: "center",
         }}>
           {children}
@@ -136,58 +199,127 @@ function Card({ c, children }: { c: Ctx; children: React.ReactNode }) {
   );
 }
 
-/** Phone numbers never break across lines. */
-const keepNumbers = (l: string) => l.replace(/(?<=[\d+])\s+(?=\d)/g, "\u00a0");
+/** The content box's height in pt, to size the type to fit. */
+function contentHeight(c: Ctx, toran: boolean) {
+  const L = layout(c, toran);
+  return L.bleedH - L.content.top - L.content.bottom;
+}
+function contentWidth(c: Ctx) {
+  const L = layout(c, false);
+  return L.bleedW - L.content.left - L.content.right;
+}
 
+/** Phone numbers never break across lines. */
+const keepNumbers = (l: string) => l.replace(/(?<=[\d+])\s+(?=\d)/g, " ");
 const nameSize = (name: string, base: number) => base * Math.min(1, 13 / Math.max(name.length, 1));
 
-function Kicker({ c, children, size = 7.2 }: { c: Ctx; children: React.ReactNode; size?: number }) {
-  return <Text style={{ fontFamily: "Cinzel", fontWeight: 600, fontSize: size * c.s, letterSpacing: 1.6 * c.s, color: c.p.accent }}>{children}</Text>;
+function Kicker({ c, children, size = 7.2 }: { c: Ctx; children: string; size?: number }) {
+  return <Tx style={{ fontFamily: "Cinzel", fontWeight: 600, fontSize: size * c.s, letterSpacing: 1.6 * c.s, color: c.p.accent }}>{children}</Tx>;
 }
 
 function Wording({ c, lines }: { c: Ctx; lines: Line[] }) {
   return (
     <>
       {lines.map((l, i) => (
-        <Text key={i} style={l.name
+        <Tx key={i} style={l.name
           ? { fontWeight: 600, fontSize: 11.5 * c.s, marginVertical: 1.5 * c.s }
           : { fontStyle: "italic", fontSize: 10.5 * c.s, color: c.p.soft, lineHeight: 1.25 }}>
           {l.t}
-        </Text>
+        </Tx>
       ))}
     </>
   );
 }
 
-function Front({ c, inv }: { c: Ctx; inv: Invitation }) {
-  const f = inv.front;
+function Crest({ c, text, size }: { c: Ctx; text: string; size: number }) {
+  const cr = crest(c.o.monogramStyle);
+  const fs = (cr.textSize * size) / 100 * Math.min(1, 5 / Math.max(text.replace(/\s/g, "").length, 2));
   return (
-    <Card c={c}>
+    <View style={{ width: size, height: size, marginBottom: 5 * c.s }}>
+      <Draw m={cr} width={size} p={c.p} />
+      <View style={{ position: "absolute", left: 0, right: 0, top: (cr.textY * size) / 100 - fs * 0.62, alignItems: "center" }}>
+        <Tx style={{ fontFamily: "Cinzel", fontWeight: 600, fontSize: fs, color: c.p.accent, letterSpacing: fs * 0.08 }}>{text}</Tx>
+      </View>
+    </View>
+  );
+}
+
+function Photo({ c, src, width }: { c: Ctx; src: string; width: number }) {
+  const arch = c.o.photoShape === "arch";
+  const h = arch ? width * 1.25 : width;
+  const radius = arch ? { borderTopLeftRadius: width / 2, borderTopRightRadius: width / 2 } : { borderRadius: width / 2 };
+  return (
+    <View style={{ width: width + 4, height: h + 4, padding: 1.5, borderWidth: 0.9, borderColor: c.p.accent, ...radius, marginBottom: 6 * c.s }}>
+      <Image src={src} style={{ width: width - 1, height: h - 1, objectFit: "cover", ...radius }} />
+    </View>
+  );
+}
+
+/* ── front ────────────────────────────────────────────────────── */
+
+function Front({ c: base, inv }: { c: Ctx; inv: Invitation }) {
+  const f = inv.front;
+  const o = base.o;
+  const photoFront = o.photo && o.photoPlace === "front";
+  const crestTop = f.monogram && !photoFront;
+  const crestSeal = f.monogram && photoFront;
+  const width = contentWidth(base);
+  const photoW = Math.min(width * 0.36, 110 * base.s);
+  const nameBase = o.nameFont === "script" ? 36 : 30;
+
+  // how tall the stack is at scale 1 (pt), to grow or shrink the type to fit
+  const top = topMotif(base.theme), div = dividerMotif(base.theme);
+  const need =
+    (crestTop ? 42 : 0) + (photoFront ? (photoW / base.s) * (o.photoShape === "arch" ? 1.25 : 1) + 10 : 0) +
+    (f.invocation ? 12 : 0) + f.shloka.length * 13 + (78 * top.h) / top.w + 10 +
+    f.lead.reduce((n, l) => n + (l.name ? 16 : 14), 0) + 10 +
+    nameSize(f.first, nameBase) * 1.15 + 18 + nameSize(f.second, nameBase) * 1.15 +
+    (f.namesLocal ? 17 : 0) + (f.secondOf ? 14 : 0) + (f.after.length ? f.after.length * 14 + 8 : 0) +
+    16 + 14 + (f.place ? 14 : 0) + (f.enclosed ? 20 : 0) + (crestSeal ? 30 : 0);
+  const room = contentHeight(base, o.toran);
+  const grow = o.fill === "fuller" ? 1.4 : 1;
+  const k = Math.max(0.55, Math.min(grow, room / (need * base.s)));
+  const c = { ...base, s: base.s * k };
+  const nameStyle = (name: string) => o.nameFont === "script"
+    ? { fontFamily: "GreatVibes", fontWeight: 400, fontSize: nameSize(name, nameBase) * c.s, lineHeight: 1.15, color: c.p.accent }
+    : { fontWeight: 700, fontSize: nameSize(name, nameBase) * c.s, lineHeight: 1.05 };
+
+  return (
+    <Card c={base}>
+      {crestTop && <Crest c={c} text={f.monogram!} size={38 * c.s} />}
+      {photoFront && <Photo c={c} src={o.photo!} width={photoW * k} />}
       {f.invocation && <Kicker c={c}>{f.invocation}</Kicker>}
-      {f.invocation && <Divider c={c} />}
-      <View style={{ marginTop: 4 * c.s, alignItems: "center" }}><Wording c={c} lines={f.lead} /></View>
-      <Text style={{ fontWeight: 700, fontSize: nameSize(f.first, 30) * c.s, marginTop: 9 * c.s, lineHeight: 1.05 }}>{f.first}</Text>
-      <Text style={{ fontStyle: "italic", fontSize: 13 * c.s, color: c.p.accent, marginVertical: 2 * c.s }}>{f.joiner}</Text>
-      <Text style={{ fontWeight: 700, fontSize: nameSize(f.second, 30) * c.s, lineHeight: 1.05 }}>{f.second}</Text>
-      {f.secondOf && <Text style={{ fontStyle: "italic", fontSize: 9.5 * c.s, color: c.p.soft, marginTop: 3 * c.s }}>{f.secondOf}</Text>}
+      {f.shloka.map((l, i) => (
+        <Tx key={i} style={{ fontStyle: "italic", fontSize: 9.5 * c.s, color: c.p.accent, marginTop: i ? 0 : 2 * c.s }}>{l}</Tx>
+      ))}
+      <Draw m={top} width={78 * c.s} p={c.p} style={{ marginVertical: 5 * c.s }} />
+      <View style={{ alignItems: "center" }}><Wording c={c} lines={f.lead} /></View>
+      <Tx style={{ ...nameStyle(f.first), marginTop: 9 * c.s }}>{f.first}</Tx>
+      <Tx style={{ fontStyle: "italic", fontSize: 13 * c.s, color: c.p.accent, marginVertical: 2 * c.s }}>{f.joiner}</Tx>
+      <Tx style={nameStyle(f.second)}>{f.second}</Tx>
+      {f.namesLocal && <Tx style={{ fontSize: 12 * c.s, marginTop: 3 * c.s, color: c.p.ink }}>{f.namesLocal}</Tx>}
+      {f.secondOf && <Tx style={{ fontStyle: "italic", fontSize: 9.5 * c.s, color: c.p.soft, marginTop: 3 * c.s }}>{f.secondOf}</Tx>}
       {f.after.length > 0 && <View style={{ marginTop: 8 * c.s, alignItems: "center" }}><Wording c={c} lines={f.after} /></View>}
-      <Divider c={c} />
+      <Draw m={div} width={56 * c.s} p={c.p} style={{ marginVertical: 6 * c.s }} />
       <Kicker c={c} size={8.5}>{f.date}</Kicker>
-      {f.place && <Text style={{ fontSize: 10 * c.s, marginTop: 3 * c.s, color: c.p.soft }}>{f.place}</Text>}
-      {f.enclosed && <Text style={{ fontStyle: "italic", fontSize: 8.5 * c.s, marginTop: 9 * c.s, color: c.p.soft }}>{f.enclosed}</Text>}
+      {f.place && <Tx style={{ fontSize: 10 * c.s, marginTop: 3 * c.s, color: c.p.soft }}>{f.place}</Tx>}
+      {f.enclosed && <Tx style={{ fontStyle: "italic", fontSize: 8.5 * c.s, marginTop: 9 * c.s, color: c.p.soft }}>{f.enclosed}</Tx>}
+      {crestSeal && <View style={{ marginTop: 8 * c.s }}><Crest c={c} text={f.monogram!} size={26 * c.s} /></View>}
     </Card>
   );
 }
 
+/* ── back and event cards ─────────────────────────────────────── */
+
 function EventBlock({ c, e, width }: { c: Ctx; e: EventCard; width: string }) {
   return (
     <View style={{ width, alignItems: "center", paddingHorizontal: 4 * c.s, marginBottom: 9 * c.s }} wrap={false}>
-      <Text style={{ fontWeight: 700, fontSize: 15 * c.s, lineHeight: 1.1 }}>{e.name}</Text>
+      <Tx style={{ fontWeight: 700, fontSize: 15 * c.s, lineHeight: 1.1 }}>{e.name}</Tx>
       {e.sideLabel && <Kicker c={c} size={5.6}>{e.sideLabel}</Kicker>}
       <Text style={{ fontSize: 9.5 * c.s, marginTop: 2 * c.s }}>{e.date} · {e.time}</Text>
-      <Text style={{ fontWeight: 600, fontSize: 10 * c.s, marginTop: 1.5 * c.s }}>{e.venue}</Text>
-      <Text style={{ fontSize: 8.8 * c.s, color: c.p.soft }}>{e.address}</Text>
-      {e.dressCode && <Text style={{ fontStyle: "italic", fontSize: 8.5 * c.s, color: c.p.soft, marginTop: 1 * c.s }}>Dress: {e.dressCode}</Text>}
+      <Tx style={{ fontWeight: 600, fontSize: 10 * c.s, marginTop: 1.5 * c.s }}>{e.venue}</Tx>
+      <Tx style={{ fontSize: 8.8 * c.s, color: c.p.soft }}>{e.address}</Tx>
+      {e.dressCode && <Tx style={{ fontStyle: "italic", fontSize: 8.5 * c.s, color: c.p.soft, marginTop: 1 * c.s }}>{`Dress: ${e.dressCode}`}</Tx>}
     </View>
   );
 }
@@ -204,7 +336,7 @@ function DetailsBlock({ c, d, qr }: { c: Ctx; d: Details; qr: string | null }) {
         {hasRsvp && (
           <View style={col(textW)}>
             <Kicker c={c} size={6.6}>R.S.V.P.</Kicker>
-            {d.rsvp.map((l, i) => <Text key={i} style={{ fontSize: 9 * c.s, marginTop: i ? 1 * c.s : 2 * c.s }}>{keepNumbers(l)}</Text>)}
+            {d.rsvp.map((l, i) => <Tx key={i} style={{ fontSize: 9 * c.s, marginTop: i ? 1 * c.s : 2 * c.s }}>{keepNumbers(l)}</Tx>)}
             {d.replyBy && <Text style={{ fontStyle: "italic", fontSize: 8.5 * c.s, color: c.p.soft, marginTop: 2 * c.s }}>{d.replyBy}</Text>}
           </View>
         )}
@@ -219,11 +351,11 @@ function DetailsBlock({ c, d, qr }: { c: Ctx; d: Details; qr: string | null }) {
         {hasComp && (
           <View style={col(textW)}>
             <Text style={{ fontStyle: "italic", fontSize: 9 * c.s, color: c.p.accent }}>With best compliments from</Text>
-            {d.compliments.map((l, i) => <Text key={i} style={{ fontSize: 9 * c.s, marginTop: i ? 0 : 2 * c.s }}>{l}</Text>)}
+            {d.compliments.map((l, i) => <Tx key={i} style={{ fontSize: 9 * c.s, marginTop: i ? 0 : 2 * c.s }}>{l}</Tx>)}
           </View>
         )}
       </View>
-      {d.note && <Text style={{ fontStyle: "italic", fontSize: 9.5 * c.s, marginTop: 8 * c.s, color: c.p.accent }}>{d.note}</Text>}
+      {d.note && <Tx style={{ fontStyle: "italic", fontSize: 9.5 * c.s, marginTop: 8 * c.s, color: c.p.accent }}>{d.note}</Tx>}
     </View>
   );
 }
@@ -231,20 +363,24 @@ function DetailsBlock({ c, d, qr }: { c: Ctx; d: Details; qr: string | null }) {
 function Back({ c, inv, qr }: { c: Ctx; inv: Invitation; qr: string | null }) {
   const evs = inv.back.events;
   const d = inv.back.details;
+  const photo = c.o.photo && c.o.photoPlace === "back" ? c.o.photo : null;
   const hasDetails = d.rsvp.length || d.replyBy || d.compliments.length || d.note || qr;
-  if (!evs.length && !hasDetails) return null;
+  if (!evs.length && !hasDetails && !photo) return null;
   // shrink the type so a long programme still fits the back of the card
   const ratio = c.trim[0] / c.trim[1];
   const cols = (ratio > 1.15 && evs.length > 2) || (ratio > 0.95 && evs.length > 3) ? 2 : 1;
   const rows = Math.ceil(evs.length / cols);
-  const usable = pt(c.trim[1] - 2 * (SAFE_MM + 3));
-  const need = (evs.length ? 26 : 0) + rows * 74 + (hasDetails ? (qr ? 105 : 60) : 0);
-  const k = Math.max(0.55, Math.min(1, usable / (need * c.s)));
+  const photoW = Math.min(contentWidth(c) * 0.32, 90 * c.s);
+  const need = (photo ? (photoW / c.s) * (c.o.photoShape === "arch" ? 1.25 : 1) + 12 : 0) +
+    (evs.length ? 30 : 0) + rows * 74 + (hasDetails ? (qr ? 105 : 60) : 0);
+  const k = Math.max(0.5, Math.min(1, contentHeight(c, false) / (need * c.s)));
   const cc = { ...c, s: c.s * k };
+  const div = dividerMotif(c.theme);
   return (
-    <Card c={c}>
+    <Card c={c} toran={false}>
+      {photo && <Photo c={cc} src={photo} width={photoW * k} />}
       {evs.length > 0 && <Kicker c={cc} size={8}>The Celebrations</Kicker>}
-      {evs.length > 0 && <Divider c={cc} />}
+      {evs.length > 0 && <Draw m={div} width={50 * cc.s} p={c.p} style={{ marginVertical: 5 * cc.s }} />}
       <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
         {evs.map((e) => <EventBlock key={e.id} c={cc} e={e} width={cols === 2 ? "50%" : "100%"} />)}
       </View>
@@ -253,22 +389,31 @@ function Back({ c, inv, qr }: { c: Ctx; inv: Invitation; qr: string | null }) {
   );
 }
 
-function Insert({ c, card }: { c: Ctx; card: InsertCard }) {
+function Insert({ c: base, card }: { c: Ctx; card: InsertCard }) {
   const e = card.event;
+  const o = base.o;
+  const top = topMotif(base.theme), div = dividerMotif(base.theme);
+  const need = 16 + 14 + (66 * top.h) / top.w + 12 + nameSize(e.name, 28) * 1.2 + (e.sideLabel ? 10 : 0) + 18 +
+    (card.couple ? 17 : 0) + 16 + 12 + 13 + 20 + 13 + (e.dressCode ? 17 : 0);
+  const k = Math.max(0.55, Math.min(o.fill === "fuller" ? 1.4 : 1, contentHeight(base, o.toran) / (need * base.s)));
+  const c = { ...base, s: base.s * k };
   return (
-    <Card c={c}>
-      <Text style={{ fontWeight: 600, fontSize: 11 * c.s }}>{card.hosts}</Text>
-      <Text style={{ fontStyle: "italic", fontSize: 10.5 * c.s, color: c.p.soft, marginTop: 2 * c.s }}>{card.request}</Text>
-      <Text style={{ fontWeight: 700, fontSize: nameSize(e.name, 28) * c.s, marginTop: 8 * c.s, lineHeight: 1.05 }}>{e.name}</Text>
+    <Card c={base}>
+      <Tx style={{ fontWeight: 600, fontSize: 11 * c.s }}>{card.hosts}</Tx>
+      <Tx style={{ fontStyle: "italic", fontSize: 10.5 * c.s, color: c.p.soft, marginTop: 2 * c.s }}>{card.request}</Tx>
+      <Draw m={top} width={66 * c.s} p={c.p} style={{ marginVertical: 5 * c.s }} />
+      <Tx style={o.nameFont === "script"
+        ? { fontFamily: "GreatVibes", fontWeight: 400, fontSize: nameSize(e.name, 34) * c.s, lineHeight: 1.15, color: c.p.accent }
+        : { fontWeight: 700, fontSize: nameSize(e.name, 28) * c.s, lineHeight: 1.05 }}>{e.name}</Tx>
       {e.sideLabel && <Kicker c={c} size={6}>{e.sideLabel}</Kicker>}
-      <Text style={{ fontStyle: "italic", fontSize: 10 * c.s, color: c.p.soft, marginTop: 6 * c.s }}>{card.occasion}</Text>
-      {card.couple && <Text style={{ fontWeight: 600, fontSize: 13 * c.s, marginTop: 2 * c.s }}>{card.couple}</Text>}
-      <Divider c={c} />
+      <Tx style={{ fontStyle: "italic", fontSize: 10 * c.s, color: c.p.soft, marginTop: 6 * c.s }}>{card.occasion}</Tx>
+      {card.couple && <Tx style={{ fontWeight: 600, fontSize: 13 * c.s, marginTop: 2 * c.s }}>{card.couple}</Tx>}
+      <Draw m={div} width={50 * c.s} p={c.p} style={{ marginVertical: 6 * c.s }} />
       <Kicker c={c} size={8}>{e.date}</Kicker>
       <Text style={{ fontSize: 10 * c.s, marginTop: 2 * c.s }}>{e.time}</Text>
-      <Text style={{ fontWeight: 600, fontSize: 11.5 * c.s, marginTop: 7 * c.s }}>{e.venue}</Text>
-      <Text style={{ fontSize: 9.5 * c.s, color: c.p.soft }}>{e.address}</Text>
-      {e.dressCode && <Text style={{ fontStyle: "italic", fontSize: 9 * c.s, color: c.p.soft, marginTop: 5 * c.s }}>Dress: {e.dressCode}</Text>}
+      <Tx style={{ fontWeight: 600, fontSize: 11.5 * c.s, marginTop: 7 * c.s }}>{e.venue}</Tx>
+      <Tx style={{ fontSize: 9.5 * c.s, color: c.p.soft }}>{e.address}</Tx>
+      {e.dressCode && <Tx style={{ fontStyle: "italic", fontSize: 9 * c.s, color: c.p.soft, marginTop: 5 * c.s }}>{`Dress: ${e.dressCode}`}</Tx>}
     </Card>
   );
 }
@@ -278,7 +423,7 @@ export async function renderInvitationPdf(inv: Invitation, o: InvitationOptions,
   registerFonts();
   const sheet = sheetFor(o);
   const trim = sheet.trim;
-  const c: Ctx = { p: paletteFor(theme, o.colours), s: Math.min(trim[0], trim[1]) / 127, trim, sheet };
+  const c: Ctx = { p: paletteFor(theme, o.colours), s: Math.min(trim[0], trim[1]) / 127, trim, sheet, theme, o, script: o.nameFont === "script" };
   const qr = inv.back.details.qrUrl
     ? await QRCode.toDataURL(inv.back.details.qrUrl, { margin: 1, width: 360, errorCorrectionLevel: "M", color: { dark: "#000000", light: "#ffffff" } })
     : null;

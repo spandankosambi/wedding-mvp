@@ -79,7 +79,7 @@ describe("wording", () => {
   it("RSVP, compliments, reply-by date and QR as asked", () => {
     const inv = buildInvitation(wedding, events, o({ rsvp: "Rajesh  +91 98220 12345\n\nSonu  +91 98765 43210", compliments: "Kosambi family", dressCode: false }), "https://x/w/p");
     expect(inv.back.details).toEqual({
-      rsvp: ["Rajesh  +91 98220 12345", "Sonu  +91 98765 43210"], replyBy: "Kindly reply by 10 January 2027",
+      rsvp: ["Rajesh +91 98220 12345", "Sonu +91 98765 43210"], replyBy: "Kindly reply by 10 January 2027",
       compliments: ["Kosambi family"], note: null, qrUrl: "https://x/w/p",
     });
     expect(inv.back.events[0].dressCode).toBeNull();
@@ -96,4 +96,37 @@ describe("the PDF", () => {
     expect(text.startsWith("%PDF")).toBe(true);
     expect(text.match(/\/Type \/Page\b/g)).toHaveLength(2 + 3);
   }, 30_000);
+});
+
+describe("design", () => {
+  it("splits Hindi, Marathi and Sanskrit from English so each prints in its own face", async () => {
+    const { scriptRuns } = await import("@/lib/invitation/motifs");
+    expect(scriptRuns("Spandan (स्पंदन) & Pooja")).toEqual([
+      { text: "Spandan (", deva: false }, { text: "स्पंदन", deva: true }, { text: ") & Pooja", deva: false },
+    ]);
+    expect(scriptRuns("॥ श्री गणेशाय नमः ॥")).toEqual([{ text: "॥ श्री गणेशाय नमः ॥", deva: true }]);
+  });
+  it("suggests monogram letters with the hosting side first", async () => {
+    const { defaultMonogram } = await import("@/lib/invitation/options");
+    expect(defaultMonogram("Pooja", "Spandan", "groom")).toBe("S | P");
+    expect(defaultMonogram("Pooja", "Spandan", "both")).toBe("P | S");
+  });
+  it("takes only a real image as the photo", () => {
+    expect(invitationSchema.safeParse({ photo: "data:image/jpeg;base64,/9j/AAAA" }).success).toBe(true);
+    expect(invitationSchema.safeParse({ photo: "javascript:alert(1)" }).success).toBe(false);
+  });
+  it("draws every design option, with Devanagari, into the PDF", async () => {
+    const png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    for (const theme of ["raj-mahal", "ivory-editorial", "gulaab-rococo", "mehfil-noor", "pichwai-bagh", "neel-chhapa"] as const) {
+      const opts = o({
+        frame: "arch", toran: true, patternBorder: true, monogram: true, monogramStyle: "wreath", nameFont: "script", fill: "fuller",
+        photo: png, photoPlace: theme === "raj-mahal" ? "back" : "front", invocation: "॥ श्री गणेशाय नमः ॥", namesLocal: "पूजा • स्पंदन",
+      });
+      const pdf = await renderInvitationPdf(buildInvitation(wedding, events, opts, "https://x/w/p"), opts, theme);
+      const text = pdf.toString("latin1");
+      expect(text.match(/\/Type \/Page\b/g)).toHaveLength(2);
+      expect(text).toContain("Tiro");
+      expect(text).toContain("GreatVibes");
+    }
+  }, 120_000);
 });

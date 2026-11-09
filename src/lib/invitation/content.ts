@@ -1,6 +1,6 @@
 import { eventForSide, type Side } from "@/lib/sides";
 import { fmtEventTime, fmtWeddingDate } from "@/lib/format";
-import type { InvitationOptions } from "./options";
+import { defaultMonogram, type InvitationOptions } from "./options";
 
 /**
  * The words on the printed cards, decided separately from how they're drawn
@@ -35,6 +35,12 @@ export type FrontCard = {
   place: string | null;
   /** separate layout: the event cards are enclosed */
   enclosed: string | null;
+  /** a blessing or shloka under the invocation, line by line */
+  shloka: string[];
+  /** the names again in Hindi/Marathi */
+  namesLocal: string | null;
+  /** the monogram crest's letters, when it's on */
+  monogram: string | null;
 };
 
 export type EventCard = {
@@ -65,7 +71,8 @@ export const fmtCardDate = (d: Date) =>
 
 const phrase = (t: string): Line => ({ t });
 const named = (t: string): Line => ({ t, name: true });
-const lines = (s: string) => s.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+/** one line per row; repeated spaces collapse (the PDF would hyphenate at them) */
+const lines = (s: string) => s.split(/\r?\n/).map((l) => l.replace(/[ \t\u00a0]+/g, " ").trim()).filter(Boolean);
 
 /** The events a version of the card shows: the couple's pick if they made
     one, else every event on the site that's open to that side. */
@@ -85,13 +92,13 @@ export function buildInvitation(w: CardWedding, all: CardEvent[], o: InvitationO
     front = {
       invocation, lead: [named(bp ?? `The family of ${bride}`), phrase("request the pleasure of your company"), phrase("at the wedding of their daughter")],
       first: bride, joiner: "with", second: groom, secondOf: gp ? `son of ${gp}` : null, after: [],
-      date: "", place: null, enclosed: null,
+      date: "", place: null, enclosed: null, shloka: [], namesLocal: null, monogram: null,
     };
   } else if (o.version === "groom") {
     front = {
       invocation, lead: [named(gp ?? `The family of ${groom}`), phrase("request the pleasure of your company"), phrase("at the wedding of their son")],
       first: groom, joiner: "with", second: bride, secondOf: bp ? `daughter of ${bp}` : null, after: [],
-      date: "", place: null, enclosed: null,
+      date: "", place: null, enclosed: null, shloka: [], namesLocal: null, monogram: null,
     };
   } else {
     const blessings = bp && gp ? [phrase("With the blessings of"), named(bp), phrase("and"), named(gp)]
@@ -100,9 +107,12 @@ export function buildInvitation(w: CardWedding, all: CardEvent[], o: InvitationO
       invocation, lead: [...blessings, phrase("together with their families")],
       first: bride, joiner: "&", second: groom, secondOf: null,
       after: [phrase("request the pleasure of your company"), phrase("at their wedding")],
-      date: "", place: null, enclosed: null,
+      date: "", place: null, enclosed: null, shloka: [], namesLocal: null, monogram: null,
     };
   }
+  front.shloka = lines(o.shloka);
+  front.namesLocal = o.namesLocal || null;
+  front.monogram = o.monogram ? o.monogramText || defaultMonogram(bride, groom, o.version) : null;
   front.date = fmtWeddingDate(w.weddingDate);
   front.place = w.city;
 

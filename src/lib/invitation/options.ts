@@ -29,7 +29,20 @@ export const CUSTOM_MAX_MM = 297;
 export const BLEED_MM = 3;
 export const SAFE_MM = 6;
 
-const text = (max: number) => z.string().trim().max(max).default("");
+/** free text: trimmed, runs of spaces collapsed (line breaks kept) */
+const text = (max: number) => z.string().max(max).transform((v) => v.replace(/[ \t\u00a0]+/g, " ").trim()).default("");
+
+/** Crest shapes for the couple's monogram. */
+export const MONOGRAM_STYLES = ["circle", "diamond", "arch", "wreath", "lotus"] as const;
+export type MonogramStyle = (typeof MONOGRAM_STYLES)[number];
+/** A shrunk photo is ~300 KB; this leaves room and stays under upload limits. */
+export const MAX_PHOTO_CHARS = 2_800_000;
+
+/** Default crest letters: the hosting side's initial first. */
+export function defaultMonogram(bride: string, groom: string, version: "bride" | "groom" | "both"): string {
+  const b = bride.trim().charAt(0).toUpperCase(), g = groom.trim().charAt(0).toUpperCase();
+  return version === "groom" ? `${g} | ${b}` : `${b} | ${g}`;
+}
 
 export const invitationSchema = z.object({
   /** whose invitation: the bride's family, the groom's, or a joint card */
@@ -58,6 +71,29 @@ export const invitationSchema = z.object({
   qr: z.boolean().default(true),
   dressCode: z.boolean().default(true),
   replyBy: z.boolean().default(true),
+
+  /* ── page 2: design. The theme's own motifs are always drawn. ── */
+  /** "classic" double-rule frame, or a mehrab (temple/palace arch) */
+  frame: z.enum(["classic", "arch"]).default("classic"),
+  /** a hanging toran of mango leaves and marigolds across the top */
+  toran: z.boolean().default(false),
+  /** a patterned band inside the edge, like a block-printed border */
+  patternBorder: z.boolean().default(false),
+  monogram: z.boolean().default(false),
+  /** the crest's letters, e.g. "S | P" */
+  monogramText: z.string().trim().max(9).default(""),
+  monogramStyle: z.enum(MONOGRAM_STYLES).default("circle"),
+  /** "fuller": bigger type that fills the card */
+  fill: z.enum(["classic", "fuller"]).default("classic"),
+  nameFont: z.enum(["serif", "script"]).default("serif"),
+  /** a photo, already shrunk in the browser, as a data URL */
+  photo: z.string().max(MAX_PHOTO_CHARS).regex(/^data:image\/(jpeg|png);base64,[A-Za-z0-9+/=]+$/).optional(),
+  photoPlace: z.enum(["front", "back"]).default("front"),
+  photoShape: z.enum(["arch", "circle"]).default("arch"),
+  /** a blessing or shloka, in any language (Devanagari prints too) */
+  shloka: text(200),
+  /** the couple's names in Hindi/Marathi, printed under the names */
+  namesLocal: text(80),
 }).refine((o) => o.size !== "custom" || (o.customWidthMm !== undefined && o.customHeightMm !== undefined), {
   message: "a custom size needs a width and a height",
 });
