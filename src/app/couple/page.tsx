@@ -7,6 +7,9 @@ import { SummaryCards } from "./SummaryCards";
 import { NonResponders } from "./NonResponders";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { ShareCard } from "./ShareCard";
+import { PrintInvitation } from "./PrintInvitation";
+import { events } from "@/db/schema";
+import { eventLabel } from "@/lib/sides";
 import { fmtWeddingDate } from "@/lib/format";
 import Link from "next/link";
 
@@ -30,6 +33,7 @@ export default async function CouplePage({
 
   const [wedding] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
   const summary = await getRsvpSummary(weddingId);
+  const evs = await db.select().from(events).where(eq(events.weddingId, weddingId)).orderBy(events.sortOrder);
   const fams = await db.select().from(families).where(eq(families.weddingId, weddingId)).orderBy(families.createdAt);
   const famIds = fams.map((f) => f.id);
   const [allGuests, allRsvps] = famIds.length
@@ -61,6 +65,15 @@ export default async function CouplePage({
         <div className="flex flex-wrap gap-2">
           <Link href={staff.role === "admin" ? `/couple/site?wedding=${weddingId}` : "/couple/site"} className="portal-button">Edit your site</Link>
           <Link href={staff.role === "admin" ? `/committee?wedding=${weddingId}` : "/committee"} className="portal-button-secondary">Guest list &amp; invites</Link>
+          <PrintInvitation
+            weddingId={weddingId}
+            admin={staff.role === "admin"}
+            brideParents={wedding.brideParents}
+            groomParents={wedding.groomParents}
+            contactPhone={wedding.contactPhone}
+            hasDeadline={!!wedding.rsvpDeadline}
+            events={evs.map((e) => ({ id: e.id, label: eventLabel(e), side: e.side, isPublished: e.isPublished }))}
+          />
         </div>
       </header>
 
