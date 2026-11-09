@@ -55,6 +55,9 @@ export const events = pgTable("events", {
   description: text("description"),
   isPublished: boolean("is_published").notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),
+  /** "both" = common to bride's and groom's families; otherwise this side's
+      own version (e.g. the bride's Haldi at her home), invited by side. */
+  side: sideEnum("side").notNull().default("both"),
 });
 
 export const families = pgTable("families", {

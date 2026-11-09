@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { upsertFamily, deleteFamilyAction } from "./actions";
 import { invitesAll } from "@/lib/travel";
+import { eventForSide, type Side } from "@/lib/sides";
 
 export type FamilyDraft = {
   familyId?: string;
@@ -47,7 +48,7 @@ export function FamilyForm({
   onClose,
 }: {
   weddingId: string;
-  events: { id: string; name: string }[];
+  events: { id: string; name: string; side: Side }[];
   draft: FamilyDraft | null;
   /** opened from the Guests view: put the cursor in this guest's name */
   focusGuestId?: string;
@@ -69,14 +70,19 @@ export function FamilyForm({
   /* Travel & Stay ticks itself when every event is selected. Otherwise it's
      the committee's call: while the box still matches that rule it keeps
      following it; once they've set it by hand, it stays as they left it. */
-  const allIds = events.map((e) => e.id);
+  // a family sees common events plus their own side's ("both" sees all)
+  const idsFor = (side: Side) => events.filter((e) => eventForSide(e.side, side)).map((e) => e.id);
+  const visible = events.filter((e) => eventForSide(e.side, form.side));
+  const withEvents = (f: FamilyDraft, side: Side, eventIds: string[]): FamilyDraft => {
+    const was = invitesAll(f.eventIds, idsFor(f.side)), now = invitesAll(eventIds, idsFor(side));
+    const showTravel = now ? true : f.showTravel === was ? now : f.showTravel;
+    return { ...f, side, eventIds, showTravel };
+  };
   const toggleEvent = (id: string) =>
-    setForm((f) => {
-      const eventIds = f.eventIds.includes(id) ? f.eventIds.filter((x) => x !== id) : [...f.eventIds, id];
-      const was = invitesAll(f.eventIds, allIds), now = invitesAll(eventIds, allIds);
-      const showTravel = now ? true : f.showTravel === was ? now : f.showTravel;
-      return { ...f, eventIds, showTravel };
-    });
+    setForm((f) => withEvents(f, f.side, f.eventIds.includes(id) ? f.eventIds.filter((x) => x !== id) : [...f.eventIds, id]));
+  // switching side drops the other side's own events
+  const changeSide = (side: Side) =>
+    setForm((f) => withEvents(f, side, f.eventIds.filter((id) => idsFor(side).includes(id))));
 
   /* Exactly one primary, always an adult when there is one */
   const withPrimary = (members: DraftMember[]): DraftMember[] => {
@@ -153,7 +159,7 @@ export function FamilyForm({
               <span className="text-xs font-medium uppercase tracking-wide text-neutral-500">Side</span>
               <select
                 value={form.side}
-                onChange={(e) => set("side", e.target.value as FamilyDraft["side"])}
+                onChange={(e) => changeSide(e.target.value as Side)}
                 className="portal-input mt-1"
               >
                 <option value="bride">Bride</option>
@@ -287,8 +293,13 @@ export function FamilyForm({
 
           <fieldset>
             <legend className="text-xs font-medium uppercase tracking-wide text-neutral-500">Invited to</legend>
+            {events.some((e) => e.side !== "both") && form.side !== "both" && (
+              <p className="mt-1 text-xs text-neutral-500">
+                Showing common and {form.side === "bride" ? "bride" : "groom"}&apos;s-side events.
+              </p>
+            )}
             <div className="mt-1 flex flex-wrap gap-2">
-              {events.map((e) => {
+              {visible.map((e) => {
                 const on = form.eventIds.includes(e.id);
                 return (
                   <button
@@ -316,7 +327,7 @@ export function FamilyForm({
               />
               <span>
                 Show Travel &amp; Stay on their wedding site
-                <span className="block text-xs text-neutral-500">Ticked automatically when they&apos;re invited to every event.</span>
+                <span className="block text-xs text-neutral-500">Ticked automatically when they&apos;re invited to every event for their side.</span>
               </span>
             </label>
           </fieldset>

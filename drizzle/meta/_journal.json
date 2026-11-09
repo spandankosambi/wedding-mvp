@@ -64,6 +64,13 @@
       "when": 1794203894388,
       "tag": "0008_travel-visibility",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794206961221,
+      "tag": "0009_event-side",
+      "breakpoints": true
     }
   ]
 }

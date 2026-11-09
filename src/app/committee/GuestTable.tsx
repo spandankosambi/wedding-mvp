@@ -9,6 +9,7 @@ import { BulkRsvpDialog } from "./BulkRsvpDialog";
 import { FamilyForm, draftFromFamily, type FamilyDraft } from "./FamilyForm";
 import { openWhatsAppInvite } from "./whatsapp";
 import { useTravelToggle } from "./travel";
+import type { Side } from "@/lib/sides";
 import type { Row } from "./FamilyTable";
 
 const SIDE_BADGE: Record<Row["side"], string> = {
@@ -33,7 +34,7 @@ export function GuestTable({
   columns,
 }: {
   weddingId: string;
-  events: { id: string; name: string }[];
+  events: { id: string; name: string; side: Side }[];
   rows: Row[];
   columns: GuestColumn[];
 }) {

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { sendInvitesAction, bulkFamilyRsvpAction } from "./actions";
 import { useTravelToggle } from "./travel";
+import type { Side } from "@/lib/sides";
 import { FamilyForm, draftFromFamily, type FamilyDraft } from "./FamilyForm";
 import { RsvpEditor, type RsvpTarget } from "./RsvpEditor";
 import { BulkRsvpDialog } from "./BulkRsvpDialog";
@@ -38,7 +39,7 @@ export function FamilyTable({
   rows,
 }: {
   weddingId: string;
-  events: { id: string; name: string }[];
+  events: { id: string; name: string; side: Side }[];
   rows: Row[];
 }) {
   const router = useRouter();

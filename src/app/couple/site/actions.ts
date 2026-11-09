@@ -74,6 +74,7 @@ export async function saveEvent(formData: FormData) {
     venueName: str(formData, "venueName"), address: str(formData, "address"), mapUrl: str(formData, "mapUrl"),
     dressCode: str(formData, "dressCode"), description: str(formData, "description"),
     isPublished: formData.get("isPublished") === "on",
+    side: str(formData, "side") || "both",
   });
   done(ctx, id ? `event-${id}` : "events", r.ok ? undefined : r.error);
 }

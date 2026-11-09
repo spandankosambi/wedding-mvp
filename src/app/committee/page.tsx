@@ -5,6 +5,7 @@ import { weddings, events, families, guests, eventInvites, rsvps, emailLog } fro
 import { requireRole } from "@/lib/authz";
 import { getRsvpSummary } from "@/lib/rsvp";
 import { showsTravel } from "@/lib/travel";
+import { eventForSide, eventLabel } from "@/lib/sides";
 import { FamilyTable } from "./FamilyTable";
 import { GuestTable } from "./GuestTable";
 
@@ -43,7 +44,6 @@ export default async function CommitteePage({
       ])
     : [[], [], [], []];
 
-  const allEventIds = evs.map((e) => e.id);
   const rows = fams.map((f) => ({
     id: f.id,
     name: f.name,
@@ -56,7 +56,9 @@ export default async function CommitteePage({
     members: allGuests.filter((g) => g.familyId === f.id)
       .map((g) => ({ id: g.id, fullName: g.fullName, ageGroup: g.ageGroup, details: g.details ?? {}, email: g.email, phone: g.phone, isPrimary: g.isPrimary })),
     eventIds: allInvites.filter((i) => i.familyId === f.id).map((i) => i.eventId),
-    showTravel: showsTravel(f.showTravel, allInvites.filter((i) => i.familyId === f.id).map((i) => i.eventId), allEventIds),
+    // "every event" means every event open to their side
+    showTravel: showsTravel(f.showTravel, allInvites.filter((i) => i.familyId === f.id).map((i) => i.eventId),
+      evs.filter((e) => eventForSide(e.side, f.side)).map((e) => e.id)),
     rsvpByEvent: Object.fromEntries(
       allRsvps.filter((r) => r.familyId === f.id)
         .map((r) => [r.eventId, { status: r.status, headcount: r.headcount, note: r.note, guestIds: r.guestIds ?? null }]),
@@ -130,13 +132,13 @@ export default async function CommitteePage({
       {view === "families" ? (
         <FamilyTable
           weddingId={weddingId}
-          events={evs.map((e) => ({ id: e.id, name: e.name }))}
+          events={evs.map((e) => ({ id: e.id, name: eventLabel(e), side: e.side }))}
           rows={rows}
         />
       ) : (
         <GuestTable
           weddingId={weddingId}
-          events={evs.map((e) => ({ id: e.id, name: e.name }))}
+          events={evs.map((e) => ({ id: e.id, name: eventLabel(e), side: e.side }))}
           rows={rows}
           columns={wedding.guestColumns ?? []}
         />

@@ -70,6 +70,7 @@ export default async function RsvpPage({
           events={events.map((e) => ({
             id: e.id,
             name: e.name,
+            side: e.side,
             startsAtISO: e.startsAt.toISOString(),
             venueName: e.venueName,
             address: e.address,

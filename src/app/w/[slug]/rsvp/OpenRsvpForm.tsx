@@ -4,8 +4,9 @@ import { useState, useTransition } from "react";
 import { submitOpenRsvpAction } from "./actions";
 import { fmtEventDate, fmtEventTime } from "@/lib/format";
 import { DIET_OPTIONS, MAX_OPEN_HEADCOUNT_UI as MAX } from "./limits";
+import { eventForSide, sideLabel, type Side } from "@/lib/sides";
 
-type EventProp = { id: string; name: string; startsAtISO: string; venueName: string; address: string; dressCode: string | null };
+type EventProp = { id: string; name: string; side: Side; startsAtISO: string; venueName: string; address: string; dressCode: string | null };
 type Status = "attending" | "declined" | null;
 
 const field = { background: "var(--surface)", border: "1px solid var(--hairline)", color: "var(--ink)" } as const;
@@ -25,7 +26,9 @@ export function OpenRsvpForm({ slug, events }: { slug: string; events: EventProp
   const [done, setDone] = useState<{ editUrl: string; attending: string[] } | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const answered = events.filter((e) => statuses[e.id] !== null);
+  // once they say whose side they're from, only that side's events (and common ones)
+  const shown = side ? events.filter((e) => eventForSide(e.side, side)) : events;
+  const answered = shown.filter((e) => statuses[e.id] !== null);
   const canSubmit = name.trim().length >= 2 && (phone.trim() || email.trim()) && answered.length > 0 && !pending;
 
   function submit() {
@@ -114,7 +117,7 @@ export function OpenRsvpForm({ slug, events }: { slug: string; events: EventProp
 
       <p className="kicker mt-10">The celebrations</p>
       <ol className="mt-5 space-y-6">
-        {events.map((e) => {
+        {shown.map((e) => {
           const status = statuses[e.id];
           const startsAt = new Date(e.startsAtISO);
           return (
@@ -123,6 +126,9 @@ export function OpenRsvpForm({ slug, events }: { slug: string; events: EventProp
                 <h2 className="font-display text-3xl tracking-tight">{e.name}</h2>
                 <p className="kicker" style={{ letterSpacing: "0.22em" }}>{fmtEventDate(startsAt)} · {fmtEventTime(startsAt)}</p>
               </div>
+              {sideLabel(e.side) && (
+                <p className="kicker mt-2" style={{ color: "var(--accent)", letterSpacing: "0.18em" }}>{sideLabel(e.side)}</p>
+              )}
               <p className="mt-2 text-sm" style={{ color: "var(--ink-soft)" }}>
                 {e.venueName} — {e.address}{e.dressCode ? ` · Dress: ${e.dressCode}` : ""}
               </p>

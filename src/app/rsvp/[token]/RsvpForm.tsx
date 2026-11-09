@@ -3,10 +3,12 @@
 import { useState, useTransition } from "react";
 import { submitRsvpAction } from "../actions";
 import { fmtEventDate, fmtEventTime } from "@/lib/format";
+import { sideLabel, type Side } from "@/lib/sides";
 
 type EventProp = {
   id: string;
   name: string;
+  side: Side;
   startsAtISO: string;
   venueName: string;
   address: string;
@@ -97,6 +99,9 @@ export function RsvpForm({
                   {fmtEventDate(startsAt)} · {fmtEventTime(startsAt)}
                 </p>
               </div>
+              {sideLabel(e.side) && (
+                <p className="kicker mt-2" style={{ color: "var(--accent)", letterSpacing: "0.18em" }}>{sideLabel(e.side)}</p>
+              )}
               <p className="mt-2 text-sm" style={{ color: "var(--ink-soft)" }}>
                 {e.venueName} — {e.address}
                 {e.dressCode ? ` · Dress: ${e.dressCode}` : ""}

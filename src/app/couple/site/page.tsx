@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { EventSideField } from "./EventSideField";
+import { sideLabel } from "@/lib/sides";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events } from "@/db/schema";
@@ -135,6 +137,9 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                       <span className="w-6 text-xs tabular-nums text-neutral-400">{String(i + 1).padStart(2, "0")}</span>
                       <span className="min-w-0 flex-1">
                         <span className={`font-medium ${e.isPublished ? "" : "text-neutral-400 line-through decoration-neutral-300"}`}>{e.name}</span>
+                        {e.side !== "both" && (
+                          <span className="ml-2 rounded border border-neutral-200 px-1.5 py-0.5 text-xs text-neutral-600">{sideLabel(e.side)}</span>
+                        )}
                         <span className="ml-2 text-xs text-neutral-400">{p.date} · {p.time} · {e.venueName}</span>
                       </span>
                       {!e.isPublished && <span className="portal-badge">hidden</span>}
@@ -155,6 +160,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                         <Field label="Map link" hint="Google Maps share link"><input name="mapUrl" type="url" defaultValue={e.mapUrl ?? ""} maxLength={500} placeholder="https://maps.app.goo.gl/…" className="portal-input" /></Field>
                         <Field label="Dress code"><input name="dressCode" defaultValue={e.dressCode ?? ""} maxLength={80} placeholder="Yellows / Traditional / Cocktail" className="portal-input" /></Field>
                         <Field label="A line about it" className="md:col-span-2"><input name="description" defaultValue={e.description ?? ""} maxLength={400} className="portal-input" /></Field>
+                        <EventSideField initial={e.side} eventName={e.name} />
                         <label className="flex items-center gap-2 text-sm md:col-span-2">
                           <input type="checkbox" name="isPublished" defaultChecked={e.isPublished} className="h-4 w-4" />
                           Show this event on the site and RSVP form

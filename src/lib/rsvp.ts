@@ -3,6 +3,7 @@ import { eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events, families, guests, eventInvites, rsvps } from "@/db/schema";
 import { showsTravel } from "@/lib/travel";
+import { eventLabel, eventForSide } from "@/lib/sides";
 import { hashToken, isExpired } from "@/lib/tokens";
 import { rateLimit } from "@/lib/ratelimit";
 import { attendeesFromCount } from "@/lib/household";
@@ -25,13 +26,13 @@ export async function getFamilyByToken(token: string) {
   return {
     family: {
       id: family.id, name: family.name, side: family.side, relation: family.relation,
-      showTravel: showsTravel(family.showTravel, eventIds, allEvents.map((e) => e.id)),
+      showTravel: showsTravel(family.showTravel, eventIds, allEvents.filter((e) => eventForSide(e.side, family.side)).map((e) => e.id)),
     },
     wedding: { id: wedding.id, slug: wedding.slug, brideName: wedding.brideName, groomName: wedding.groomName, theme: wedding.theme, weddingDate: wedding.weddingDate },
     members: members.map((m) => ({ id: m.id, fullName: m.fullName, ageGroup: m.ageGroup })),
     events: evs.map((e) => {
       const r = existing.find((x) => x.eventId === e.id);
-      return { id: e.id, name: e.name, startsAt: e.startsAt, venueName: e.venueName, address: e.address, mapUrl: e.mapUrl, dressCode: e.dressCode,
+      return { id: e.id, name: e.name, side: e.side, startsAt: e.startsAt, venueName: e.venueName, address: e.address, mapUrl: e.mapUrl, dressCode: e.dressCode,
         rsvp: r ? { status: r.status, headcount: r.headcount, note: r.note, guestIds: r.guestIds ?? null } : null };
     }),
   };
@@ -99,7 +100,7 @@ export async function getRsvpSummary(weddingId: string) {
       n: sql<number>`count(*)::int`,
       heads: sql<number>`coalesce(sum(case when status = 'attending' then headcount else 0 end), 0)::int`,
     }).from(rsvps).where(eq(rsvps.eventId, e.id));
-    out.push({ eventId: e.id, eventName: e.name, invitedFamilies: invited[0].n, responded: resp[0].n, attendingHeadcount: resp[0].heads });
+    out.push({ eventId: e.id, eventName: eventLabel(e), invitedFamilies: invited[0].n, responded: resp[0].n, attendingHeadcount: resp[0].heads });
   }
   return out;
 }

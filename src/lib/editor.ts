@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
-import { weddings, events, type TravelInfo } from "@/db/schema";
+import { weddings, events, families, eventInvites, rsvps, type TravelInfo } from "@/db/schema";
 import { THEMES } from "@/themes/catalog";
 
 /* Everything the couple can change about their own site. Pure DB logic —
@@ -41,6 +41,7 @@ export const eventSchema = z.object({
   dressCode: optional(80),
   description: optional(400),
   isPublished: z.boolean().default(true),
+  side: z.enum(["bride", "groom", "both"]).default("both"),
 });
 
 export const travelSchema = z.object({
@@ -102,12 +103,26 @@ export async function upsertEvent(weddingId: string, input: unknown): Promise<Re
   if (id) {
     const [row] = await db.update(events).set(values)
       .where(and(eq(events.id, id), eq(events.weddingId, weddingId))).returning();
-    return row ? { ok: true, id: row.id } : { ok: false, error: "event not found" };
+    if (!row) return { ok: false, error: "event not found" };
+    if (row.side !== "both") await dropOtherSide(weddingId, row.id, row.side);
+    return { ok: true, id: row.id };
   }
   const existing = await db.select({ sortOrder: events.sortOrder }).from(events).where(eq(events.weddingId, weddingId));
   const sortOrder = existing.reduce((m, e) => Math.max(m, e.sortOrder), -1) + 1;
   const [row] = await db.insert(events).values({ ...values, weddingId, sortOrder }).returning();
   return { ok: true, id: row.id };
+}
+
+/** An event that became one side's own: the other side's households are no
+    longer invited to it (and their answers for it go with the invitation).
+    Households marked "both" stay invited. */
+async function dropOtherSide(weddingId: string, eventId: string, side: "bride" | "groom") {
+  const other = side === "bride" ? "groom" : "bride";
+  const theirs = (await db.select({ id: families.id }).from(families)
+    .where(and(eq(families.weddingId, weddingId), eq(families.side, other)))).map((f) => f.id);
+  if (!theirs.length) return;
+  await db.delete(eventInvites).where(and(eq(eventInvites.eventId, eventId), inArray(eventInvites.familyId, theirs)));
+  await db.delete(rsvps).where(and(eq(rsvps.eventId, eventId), inArray(rsvps.familyId, theirs)));
 }
 
 export async function setEventPublished(weddingId: string, eventId: string, isPublished: boolean): Promise<Result> {

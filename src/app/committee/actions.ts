@@ -9,6 +9,7 @@ import { requireRole } from "@/lib/authz";
 import { issueInvites, whatsappInvite } from "@/lib/invites";
 import * as household from "@/lib/household";
 import { syncHousehold } from "@/lib/primary";
+import { eventForSide } from "@/lib/sides";
 
 /* Admin may act on any wedding (passes it explicitly); committee is pinned
    to their own. Every action re-resolves this server-side — never trust input. */
@@ -56,10 +57,10 @@ export async function upsertFamily(input: unknown): Promise<{ ok: boolean; error
     return { ...m, email: m.email || null, phone: m.phone || null, isPrimary };
   });
 
-  const validEvents = new Set(
-    (await db.select().from(events).where(eq(events.weddingId, weddingId))).map((e) => e.id),
-  );
-  if (!eventIds.every((id) => validEvents.has(id))) return { ok: false, error: "invalid events" };
+  const weddingEvents = await db.select().from(events).where(eq(events.weddingId, weddingId));
+  if (!eventIds.every((id) => weddingEvents.some((e) => e.id === id))) return { ok: false, error: "invalid events" };
+  // the other side's own events aren't theirs to be invited to
+  const invitable = eventIds.filter((id) => eventForSide(weddingEvents.find((e) => e.id === id)!.side, side));
 
   let familyId = parsed.data.familyId;
   if (familyId) {
@@ -86,8 +87,8 @@ export async function upsertFamily(input: unknown): Promise<{ ok: boolean; error
     })));
   }
 
-  if (eventIds.length) {
-    await db.insert(eventInvites).values(eventIds.map((eventId) => ({ eventId, familyId: familyId! })));
+  if (invitable.length) {
+    await db.insert(eventInvites).values(invitable.map((eventId) => ({ eventId, familyId: familyId! })));
   }
   await syncHousehold(familyId);
   await household.pruneAttendees(familyId);

@@ -50,7 +50,7 @@ export default async function OpenRsvpPage({ params }: { params: Promise<{ slug:
           <OpenRsvpForm
             slug={slug}
             events={events.map((e) => ({
-              id: e.id, name: e.name, startsAtISO: e.startsAt.toISOString(),
+              id: e.id, name: e.name, side: e.side, startsAtISO: e.startsAt.toISOString(),
               venueName: e.venueName, address: e.address, dressCode: e.dressCode,
             }))}
           />

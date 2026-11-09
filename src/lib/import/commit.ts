@@ -3,6 +3,7 @@ import { pruneAttendees } from "@/lib/household";
 import { syncHousehold } from "@/lib/primary";
 import { db } from "@/db/client";
 import { events, families, guests, eventInvites } from "@/db/schema";
+import { eventForSide } from "@/lib/sides";
 import type { ImportRow, Member } from "./normalize";
 import { matchExisting, normalizePersonName, type ExistingFamily } from "./match";
 
@@ -51,14 +52,17 @@ const isPlaceholder = (m: Member) => normalizePersonName(m.fullName) === null;
  */
 export async function commitImport(weddingId: string, rows: ImportRow[], opts: CommitOptions): Promise<CommitResult> {
   const result: CommitResult = { created: 0, updated: 0, skipped: 0, errors: [] };
-  const validEvents = new Set((await db.select({ id: events.id }).from(events).where(eq(events.weddingId, weddingId))).map((e) => e.id));
+  const weddingEvents = await db.select({ id: events.id, side: events.side }).from(events).where(eq(events.weddingId, weddingId));
+  const validEvents = new Set(weddingEvents.map((e) => e.id));
   const existing = await findExistingFamilies(weddingId);
 
-  for (const row of rows) {
+  for (let row of rows) {
     const name = row.name.trim();
     const email = row.email.trim().toLowerCase();
     if (!name) { result.errors.push({ key: row.key, error: "household name is required" }); continue; }
     if (!row.eventIds.every((id) => validEvents.has(id))) { result.errors.push({ key: row.key, error: "invited to an event that isn't part of this wedding" }); continue; }
+    // "all events" for a bride's-side household means common ones and the bride's own
+    row = { ...row, eventIds: row.eventIds.filter((id) => eventForSide(weddingEvents.find((e) => e.id === id)!.side, row.side)) };
     const members = row.members.map((m) => ({ fullName: m.fullName.trim(), ageGroup: m.ageGroup })).filter((m) => m.fullName);
     if (!members.length) { result.errors.push({ key: row.key, error: "at least one member is required" }); continue; }
 

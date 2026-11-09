@@ -1,5 +1,6 @@
 import { SectionHeader } from "./SectionHeader";
 import { fmtEventDate, fmtEventTime } from "@/lib/format";
+import { sideLabel, type Side } from "@/lib/sides";
 
 type EventRow = {
   id: string;
@@ -10,6 +11,7 @@ type EventRow = {
   mapUrl: string | null;
   dressCode: string | null;
   description?: string | null;
+  side?: Side;
 };
 
 export function EventTimeline({ theme: _theme, events, no = "02" }: { theme: string; events: EventRow[]; no?: string }) {
@@ -32,6 +34,9 @@ export function EventTimeline({ theme: _theme, events, no = "02" }: { theme: str
             </span>
             <div className="md:col-span-6">
               <h3 className="font-display text-4xl tracking-tight md:text-5xl">{e.name}</h3>
+              {e.side && sideLabel(e.side) && (
+                <p className="kicker mt-3" style={{ color: "var(--accent)" }}>{sideLabel(e.side)}</p>
+              )}
               <p className="kicker mt-4">
                 {fmtEventDate(e.startsAt)} · {fmtEventTime(e.startsAt)}
               </p>

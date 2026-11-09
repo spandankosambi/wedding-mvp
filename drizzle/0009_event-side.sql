@@ -1,0 +1,1 @@
+ALTER TABLE "events" ADD COLUMN "side" "side" DEFAULT 'both' NOT NULL;
