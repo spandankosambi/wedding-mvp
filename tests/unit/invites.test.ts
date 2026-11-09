@@ -46,7 +46,9 @@ describe("issueInvites", () => {
     const [fam] = await db.select().from(families).where(eq(families.id, famFresh));
     expect(fam.inviteTokenHash).toBeTruthy();
     const [mail] = lastOutboxLines(1);
-    const token = mail.rsvpUrl.split("/rsvp/")[1];
+    // the email opens the couple's site, personalised for this household
+    expect(mail.rsvpUrl).toMatch(/\/w\/[\w-]+\?invite=[\w-]+$/);
+    const token = mail.rsvpUrl.split("?invite=")[1];
     expect(hashToken(token)).toBe(fam.inviteTokenHash);
   });
 
@@ -57,7 +59,7 @@ describe("issueInvites", () => {
     const [after] = await db.select().from(families).where(eq(families.id, famFresh));
     expect(after.inviteTokenHash).not.toBe(before.inviteTokenHash);
     const [mail] = lastOutboxLines(1);
-    expect(hashToken(mail.rsvpUrl.split("/rsvp/")[1])).toBe(after.inviteTokenHash);
+    expect(hashToken(mail.rsvpUrl.split("?invite=")[1])).toBe(after.inviteTokenHash);
   });
 
   it("remind skips families that responded to every invited event", async () => {

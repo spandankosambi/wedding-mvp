@@ -8,6 +8,13 @@ import { fmtWeddingDate } from "@/lib/format";
 
 export type InviteType = "invite" | "resend" | "remind";
 
+/** Where an invitation points: the couple's wedding site, personalised for
+    this household (greeting, and an RSVP button that opens their own RSVP
+    page). Plain /rsvp/<token> links keep working too. */
+export function inviteUrl(origin: string, slug: string, token: string) {
+  return `${origin}/w/${slug}?invite=${token}`;
+}
+
 export type IssueResult = { familyId: string; ok: boolean; error?: string };
 
 // Hash-only token storage means every send mints a fresh link — we cannot
@@ -58,7 +65,7 @@ export async function issueInvites(
       to: family.email,
       familyName: family.name,
       coupleNames,
-      rsvpUrl: `${appUrl}/rsvp/${token}`,
+      rsvpUrl: inviteUrl(appUrl, wedding.slug, token),
       theme: wedding.theme,
       type: type === "remind" ? "reminder" : type,
     });
@@ -79,7 +86,7 @@ export function whatsappNumber(raw: string | null | undefined): string | null {
 
 /**
  * The household's invitation as a WhatsApp message to their primary adult:
- * mints a fresh personal RSVP link (like a resend, the previous link stops
+ * mints a fresh personal link to the wedding site (like a resend, the previous link stops
  * working), logs it as sent, and returns a wa.me link that opens the chat
  * with the message typed. No phone saved → WhatsApp asks who to send it to.
  */
@@ -97,7 +104,7 @@ export async function whatsappInvite(weddingId: string, familyId: string): Promi
     .where(eq(families.id, familyId));
   await db.insert(emailLog).values({ familyId, type: "invite", status: "whatsapp" });
 
-  const link = `${await appOrigin()}/rsvp/${token}`;
+  const link = inviteUrl(await appOrigin(), wedding.slug, token);
   const first = primary?.fullName.trim().split(/\s+/)[0];
   const text = [
     `${first ? `Namaste ${first}!` : "Namaste!"}`,

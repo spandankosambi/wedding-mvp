@@ -171,7 +171,7 @@ test("a family can be saved without an email", async ({ page }) => {
   await expect.poll(() => tab.url()).toMatch(/^https:\/\/wa\.me\/919876543210\?text=/);
   const text = decodeURIComponent(new URL(tab.url()).searchParams.get("text") ?? "");
   expect(text).toContain("Namaste Sonu!");
-  expect(text).toMatch(/\/rsvp\/[\w-]{20,}/);
+  expect(text).toMatch(/\/w\/[\w-]+\?invite=[\w-]{20,}/); // opens the wedding site first
   await tab.close();
   await expect(row.getByText("invite · WhatsApp")).toBeVisible();
 });

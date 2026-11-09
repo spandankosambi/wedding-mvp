@@ -82,7 +82,9 @@ describe("WhatsApp invite", () => {
     expect(text).toContain("Namaste Sonu!");
     expect(text).toContain("Pooja & Spandan are getting married");
     expect(text).toContain("Wadiker Family");
-    const token = text.match(/\/rsvp\/([\w-]+)/)![1];
+    // the link opens the wedding site first; its RSVP button leads on
+    expect(text).toContain(`/w/pr-${n}?invite=`);
+    const token = text.match(/\?invite=([\w-]+)/)![1];
     expect((await getFamilyByToken(token))?.family.id).toBe(familyId);
     expect((await db.select().from(emailLog).where(eq(emailLog.familyId, familyId)))[0].status).toBe("whatsapp");
   });

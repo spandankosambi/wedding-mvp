@@ -40,7 +40,14 @@ export default async function RsvpPage({
   return (
     <main data-theme={wedding.theme} className="themed min-h-svh px-6 py-16 md:py-24">
       <div className="mx-auto max-w-2xl">
-        <header className="text-center">
+        <a
+          href={`/w/${wedding.slug}?invite=${token}`}
+          className="kicker inline-block"
+          style={{ color: "var(--ink-soft)", letterSpacing: "0.18em" }}
+        >
+          ← The wedding site
+        </a>
+        <header className="mt-8 text-center">
           <p className="kicker rise rise-1">{coupleNames} · {fmtWeddingDate(wedding.weddingDate)}</p>
           <h1
             className="font-display rise rise-2 mt-6 tracking-tight"
