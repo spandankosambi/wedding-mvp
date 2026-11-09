@@ -4,6 +4,7 @@ import { db } from "@/db/client";
 import { weddings, events, families, guests, eventInvites, rsvps, emailLog } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
 import { getRsvpSummary } from "@/lib/rsvp";
+import { showsTravel } from "@/lib/travel";
 import { FamilyTable } from "./FamilyTable";
 import { GuestTable } from "./GuestTable";
 
@@ -42,6 +43,7 @@ export default async function CommitteePage({
       ])
     : [[], [], [], []];
 
+  const allEventIds = evs.map((e) => e.id);
   const rows = fams.map((f) => ({
     id: f.id,
     name: f.name,
@@ -54,6 +56,7 @@ export default async function CommitteePage({
     members: allGuests.filter((g) => g.familyId === f.id)
       .map((g) => ({ id: g.id, fullName: g.fullName, ageGroup: g.ageGroup, details: g.details ?? {}, email: g.email, phone: g.phone, isPrimary: g.isPrimary })),
     eventIds: allInvites.filter((i) => i.familyId === f.id).map((i) => i.eventId),
+    showTravel: showsTravel(f.showTravel, allInvites.filter((i) => i.familyId === f.id).map((i) => i.eventId), allEventIds),
     rsvpByEvent: Object.fromEntries(
       allRsvps.filter((r) => r.familyId === f.id)
         .map((r) => [r.eventId, { status: r.status, headcount: r.headcount, note: r.note, guestIds: r.guestIds ?? null }]),

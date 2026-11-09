@@ -28,7 +28,9 @@ type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 /** The household behind ?invite=<token>, if the token is current and belongs
     to this wedding. Anything else just shows the ordinary site. */
-async function invitedGuest(weddingId: string, searchParams: SearchParams): Promise<InvitedGuest | null> {
+async function invitedGuest(weddingId: string, searchParams: SearchParams): Promise<
+  (InvitedGuest & { eventIds: Set<string>; showTravel: boolean }) | null
+> {
   const token = (await searchParams).invite;
   if (typeof token !== "string" || token.length < 20 || token.length > 100) return null;
   const data = await getFamilyByToken(token);
@@ -37,6 +39,8 @@ async function invitedGuest(weddingId: string, searchParams: SearchParams): Prom
     familyName: data.family.name,
     href: `/rsvp/${token}`,
     answered: data.events.some((e) => e.rsvp),
+    eventIds: new Set(data.events.map((e) => e.id)),
+    showTravel: data.family.showTravel,
   };
 }
 
@@ -75,9 +79,13 @@ export default async function WeddingPage({
   if (!data) notFound();
   const { wedding, events } = data;
   const invite = await invitedGuest(wedding.id, searchParams);
+  // A household's own invitation shows only the events they're invited to
+  // (the same list as their RSVP page), and Travel & Stay only if the
+  // committee shows it to them. The general site shows everything.
+  const shown = invite ? events.filter((e) => invite.eventIds.has(e.id)) : events;
   const window = rsvpWindow(wedding);
   // section numbers count only what this wedding actually shows
-  const hasTravel = !!(wedding.travel?.stays?.length || wedding.travel?.gettingThere);
+  const hasTravel = !!(wedding.travel?.stays?.length || wedding.travel?.gettingThere) && (!invite || invite.showTravel);
   let n = 0;
   const no = () => String(++n).padStart(2, "0");
   const storyNo = wedding.story ? no() : "";
@@ -93,10 +101,10 @@ export default async function WeddingPage({
       <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('fx')" }} />
       <ScrollFx />
       <Hero wedding={wedding} city={weddingCity(wedding.city, events)} />
-      <Marquee items={[...events.map((e) => e.name), fmtWeddingDate(wedding.weddingDate)]} />
+      <Marquee items={[...shown.map((e) => e.name), fmtWeddingDate(wedding.weddingDate)]} />
       <Story theme={wedding.theme} story={wedding.story} no={storyNo} />
-      <EventTimeline theme={wedding.theme} events={events} no={eventsNo} />
-      <TravelStay travel={wedding.travel} no={travelNo} />
+      <EventTimeline theme={wedding.theme} events={shown} no={eventsNo} />
+      {hasTravel && <TravelStay travel={wedding.travel} no={travelNo} />}
       {gallery.enabled && <Gallery theme={wedding.theme} no={galleryNo} photos={gallery.photos} />}
       <RsvpCta slug={wedding.slug} open={window.open} deadline={wedding.rsvpDeadline} contactPhone={wedding.contactPhone} invite={invite} />
       {/* room under the footer so the invitation bar never covers it */}

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { upsertFamily, deleteFamilyAction } from "./actions";
+import { invitesAll } from "@/lib/travel";
 
 export type FamilyDraft = {
   familyId?: string;
@@ -10,6 +11,8 @@ export type FamilyDraft = {
   relation: string;
   members: DraftMember[];
   eventIds: string[];
+  /** their invitation shows the site's Travel & Stay section */
+  showTravel: boolean;
 };
 
 const COMPACT = { padding: "0.45rem 0.6rem", fontSize: "0.875rem" } as const;
@@ -21,17 +24,19 @@ export function draftFromFamily(r: {
   id: string; name: string; side: FamilyDraft["side"]; relation: string | null;
   members: { id: string; fullName: string; ageGroup: "adult" | "child"; email: string | null; phone: string | null; isPrimary: boolean }[];
   eventIds: string[];
+  showTravel: boolean;
 }): FamilyDraft {
   return {
     familyId: r.id, name: r.name, side: r.side, relation: r.relation ?? "",
     members: r.members.map(({ id, fullName, ageGroup, email, phone, isPrimary }) => ({ id, fullName, ageGroup, email: email ?? "", phone: phone ?? "", isPrimary })),
     eventIds: r.eventIds,
+    showTravel: r.showTravel,
   };
 }
 
 const EMPTY: FamilyDraft = {
   name: "", side: "bride", relation: "",
-  members: [{ fullName: "", ageGroup: "adult", email: "", phone: "", isPrimary: true }], eventIds: [],
+  members: [{ fullName: "", ageGroup: "adult", email: "", phone: "", isPrimary: true }], eventIds: [], showTravel: false,
 };
 
 export function FamilyForm({
@@ -60,6 +65,18 @@ export function FamilyForm({
   function set<K extends keyof FamilyDraft>(key: K, value: FamilyDraft[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
+
+  /* Travel & Stay ticks itself when every event is selected. Otherwise it's
+     the committee's call: while the box still matches that rule it keeps
+     following it; once they've set it by hand, it stays as they left it. */
+  const allIds = events.map((e) => e.id);
+  const toggleEvent = (id: string) =>
+    setForm((f) => {
+      const eventIds = f.eventIds.includes(id) ? f.eventIds.filter((x) => x !== id) : [...f.eventIds, id];
+      const was = invitesAll(f.eventIds, allIds), now = invitesAll(eventIds, allIds);
+      const showTravel = now ? true : f.showTravel === was ? now : f.showTravel;
+      return { ...f, eventIds, showTravel };
+    });
 
   /* Exactly one primary, always an adult when there is one */
   const withPrimary = (members: DraftMember[]): DraftMember[] => {
@@ -90,6 +107,7 @@ export function FamilyForm({
         members: form.members.filter((m) => m.fullName.trim())
           .map((m) => ({ ...m, email: m.email.trim(), phone: m.phone.trim() })),
         eventIds: form.eventIds,
+        showTravel: form.showTravel,
       });
       if (res.ok) onClose(true);
       else setError(res.error === "invalid input"
@@ -277,9 +295,7 @@ export function FamilyForm({
                     key={e.id}
                     type="button"
                     aria-pressed={on}
-                    onClick={() =>
-                      set("eventIds", on ? form.eventIds.filter((id) => id !== e.id) : [...form.eventIds, e.id])
-                    }
+                    onClick={() => toggleEvent(e.id)}
                     className={`rounded-full border px-3 py-1.5 text-xs ${
                       on
                         ? "border-stone-800 bg-stone-800 text-white"
@@ -291,6 +307,18 @@ export function FamilyForm({
                 );
               })}
             </div>
+            <label className="mt-3 flex items-start gap-2 text-sm text-neutral-700">
+              <input
+                type="checkbox"
+                checked={form.showTravel}
+                onChange={(e) => set("showTravel", e.target.checked)}
+                className="mt-0.5 h-4 w-4"
+              />
+              <span>
+                Show Travel &amp; Stay on their wedding site
+                <span className="block text-xs text-neutral-500">Ticked automatically when they&apos;re invited to every event.</span>
+              </span>
+            </label>
           </fieldset>
         </div>
 

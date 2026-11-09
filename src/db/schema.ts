@@ -69,6 +69,9 @@ export const families = pgTable("families", {
   source: familySourceEnum("source").notNull().default("committee"),
   inviteTokenHash: text("invite_token_hash"),
   tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
+  /** Whether this household's invitation shows the Travel & Stay section.
+      null = automatic: shown when they're invited to every event. */
+  showTravel: boolean("show_travel"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

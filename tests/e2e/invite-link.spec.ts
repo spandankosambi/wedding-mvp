@@ -58,3 +58,27 @@ test("an old, wrong or other wedding's code just shows the ordinary site", async
   await page.goto(`/w/gaurav-weds-karishma?invite=${tokenOf("The Guptas")}`);
   await expect(page.getByTestId("invite-bar")).toHaveCount(0);
 });
+
+test("each household's site shows only their celebrations, and Travel & Stay only when it's theirs", async ({ page }) => {
+  const celebration = (name: string) => page.getByRole("heading", { name, level: 3, exact: true });
+  const travel = page.getByRole("heading", { name: "Travel & Stay", level: 2 });
+
+  // The Guptas are invited to 3 of the 5 events: just those, and no travel
+  await page.goto(`/w/ananya-weds-arjun?invite=${tokenOf("The Guptas")}`);
+  await expect(celebration("Sangeet")).toBeAttached();
+  await expect(celebration("Pheras")).toBeAttached();
+  await expect(celebration("Reception")).toBeAttached();
+  await expect(celebration("Haldi")).toHaveCount(0);
+  await expect(celebration("Mehendi")).toHaveCount(0);
+  await expect(travel).toHaveCount(0);
+
+  // the Sharmas are invited to everything, so Travel & Stay shows on its own
+  await page.goto(`/w/ananya-weds-arjun?invite=${tokenOf("Sharma Family")}`);
+  await expect(celebration("Haldi")).toBeAttached();
+  await expect(travel).toBeAttached();
+
+  // the general site is unchanged
+  await page.goto("/w/ananya-weds-arjun");
+  await expect(celebration("Haldi")).toBeAttached();
+  await expect(travel).toBeAttached();
+});

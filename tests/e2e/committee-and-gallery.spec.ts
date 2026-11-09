@@ -188,3 +188,57 @@ test("a guest can be edited from the Guests view", async ({ page }) => {
   await expect(page.getByRole("row", { name: /Padma K Iyer/ })).toBeVisible();
   await expect(page).toHaveURL(/view=guests/);
 });
+
+test("Travel & Stay is one tick per household, from either view, and follows the invitation", async ({ page }) => {
+  await signIn(page, "committee@example.com");
+  await page.goto("/committee?view=guests");
+
+  // automatic until set: Chachu's family is invited to everything, the Office Gang to 3 of 5
+  await expect(page.getByLabel("Show Travel & Stay to Rohit Mehta")).toBeChecked();
+  const priya = page.getByLabel("Show Travel & Stay to Priya Nair");
+  const kabir = page.getByLabel("Show Travel & Stay to Kabir Bose");
+  const ishaan = page.getByLabel("Show Travel & Stay to Ishaan Verma");
+  await expect(priya).not.toBeChecked();
+
+  // ticking one guest ticks their whole family
+  await priya.check();
+  await expect(kabir).toBeChecked();
+  await expect(ishaan).toBeChecked();
+  await expect(page.getByText("Travel & Stay shown to Ananya's Office Gang")).toBeVisible();
+  if (shots) await page.screenshot({ path: `${shots}/guest-travel.png` });
+  await page.reload();
+  await expect(kabir).toBeChecked();
+  // …and unticking one unticks them all
+  await ishaan.uncheck();
+  await expect(priya).not.toBeChecked();
+  await expect(page.getByText("Travel & Stay hidden from Ananya's Office Gang")).toBeVisible();
+
+  // the Families view has one box per family, with the same value
+  await page.getByRole("link", { name: /^Families/ }).click();
+  const row = page.getByRole("row", { name: /Ananya's Office Gang/ });
+  const box = row.getByLabel("Show Travel & Stay to Ananya's Office Gang");
+  await expect(box).not.toBeChecked();
+  await box.check();
+  await expect(page.getByText("Travel & Stay shown to Ananya's Office Gang")).toBeVisible();
+  await box.uncheck();
+  await expect(page.getByText("Travel & Stay hidden from Ananya's Office Gang")).toBeVisible();
+
+  // in the family form, selecting every event ticks it
+  await row.getByRole("button", { name: "edit" }).click();
+  const dialog = page.getByRole("dialog");
+  const formBox = dialog.getByLabel(/Show Travel & Stay on their wedding site/);
+  await expect(formBox).not.toBeChecked();
+  await dialog.getByRole("button", { name: "Haldi" }).click();
+  await expect(formBox).not.toBeChecked();
+  await dialog.getByRole("button", { name: "Mehendi" }).click();
+  await expect(formBox).toBeChecked();
+  if (shots) await page.screenshot({ path: `${shots}/family-travel.png` });
+  await dialog.getByRole("button", { name: "Haldi" }).click(); // ticked by the rule, so it follows it back
+  await expect(formBox).not.toBeChecked();
+  await formBox.check(); // the committee's own choice sticks
+  await dialog.getByRole("button", { name: "Sangeet" }).click();
+  await expect(formBox).toBeChecked();
+  await page.getByRole("button", { name: "Save family" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(box).toBeChecked();
+});

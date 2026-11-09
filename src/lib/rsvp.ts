@@ -2,6 +2,7 @@ import { z } from "zod";
 import { eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events, families, guests, eventInvites, rsvps } from "@/db/schema";
+import { showsTravel } from "@/lib/travel";
 import { hashToken, isExpired } from "@/lib/tokens";
 import { rateLimit } from "@/lib/ratelimit";
 import { attendeesFromCount } from "@/lib/household";
@@ -15,13 +16,17 @@ export async function getFamilyByToken(token: string) {
   const members = await db.select().from(guests).where(eq(guests.familyId, family.id)).orderBy(guests.seq);
   const invites = await db.select().from(eventInvites).where(eq(eventInvites.familyId, family.id));
   const eventIds = invites.map((i) => i.eventId);
-  const evs = eventIds.length
-    ? await db.select().from(events).where(inArray(events.id, eventIds)).orderBy(events.sortOrder)
-    : [];
+  const allEvents = await db.select().from(events).where(eq(events.weddingId, family.weddingId)).orderBy(events.sortOrder);
+  // only what they're invited to, and only events the couple shows on the
+  // site — the wedding site and this RSVP page list exactly the same ones
+  const evs = allEvents.filter((e) => e.isPublished && eventIds.includes(e.id));
   const existing = await db.select().from(rsvps).where(eq(rsvps.familyId, family.id));
 
   return {
-    family: { id: family.id, name: family.name, side: family.side, relation: family.relation },
+    family: {
+      id: family.id, name: family.name, side: family.side, relation: family.relation,
+      showTravel: showsTravel(family.showTravel, eventIds, allEvents.map((e) => e.id)),
+    },
     wedding: { id: wedding.id, slug: wedding.slug, brideName: wedding.brideName, groomName: wedding.groomName, theme: wedding.theme, weddingDate: wedding.weddingDate },
     members: members.map((m) => ({ id: m.id, fullName: m.fullName, ageGroup: m.ageGroup })),
     events: evs.map((e) => {

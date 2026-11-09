@@ -39,6 +39,7 @@ const familySchema = z.object({
     isPrimary: z.boolean().optional().default(false),
   })).min(1).max(30),
   eventIds: z.array(z.string().uuid()).max(50),
+  showTravel: z.boolean().optional(),
 });
 
 export async function upsertFamily(input: unknown): Promise<{ ok: boolean; error?: string }> {
@@ -46,7 +47,7 @@ export async function upsertFamily(input: unknown): Promise<{ ok: boolean; error
   if (!parsed.success) return { ok: false, error: "invalid input" };
   const weddingId = await scopedWeddingId(parsed.data.weddingId);
   if (!weddingId) return { ok: false, error: "forbidden" };
-  const { name, side, relation, eventIds } = parsed.data;
+  const { name, side, relation, eventIds, showTravel } = parsed.data;
   // one primary at most from the form; syncHousehold settles the rest
   let primarySeen = false;
   const members = parsed.data.members.map((m) => {
@@ -65,7 +66,8 @@ export async function upsertFamily(input: unknown): Promise<{ ok: boolean; error
     const [fam] = await db.select().from(families)
       .where(and(eq(families.id, familyId), eq(families.weddingId, weddingId)));
     if (!fam) return { ok: false, error: "family not found" };
-    await db.update(families).set({ name, side, relation: relation ?? null }).where(eq(families.id, familyId));
+    await db.update(families).set({ name, side, relation: relation ?? null, ...(showTravel === undefined ? {} : { showTravel }) })
+      .where(eq(families.id, familyId));
     // Update guests in place — their ids carry RSVP answers and custom columns
     const current = await db.select().from(guests).where(eq(guests.familyId, familyId));
     const keep = new Set(members.filter((m) => m.id).map((m) => m.id!));
@@ -77,7 +79,7 @@ export async function upsertFamily(input: unknown): Promise<{ ok: boolean; error
     }
     await db.delete(eventInvites).where(eq(eventInvites.familyId, familyId));
   } else {
-    const [f] = await db.insert(families).values({ weddingId, name, side, relation: relation ?? null, email: "" }).returning();
+    const [f] = await db.insert(families).values({ weddingId, name, side, relation: relation ?? null, email: "", showTravel: showTravel ?? null }).returning();
     familyId = f.id;
     await db.insert(guests).values(members.map((m) => ({
       familyId: familyId!, fullName: m.fullName, ageGroup: m.ageGroup, email: m.email, phone: m.phone, isPrimary: m.isPrimary,
@@ -187,4 +189,25 @@ export async function whatsappInviteAction(input: { weddingId: string; familyId:
   const r = await whatsappInvite(weddingId, input.familyId);
   revalidatePath("/committee");
   return r;
+}
+
+const travelSchema = z.object({
+  weddingId: z.string().uuid(),
+  familyId: z.string().uuid(),
+  show: z.boolean(),
+});
+
+/** Show or hide the site's Travel & Stay section for one household (every
+    guest in it — the Guests view's tick is the family's tick). */
+export async function setTravelAction(input: unknown): Promise<{ ok: boolean; error?: string }> {
+  const parsed = travelSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "invalid input" };
+  const weddingId = await scopedWeddingId(parsed.data.weddingId);
+  if (!weddingId) return { ok: false, error: "forbidden" };
+  const done = await db.update(families).set({ showTravel: parsed.data.show })
+    .where(and(eq(families.id, parsed.data.familyId), eq(families.weddingId, weddingId)))
+    .returning();
+  if (!done.length) return { ok: false, error: "family not found" };
+  revalidatePath("/committee");
+  return { ok: true };
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "families" ADD COLUMN "show_travel" boolean;

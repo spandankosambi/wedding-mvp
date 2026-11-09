@@ -8,6 +8,7 @@ import { guestRsvpAction, addGuestColumnAction, removeGuestColumnAction, setGues
 import { BulkRsvpDialog } from "./BulkRsvpDialog";
 import { FamilyForm, draftFromFamily, type FamilyDraft } from "./FamilyForm";
 import { openWhatsAppInvite } from "./whatsapp";
+import { useTravelToggle } from "./travel";
 import type { Row } from "./FamilyTable";
 
 const SIDE_BADGE: Record<Row["side"], string> = {
@@ -45,6 +46,7 @@ export function GuestTable({
   const [removing, setRemoving] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ draft: FamilyDraft; guestId: string; name: string } | null>(null);
   const [pending, startTransition] = useTransition();
+  const travel = useTravelToggle(weddingId, rows, setFlash);
 
   const guests = useMemo(() => rows.flatMap((f) => f.members.map((m) => ({ ...m, family: f }))), [rows]);
   const q = query.trim().toLowerCase();
@@ -140,6 +142,7 @@ export function GuestTable({
               <th className="p-3">Contact</th>
               <th className="p-3">Family</th>
               <th className="p-3">RSVP by event</th>
+              <th className="p-3" title="Set per household: ticking one guest ticks their whole family">Travel &amp; Stay</th>
               {columns.map((c) => (
                 <th key={c.id} className="p-3">
                   <span className="inline-flex items-center gap-1 whitespace-nowrap">
@@ -196,6 +199,16 @@ export function GuestTable({
                       {f.eventIds.length === 0 && <span className="text-xs text-neutral-400">not invited yet</span>}
                     </div>
                   </td>
+                  <td className="text-center">
+                    <input
+                      type="checkbox"
+                      aria-label={`Show Travel & Stay to ${g.fullName}`}
+                      title={`Set for the whole of ${f.name}`}
+                      checked={travel.shows(f)}
+                      onChange={(e) => travel.set(f, e.target.checked)}
+                      className="h-4 w-4"
+                    />
+                  </td>
                   {columns.map((c) => (
                     <td key={c.id}>
                       <DetailCell weddingId={weddingId} guestId={g.id} column={c} initial={g.details[c.id] ?? ""} guestName={g.fullName} />
@@ -219,7 +232,7 @@ export function GuestTable({
                     <button type="button" onClick={() => setRsvpFor({ ids: [g.id], label: g.fullName })} className="portal-link mr-4" aria-label={`Record RSVP for ${g.fullName}`}>
                       RSVP
                     </button>
-                    <button type="button" onClick={() => setEditing({ draft: draftFromFamily(f), guestId: g.id, name: g.fullName })} className="portal-link" aria-label={`Edit ${g.fullName}`}>
+                    <button type="button" onClick={() => setEditing({ draft: draftFromFamily({ ...f, showTravel: travel.shows(f) }), guestId: g.id, name: g.fullName })} className="portal-link" aria-label={`Edit ${g.fullName}`}>
                       edit
                     </button>
                   </td>
@@ -228,7 +241,7 @@ export function GuestTable({
             })}
             {shown.length === 0 && (
               <tr>
-                <td colSpan={6 + columns.length} className="p-10 text-center text-sm text-neutral-400">
+                <td colSpan={7 + columns.length} className="p-10 text-center text-sm text-neutral-400">
                   {guests.length ? "No guest matches that search." : "No guests yet — add a family in the Families view."}
                 </td>
               </tr>

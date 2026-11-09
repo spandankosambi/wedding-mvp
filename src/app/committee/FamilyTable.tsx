@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { sendInvitesAction, bulkFamilyRsvpAction } from "./actions";
+import { useTravelToggle } from "./travel";
 import { FamilyForm, draftFromFamily, type FamilyDraft } from "./FamilyForm";
 import { RsvpEditor, type RsvpTarget } from "./RsvpEditor";
 import { BulkRsvpDialog } from "./BulkRsvpDialog";
@@ -19,6 +20,8 @@ export type Row = {
   source?: "committee" | "import" | "guest";
   members: { id: string; fullName: string; ageGroup: "adult" | "child"; details: Record<string, string>; email: string | null; phone: string | null; isPrimary: boolean }[];
   eventIds: string[];
+  /** their invitation shows the site's Travel & Stay section */
+  showTravel: boolean;
   rsvpByEvent: Record<string, { status: "attending" | "declined"; headcount: number; note: string | null; guestIds: string[] | null }>;
   lastEmail: { type: string; status: string; sentAt: string } | null;
 };
@@ -45,6 +48,7 @@ export function FamilyTable({
   const [bulk, setBulk] = useState(false);
   const [pending, startTransition] = useTransition();
   const [flash, setFlash] = useState<string | null>(null);
+  const travel = useTravelToggle(weddingId, rows, setFlash);
 
   function toggle(id: string) {
     setSelected((s) => {
@@ -135,6 +139,7 @@ export function FamilyTable({
               <th className="p-3">Primary contact</th>
               <th className="p-3">Members</th>
               <th className="p-3">RSVP by event</th>
+              <th className="p-3" title="Show the Travel & Stay section on their wedding site">Travel &amp; Stay</th>
               <th className="p-3">Last sent</th>
               <th className="p-3" />
             </tr>
@@ -201,6 +206,16 @@ export function FamilyTable({
                     })}
                   </div>
                 </td>
+                <td className="text-center">
+                  <input
+                    type="checkbox"
+                    aria-label={`Show Travel & Stay to ${r.name}`}
+                    title="Show the Travel & Stay section on their wedding site"
+                    checked={travel.shows(r)}
+                    onChange={(e) => travel.set(r, e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                </td>
                 <td>
                   {r.lastEmail ? (
                     r.lastEmail.status === "whatsapp" ? (
@@ -257,7 +272,7 @@ export function FamilyTable({
                     RSVP
                   </button>
                   <button
-                    onClick={() => setEditing(draftFromFamily(r))}
+                    onClick={() => setEditing(draftFromFamily({ ...r, showTravel: travel.shows(r) }))}
                     className="portal-link"
                   >
                     edit
@@ -267,7 +282,7 @@ export function FamilyTable({
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-10 text-center text-sm text-neutral-400">
+                <td colSpan={8} className="p-10 text-center text-sm text-neutral-400">
                   No families yet — add the first one, or{" "}
                   <a href={`/committee/import?wedding=${weddingId}`} className="portal-link">import a spreadsheet</a>.
                 </td>
