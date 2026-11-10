@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { EventSideField } from "./EventSideField";
-import { asFamilySide, getLooks, hasPart, otherSide, samePart, sideName, type FamilySide, type Look, type LookPart } from "@/lib/looks";
+import { asFamilySide, getLooks, hasPart, namesFor, otherSide, samePart, sideName, type FamilySide, type Look, type LookPart } from "@/lib/looks";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
-import { istParts } from "@/lib/editor";
+import { istParts, MAX_STAYS } from "@/lib/editor";
 import { EVENT_PRESETS } from "@/lib/presets";
 import { fmtWeddingDate } from "@/lib/format";
 import { ThemeSwitcher } from "../ThemeSwitcher";
 import { SaveButton } from "./SaveButton";
 import { GalleryUploader } from "./GalleryUploader";
+import { StaysEditor } from "./StaysEditor";
 import { galleryOf, photoStorageConfigured, MAX_GALLERY_PHOTOS } from "@/lib/gallery";
 import {
   saveWords, saveTravel, saveEvent, addPresetEvent, toggleEvent, removeEvent, moveEventAction, sortEvents,
@@ -56,7 +57,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
   // this family's section: common events and its own
   const evs = (await db.select().from(events).where(eq(events.weddingId, weddingId)).orderBy(events.sortOrder, events.startsAt))
     .filter((e) => e.side === "both" || e.side === family);
-  const coupleNames = `${w.brideName} & ${w.groomName}`;
+  const coupleNames = namesFor(w, family).couple; // this family's name order
   const hidden = evs.filter((e) => !e.isPublished).length;
   const wid = (
     <>
@@ -64,8 +65,6 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
       <input type="hidden" name="family" value={family} />
     </>
   );
-  const stays = [...(look.travel?.stays ?? [])];
-  while (stays.length < 3) stays.push({ name: "", note: "", url: "" });
   const gal = galleryOf(look);
   const uploadsOn = photoStorageConfigured();
   const adminQ = staff.role === "admin" ? `wedding=${weddingId}&` : "";
@@ -223,19 +222,13 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
               <div>
                 <p className="portal-eyebrow">Travel &amp; stay</p>
                 <h2 className="mt-1 font-semibold">Where out-of-town guests should stay</h2>
-                <p className="mt-1 text-sm text-neutral-500">Leave everything blank to hide the section.</p>
+                <p className="mt-1 text-sm text-neutral-500">Leave everything blank to hide the section. A hotel ticked common shows on both families&apos; sites.</p>
               </div>
               {same("travel")}
             </div>
             <form action={saveTravel} className="mt-5 space-y-4">
               {wid}
-              {stays.map((s, i) => (
-                <div key={i} className="grid gap-3 rounded-xl border border-neutral-100 p-3 md:grid-cols-3">
-                  <Field label={`Hotel ${i + 1}`}><input name={`stay${i}name`} defaultValue={s.name} maxLength={120} placeholder="Taj Lands End, Bandra" className="portal-input" /></Field>
-                  <Field label="Note"><input name={`stay${i}note`} defaultValue={s.note} maxLength={400} placeholder="Wedding block reserved — mention our names" className="portal-input" /></Field>
-                  <Field label="Booking / map link"><input name={`stay${i}url`} type="url" defaultValue={s.url ?? ""} maxLength={500} placeholder="https://…" className="portal-input" /></Field>
-                </div>
-              ))}
+              <StaysEditor initial={look.travel?.stays ?? []} family={family} max={MAX_STAYS} />
               <Field label="Getting there" hint="airport, distances, shuttles">
                 <textarea name="gettingThere" defaultValue={look.travel?.gettingThere ?? ""} maxLength={1200} rows={3} className="portal-input resize-y" placeholder="Fly into Mumbai (BOM). Both hotels are 20–40 minutes from the terminals…" />
               </Field>

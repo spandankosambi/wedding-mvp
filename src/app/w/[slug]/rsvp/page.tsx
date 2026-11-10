@@ -5,13 +5,14 @@ import { getPublicWedding, rsvpWindow } from "@/lib/open-rsvp";
 import { fmtWeddingDate } from "@/lib/format";
 import { Ornament } from "@/themes/ornaments";
 import { OpenRsvpForm } from "./OpenRsvpForm";
-import { asFamilySide, getLook, withLook, type FamilySide } from "@/lib/looks";
+import { asFamilySide, getLook, namesFor, withLook, type FamilySide } from "@/lib/looks";
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ side?: string }> }): Promise<Metadata> {
   const data = await getPublicWedding((await params).slug);
-  return { title: data ? `RSVP · ${data.wedding.brideName} & ${data.wedding.groomName}` : "RSVP", robots: { index: false } };
+  const side = asFamilySide((await searchParams).side) ?? "bride";
+  return { title: data ? `RSVP · ${namesFor(data.wedding, side).couple}` : "RSVP", robots: { index: false } };
 }
 
 export default async function OpenRsvpPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ side?: string }> }) {
@@ -22,7 +23,7 @@ export default async function OpenRsvpPage({ params, searchParams }: { params: P
   const wedding = withLook(data.wedding, await getLook(data.wedding.id, side));
   const { events } = data;
   const window = rsvpWindow(wedding);
-  const coupleNames = `${wedding.brideName} & ${wedding.groomName}`;
+  const coupleNames = namesFor(wedding, side).couple;
 
   return (
     <main data-theme={wedding.theme} className="themed min-h-svh px-6 py-16 md:py-24">

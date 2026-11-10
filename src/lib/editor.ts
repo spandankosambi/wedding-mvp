@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { expandMapLink } from "@/lib/maplinks";
-import { updateLook, type FamilySide } from "@/lib/looks";
+import { saveTravelLook, updateLook, type FamilySide } from "@/lib/looks";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events, families, eventInvites, rsvps, type TravelInfo } from "@/db/schema";
@@ -51,12 +51,15 @@ export const eventSchema = z.object({
   side: z.enum(["bride", "groom", "both"]).default("both"),
 });
 
+export const MAX_STAYS = 12;
+
 export const travelSchema = z.object({
   stays: z.array(z.object({
     name: z.string().trim().min(1).max(120),
     note: z.string().trim().max(400),
     url: z.union([z.string().trim().url().max(500), z.literal("")]).optional(),
-  })).max(8),
+    common: z.boolean().optional(),
+  })).max(MAX_STAYS),
   gettingThere: z.string().trim().max(1200),
 });
 
@@ -89,13 +92,14 @@ export async function updateWords(weddingId: string, side: FamilySide, input: un
   return { ok: true };
 }
 
-export async function updateRsvpSettings(weddingId: string, input: unknown): Promise<Result> {
+/** Each family opens, closes and dates its own RSVPs. */
+export async function updateRsvpSettings(weddingId: string, side: FamilySide, input: unknown): Promise<Result> {
   const p = rsvpSettingsSchema.safeParse(input);
   if (!p.success) return { ok: false, error: "invalid input" };
-  await db.update(weddings).set({
+  await updateLook(weddingId, side, {
     rsvpOpen: p.data.rsvpOpen,
     rsvpDeadline: p.data.rsvpDeadline ? istDate(p.data.rsvpDeadline, "23:59") : null,
-  }).where(eq(weddings.id, weddingId));
+  });
   return { ok: true };
 }
 
@@ -103,10 +107,13 @@ export async function updateTravel(weddingId: string, side: FamilySide, input: u
   const p = travelSchema.safeParse(input);
   if (!p.success) return { ok: false, error: "invalid input" };
   const travel: TravelInfo = {
-    stays: await Promise.all(p.data.stays.map(async (s) => ({ name: s.name, note: s.note, ...(s.url && { url: await expandMapLink(s.url) }) }))),
+    stays: await Promise.all(p.data.stays.map(async (s) => ({
+      name: s.name, note: s.note, ...(s.url && { url: await expandMapLink(s.url) }), ...(s.common && { common: true }),
+    }))),
     gettingThere: p.data.gettingThere,
   };
-  await updateLook(weddingId, side, { travel });
+  // stays ticked "common" show on the other family's site too
+  await saveTravelLook(weddingId, side, travel);
   return { ok: true };
 }
 

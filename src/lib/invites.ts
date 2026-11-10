@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { getLook } from "@/lib/looks";
+import { getLook, namesFor } from "@/lib/looks";
 import { db } from "@/db/client";
 import { weddings, families, guests, eventInvites, rsvps, emailLog } from "@/db/schema";
 import { generateInviteToken, tokenExpiry } from "@/lib/tokens";
@@ -28,7 +28,6 @@ export async function issueInvites(
 ): Promise<IssueResult[]> {
   const [wedding] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
   if (!wedding) return familyIds.map((familyId) => ({ familyId, ok: false, error: "wedding not found" }));
-  const coupleNames = `${wedding.brideName} & ${wedding.groomName}`;
   const appUrl = await appOrigin();
 
   const results: IssueResult[] = [];
@@ -65,7 +64,7 @@ export async function issueInvites(
       familyId,
       to: family.email,
       familyName: family.name,
-      coupleNames,
+      coupleNames: namesFor(wedding, family.side === "groom" ? "groom" : "bride").couple, // the family's own order
       rsvpUrl: inviteUrl(appUrl, wedding.slug, token),
       // in the household's family's look
       theme: (await getLook(wedding.id, family.side === "groom" ? "groom" : "bride")).theme,
@@ -111,7 +110,7 @@ export async function whatsappInvite(weddingId: string, familyId: string): Promi
   const text = [
     `${first ? `Namaste ${first}!` : "Namaste!"}`,
     "",
-    `${wedding.brideName} & ${wedding.groomName} are getting married on ${fmtWeddingDate(wedding.weddingDate)}${wedding.city ? ` in ${wedding.city}` : ""}, and would love to celebrate with ${family.name}.`,
+    `${namesFor(wedding, family.side === "groom" ? "groom" : "bride").couple} are getting married on ${fmtWeddingDate(wedding.weddingDate)}${wedding.city ? ` in ${wedding.city}` : ""}, and would love to celebrate with ${family.name}.`,
     "",
     `See the celebrations and RSVP here: ${link}`,
   ].join("\n");

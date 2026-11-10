@@ -6,7 +6,7 @@ import { appOrigin } from "@/lib/origin";
 import { invitationSchema } from "@/lib/invitation/options";
 import { buildInvitation, fileName } from "@/lib/invitation/content";
 import { renderInvitationPdf } from "@/lib/invitation/pdf";
-import { getLook } from "@/lib/looks";
+import { getLook, withLook } from "@/lib/looks";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,9 +34,10 @@ export async function POST(req: Request) {
     return Response.json({ error: "invalid events" }, { status: 400 });
   }
 
-  const inv = buildInvitation(wedding, evs, o, `${await appOrigin()}/w/${wedding.slug}`);
-  // each family's cards in its own look
-  const pdf = await renderInvitationPdf(inv, o, (await getLook(weddingId, o.version)).theme);
+  // each family's cards in its own look, with its own reply-by date
+  const look = await getLook(weddingId, o.version);
+  const inv = buildInvitation(withLook(wedding, look), evs, o, `${await appOrigin()}/w/${wedding.slug}?side=${o.version}`);
+  const pdf = await renderInvitationPdf(inv, o, look.theme);
   return new Response(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",

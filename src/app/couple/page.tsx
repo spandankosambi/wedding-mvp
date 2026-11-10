@@ -9,7 +9,7 @@ import { THEME_META } from "@/themes/catalog";
 import { SummaryCards } from "./SummaryCards";
 import { DangerZone } from "./danger/DangerZone";
 import { SaveButton } from "./site/SaveButton";
-import { saveDetails, saveRsvpSettings } from "./site/actions";
+import { saveDetails } from "./site/actions";
 import { Stat, weddingStats } from "./stats";
 
 export const dynamic = "force-dynamic";
@@ -115,11 +115,11 @@ export default async function CouplePage({
       </div>
 
       {/* ── shared details ──────────────────────────────────────── */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6">
         <section id="details" className="portal-panel p-6">
           <p className="portal-eyebrow">Shared by both families</p>
           <h2 className="mt-1 font-semibold">Names, date, city, parents</h2>
-          <form action={saveDetails} className="mt-5 grid gap-4 sm:grid-cols-2">
+          <form action={saveDetails} className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {wid}
             <Field label="Bride's name"><input name="brideName" defaultValue={wedding.brideName} required maxLength={60} className="portal-input" /></Field>
             <Field label="Groom's name"><input name="groomName" defaultValue={wedding.groomName} required maxLength={60} className="portal-input" /></Field>
@@ -127,31 +127,13 @@ export default async function CouplePage({
             <Field label="City"><input name="city" defaultValue={wedding.city ?? ""} maxLength={80} placeholder="Mumbai" className="portal-input" /></Field>
             <Field label="Bride's parents" hint="on cards and the site"><input name="brideParents" defaultValue={wedding.brideParents ?? ""} maxLength={160} placeholder="Sunita & Rajesh Sharma" className="portal-input" /></Field>
             <Field label="Groom's parents"><input name="groomParents" defaultValue={wedding.groomParents ?? ""} maxLength={160} placeholder="Kavita & Vikram Mehta" className="portal-input" /></Field>
-            <div className="sm:col-span-2"><SaveButton /></div>
+            <div className="sm:col-span-2 lg:col-span-3"><SaveButton /></div>
           </form>
         </section>
 
-        <section id="rsvp" className="portal-panel p-6">
-          <p className="portal-eyebrow">RSVP</p>
-          <h2 className="mt-1 font-semibold">Who can reply, and until when</h2>
-          <form action={saveRsvpSettings} className="mt-5 space-y-4">
-            {wid}
-            <label className="flex items-start gap-3 text-sm">
-              <input type="checkbox" name="rsvpOpen" defaultChecked={wedding.rsvpOpen} className="mt-0.5 h-4 w-4" />
-              <span>
-                <span className="font-medium">Accept RSVPs from the shared links</span>
-                <span className="block text-xs text-neutral-500">Off = the site shows the family contact instead of the form. Personal invitation links keep working.</span>
-              </span>
-            </label>
-            <Field label="Reply-by date" hint="optional; the form closes at midnight IST">
-              <input name="rsvpDeadline" type="date" defaultValue={wedding.rsvpDeadline ? istParts(wedding.rsvpDeadline).date : ""} className="portal-input md:max-w-xs" />
-            </Field>
-            <SaveButton />
-          </form>
-        </section>
       </div>
 
-      {/* only the couple themselves can reset or delete; admins have their own tools */}
+      {/* only the couple themselves can delete; each family resets its own part in its section */}
       {staff.role === "couple" && <div className="mt-8"><DangerZone coupleNames={coupleNames} /></div>}
     </main>
   );

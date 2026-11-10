@@ -27,19 +27,39 @@ describe("editor", () => {
     expect(await getLook(weddingId, "groom")).toMatchObject({ heroTagline: "Baraat at dawn", hashtag: "ArjunKiShaadi", theme: "raj-mahal" });
     expect((await getLook(weddingId, "bride")).hashtag).not.toBe("ArjunKiShaadi");
   });
-  it("rsvp settings: deadline is end of that IST day, blank clears", async () => {
-    expect((await updateRsvpSettings(weddingId, { rsvpOpen: false, rsvpDeadline: "2027-01-15" })).ok).toBe(true);
-    let [w] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
-    expect(w.rsvpOpen).toBe(false);
-    expect(w.rsvpDeadline?.toISOString()).toBe("2027-01-15T18:29:00.000Z");
-    await updateRsvpSettings(weddingId, { rsvpOpen: true, rsvpDeadline: "" });
-    [w] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
-    expect(w.rsvpDeadline).toBeNull();
+  it("rsvp settings are each family's own: deadline is end of that IST day, blank clears", async () => {
+    expect((await updateRsvpSettings(weddingId, "groom", { rsvpOpen: false, rsvpDeadline: "2027-01-15" })).ok).toBe(true);
+    let groom = await getLook(weddingId, "groom");
+    expect(groom.rsvpOpen).toBe(false);
+    expect(groom.rsvpDeadline?.toISOString()).toBe("2027-01-15T18:29:00.000Z");
+    expect(await getLook(weddingId, "bride")).toMatchObject({ rsvpOpen: true, rsvpDeadline: null });
+    await updateRsvpSettings(weddingId, "groom", { rsvpOpen: true, rsvpDeadline: "" });
+    groom = await getLook(weddingId, "groom");
+    expect(groom.rsvpDeadline).toBeNull();
   });
   it("travel is each family's own", async () => {
     await updateTravel(weddingId, "bride", { stays: [{ name: "Taj", note: "Wedding block", url: "" }], gettingThere: "Fly to PNQ" });
     expect((await getLook(weddingId, "bride")).travel).toEqual({ stays: [{ name: "Taj", note: "Wedding block" }], gettingThere: "Fly to PNQ" });
     expect((await getLook(weddingId, "groom")).travel?.gettingThere).not.toBe("Fly to PNQ");
+    expect((await getLook(weddingId, "groom")).travel?.stays ?? []).not.toContainEqual(expect.objectContaining({ name: "Taj" }));
+  });
+  it("a hotel ticked common shows for both families, and either can change or drop it", async () => {
+    await updateTravel(weddingId, "groom", { stays: [{ name: "Oberoi", note: "Groom's own" }, { name: "taj", note: "old copy" }], gettingThere: "Train to Pune" });
+    // the bride's family shares the Taj, and adds one more of its own
+    await updateTravel(weddingId, "bride", {
+      stays: [{ name: "Taj", note: "Wedding block", common: true }, { name: "Marriott", note: "Bride's own" }], gettingThere: "Fly to PNQ",
+    });
+    let groom = (await getLook(weddingId, "groom")).travel!;
+    expect(groom.stays).toEqual([{ name: "Taj", note: "Wedding block", common: true }, { name: "Oberoi", note: "Groom's own" }]); // their same-named one replaced
+    expect(groom.gettingThere).toBe("Train to Pune");
+    // the groom's family edits the shared hotel; the bride's follows
+    await updateTravel(weddingId, "groom", { stays: [{ name: "Taj", note: "Ask for the Sharma block", common: true }, { name: "Oberoi", note: "Groom's own" }], gettingThere: "Train to Pune" });
+    expect((await getLook(weddingId, "bride")).travel!.stays).toEqual([{ name: "Taj", note: "Ask for the Sharma block", common: true }, { name: "Marriott", note: "Bride's own" }]);
+    // unticked, it stays with the groom's family only
+    await updateTravel(weddingId, "groom", { stays: [{ name: "Taj", note: "Ask for the Sharma block" }, { name: "Oberoi", note: "Groom's own" }], gettingThere: "Train to Pune" });
+    expect((await getLook(weddingId, "bride")).travel!.stays).toEqual([{ name: "Marriott", note: "Bride's own" }]);
+    groom = (await getLook(weddingId, "groom")).travel!;
+    expect(groom.stays.map((s) => s.name)).toEqual(["Taj", "Oberoi"]);
   });
   it("events: create, edit, hide, reorder, delete — scoped to the wedding", async () => {
     const a = await upsertEvent(weddingId, { name: "Sangeet", date: "2027-01-31", time: "19:00", venueName: "Lawns", address: "Pune", mapUrl: "", isPublished: true });

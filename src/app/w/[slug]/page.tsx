@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getPublicWedding } from "@/lib/open-rsvp";
 import { fixShortMapLinks } from "@/lib/maplinks";
-import { asFamilySide, getLook, withLook, type FamilySide } from "@/lib/looks";
+import { asFamilySide, getLook, namesFor, withLook, type FamilySide } from "@/lib/looks";
 import { eventForSide } from "@/lib/sides";
 import { rsvpWindow } from "@/lib/open-rsvp";
 import { Hero } from "./sections/Hero";
@@ -60,13 +60,15 @@ export async function generateMetadata({
   if (!data) return { title: "Wedding" };
   const { wedding } = data;
   const personal = typeof (await searchParams).invite === "string";
+  const side = (await invitedGuest(wedding.id, searchParams))?.side ?? asFamilySide((await searchParams).side) ?? "bride";
+  const n = namesFor(wedding, side);
   return {
     // a personal invitation link is nobody's search result
     ...(personal ? { robots: { index: false, follow: false } } : {}),
-    title: `${wedding.brideName} weds ${wedding.groomName}`,
+    title: `${n.first} weds ${n.second}`,
     description: wedding.heroTagline ?? `Join us on ${fmtWeddingDate(wedding.weddingDate)}`,
     openGraph: {
-      title: `${wedding.brideName} & ${wedding.groomName}`,
+      title: n.couple,
       description: `${fmtWeddingDate(wedding.weddingDate)}${wedding.city ? ` · ${wedding.city}` : ""} — you're invited. Tap to see the celebrations and RSVP.`,
       type: "website",
     },
@@ -113,7 +115,7 @@ export default async function WeddingPage({
           ScrollFx then drives the observers after hydration */}
       <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('fx')" }} />
       <ScrollFx />
-      <Hero wedding={wedding} city={weddingCity(wedding.city, events)} />
+      <Hero wedding={wedding} side={side} city={weddingCity(wedding.city, events)} />
       <Marquee items={[...shown.map((e) => e.name), fmtWeddingDate(wedding.weddingDate)]} />
       <Story theme={wedding.theme} story={wedding.story} no={storyNo} />
       <EventTimeline theme={wedding.theme} events={shown} no={eventsNo} />
@@ -123,7 +125,7 @@ export default async function WeddingPage({
       {/* room under the footer so the invitation bar never covers it */}
       <footer className="hairline-t px-6 py-10 text-center" style={invite ? { paddingBottom: "7rem" } : undefined}>
         <p className="kicker">
-          {wedding.brideName} &amp; {wedding.groomName} · {fmtWeddingDate(wedding.weddingDate)}
+          {namesFor(wedding, side).couple} · {fmtWeddingDate(wedding.weddingDate)}
           {wedding.hashtag ? ` · #${wedding.hashtag}` : ""}
         </p>
       </footer>

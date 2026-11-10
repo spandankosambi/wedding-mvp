@@ -4,6 +4,7 @@ import { db, migrateDb } from "@/db/client";
 import { weddings, events, families, rsvps, guests } from "@/db/schema";
 import { getPublicWedding, submitOpenRsvp, rsvpWindow } from "@/lib/open-rsvp";
 import { getFamilyByToken } from "@/lib/rsvp";
+import { updateLook } from "@/lib/looks";
 
 let weddingId: string, sangeet: string, pheras: string, hidden: string;
 
@@ -77,9 +78,11 @@ describe("submitOpenRsvp", () => {
     expect(r.ok).toBe(true);
     expect((await db.select().from(families).where(eq(families.weddingId, weddingId))).length).toBe(1);
   });
-  it("refuses when the couple closes RSVP", async () => {
-    await db.update(weddings).set({ rsvpOpen: false }).where(eq(weddings.id, weddingId));
-    const r = await submitOpenRsvp({ ...base, responses: [{ eventId: sangeet, status: "attending", headcount: 1 }] });
+  it("refuses when that family closes RSVP; the other family's link still works", async () => {
+    await updateLook(weddingId, "groom", { rsvpOpen: false });
+    const r = await submitOpenRsvp({ ...base, side: "groom", responses: [{ eventId: sangeet, status: "attending", headcount: 1 }] });
     expect(r).toEqual({ ok: false, error: "rsvp closed" });
+    const ok = await submitOpenRsvp({ ...base, name: "The Pais", phone: "+91 98765 00001", side: "bride", responses: [{ eventId: sangeet, status: "attending", headcount: 1 }] });
+    expect(ok.ok).toBe(true);
   });
 });

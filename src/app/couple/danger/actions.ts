@@ -10,7 +10,7 @@ import { appOrigin } from "@/lib/origin";
 import { rateLimit } from "@/lib/ratelimit";
 import { sendConfirmEmail } from "@/lib/mailer";
 import { photoStorageConfigured } from "@/lib/gallery";
-import { createAction, carryOut, resetScopeSchema, RESET_LABELS, CONFIRM_MINUTES } from "@/lib/account";
+import { createAction, carryOut, resetScopeSchema, resetItems, CONFIRM_MINUTES } from "@/lib/account";
 import type { ResetScope } from "@/db/schema";
 
 type Requested = { ok: true; email: string; minutes: number } | { ok: false; error: string };
@@ -36,7 +36,7 @@ async function request(kind: "delete" | "reset", scope?: ResetScope): Promise<Re
   try {
     await sendConfirmEmail({
       to: c.email, kind, coupleNames: c.coupleNames, link, minutes: CONFIRM_MINUTES,
-      items: scope ? (Object.keys(RESET_LABELS) as (keyof ResetScope)[]).filter((k) => scope[k]).map((k) => RESET_LABELS[k]) : undefined,
+      items: scope ? resetItems(scope) : undefined,
     });
   } catch {
     return { ok: false, error: "We couldn't send the confirmation email. Try again in a minute." };
@@ -51,8 +51,9 @@ export async function requestDeleteWedding(): Promise<Requested> {
 export async function requestResetWedding(input: unknown): Promise<Requested> {
   const parsed = resetScopeSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Choose at least one thing to reset." };
-  // the guest list takes its replies with it
-  const scope = { ...parsed.data, rsvps: parsed.data.rsvps || parsed.data.guests };
+  // the guest list takes its replies with it; a family's reset never touches committee logins
+  const scope = { ...parsed.data, rsvps: parsed.data.rsvps || parsed.data.guests, ...(parsed.data.side && { committee: false }) };
+  if (!resetItems(scope).length) return { ok: false, error: "Choose at least one thing to reset." };
   return request("reset", scope);
 }
 

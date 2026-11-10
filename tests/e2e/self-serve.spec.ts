@@ -94,14 +94,17 @@ test("RSVPs can be switched off by the couple", async ({ page }) => {
   await page.locator("#words button[type=submit]").click();
   await expect(page).toHaveURL(/saved=words/);
 
-  // …and RSVP settings, shared, on the dashboard
-  await page.goto("/couple");
+  // …and its own RSVP settings, in its section
+  await page.goto("/couple/bride");
   await page.locator("#rsvp input[name=rsvpOpen]").uncheck();
   await page.locator("#rsvp button[type=submit]").click();
-  await expect(page).toHaveURL(/saved=rsvp/);
+  await expect(page).toHaveURL(/\/couple\/bride\?saved=rsvp/);
 
   await page.goto("/w/riya-weds-veer/rsvp");
   await expect(page.getByRole("heading", { name: /rsvps are closed/i })).toBeVisible();
   await expect(page.getByText(/\+91 90000 12345/)).toBeVisible();
   await expect(page.getByRole("button", { name: /send rsvp/i })).toHaveCount(0);
+  // the groom's family still takes replies
+  await page.goto("/w/riya-weds-veer/rsvp?side=groom");
+  await expect(page.getByRole("heading", { name: "Will you be joining us?" })).toBeVisible();
 });

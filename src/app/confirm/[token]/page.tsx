@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { findAction, RESET_LABELS } from "@/lib/account";
-import type { ResetScope } from "@/db/schema";
+import { findAction, resetItems } from "@/lib/account";
 import { confirmAccountAction } from "@/app/couple/danger/actions";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +27,7 @@ export default async function ConfirmPage({ params, searchParams }: {
         <p className="kicker rise rise-1">Confirmation</p>
         <h1 className="font-display rise rise-2 mt-6 max-w-xl text-4xl tracking-tight">{p.title}</h1>
         <p className="rise rise-3 mt-6 max-w-md text-sm leading-relaxed" style={{ color: "var(--ink-soft)" }}>{p.body}</p>
-        <Link href="/couple/site#danger" className="cta-ghost rise rise-3 mt-8">Go to my dashboard</Link>
+        <Link href="/couple" className="cta-ghost rise rise-3 mt-8">Go to my dashboard</Link>
       </main>
     );
   }
@@ -41,7 +40,7 @@ export default async function ConfirmPage({ params, searchParams }: {
         "All gallery photos",
         "Every login for this wedding, including yours (" + a.email + ")",
       ]
-    : (Object.keys(RESET_LABELS) as (keyof ResetScope)[]).filter((k) => a.scope?.[k]).map((k) => RESET_LABELS[k]);
+    : a.scope ? resetItems(a.scope) : [];
 
   return (
     <main data-theme="ivory-editorial" className="themed flex min-h-svh flex-col items-center justify-center px-6 py-16">
@@ -54,7 +53,10 @@ export default async function ConfirmPage({ params, searchParams }: {
           <p className="font-semibold">This will permanently erase:</p>
           <ul className="mt-2 list-disc space-y-1 pl-5">{items.map((i) => <li key={i}>{i}</li>)}</ul>
           {a.kind === "reset" && (
-            <p className="mt-3">Your login, your names, wedding date, city and web address stay as they are.</p>
+            <p className="mt-3">
+              Your login, your names, wedding date, city and web address stay as they are
+              {a.scope?.side ? ", and so does everything of the other family's." : "."}
+            </p>
           )}
           <p className="mt-3 font-semibold">This can&apos;t be undone.</p>
         </div>
@@ -63,7 +65,7 @@ export default async function ConfirmPage({ params, searchParams }: {
           <button type="submit" className="cta" style={{ background: "#9b1c1c", color: "#fff" }}>
             {a.kind === "delete" ? "Yes, delete everything" : "Yes, reset these"}
           </button>
-          <Link href="/couple/site" className="cta-ghost">Keep everything</Link>
+          <Link href="/couple" className="cta-ghost">Keep everything</Link>
         </form>
       </div>
     </main>

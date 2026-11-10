@@ -8,6 +8,7 @@ import { syncHousehold } from "@/lib/primary";
 import { rateLimit } from "@/lib/ratelimit";
 import { normalizePhone } from "@/lib/slug";
 import { DIET_OPTIONS } from "@/lib/presets";
+import { getLook, withLook } from "@/lib/looks";
 
 /** The wedding as guests see it: only published events, in order. */
 export async function getPublicWedding(slug: string) {
@@ -70,7 +71,8 @@ export async function submitOpenRsvp(input: unknown, clientKey = "local"): Promi
   const data = await getPublicWedding(d.slug);
   if (!data) return { ok: false, error: "wedding not found" };
   const { wedding, events: published } = data;
-  if (!rsvpWindow(wedding).open) return { ok: false, error: "rsvp closed" };
+  // each family opens and closes its own RSVPs
+  if (!rsvpWindow(withLook(wedding, await getLook(wedding.id, d.side ?? "bride"))).open) return { ok: false, error: "rsvp closed" };
 
   const publishedIds = new Set(published.map((e) => e.id));
   for (const r of d.responses) {

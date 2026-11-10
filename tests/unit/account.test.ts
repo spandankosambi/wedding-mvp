@@ -2,7 +2,9 @@ import { describe, it, expect, beforeEach, beforeAll } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, migrateDb } from "@/db/client";
 import { weddings, events, families, guests, eventInvites, rsvps, users, sessions, accountActions } from "@/db/schema";
-import { createAction, findAction, carryOut, resetWedding, deleteWedding } from "@/lib/account";
+import { createAction, findAction, carryOut, resetWedding, deleteWedding, resetItems } from "@/lib/account";
+import { getLook, updateLook } from "@/lib/looks";
+import { updateTravel } from "@/lib/editor";
 import { galleryOf } from "@/lib/gallery";
 
 let n = 0;
@@ -79,6 +81,52 @@ describe("reset", () => {
     await resetWedding(fx.weddingId, { ...NONE, events: true }, fx.coupleId);
     expect((await wedding(fx.weddingId)).story).toBe("We met at work");
     expect(await db.select().from(users).where(eq(users.id, fx.committeeId))).toHaveLength(1);
+  });
+});
+
+describe("one family's reset", () => {
+  async function twoSides() {
+    // a bride's-family household too, a bride's own event, and a shared photo + hotel
+    const [bf] = await db.insert(families).values({ weddingId: fx.weddingId, name: "Bride's cousins", side: "bride", email: `b${n}@example.com` }).returning();
+    await db.insert(guests).values({ familyId: bf.id, fullName: "A Cousin" });
+    await db.insert(rsvps).values({ eventId: fx.eventId, familyId: bf.id, status: "attending", headcount: 1 });
+    await db.insert(events).values({ weddingId: fx.weddingId, name: "Bride's Mehendi", startsAt: new Date(), venueName: "Home", address: "X", sortOrder: 2, side: "bride" });
+    const shared = { url: "https://blob.example.com/shared.jpg", pathname: "shared.jpg", width: 3, height: 4 };
+    const own = { url: "https://blob.example.com/own.jpg", pathname: "own.jpg", width: 3, height: 4 };
+    await updateLook(fx.weddingId, "bride", { gallery: { enabled: true, photos: [shared, own] }, story: "Bride's story", rsvpOpen: false });
+    await updateLook(fx.weddingId, "groom", { gallery: { enabled: true, photos: [shared] }, story: "Groom's story" });
+    await updateTravel(fx.weddingId, "bride", { stays: [{ name: "Taj", note: "", common: true }], gettingThere: "" });
+    return bf.id;
+  }
+
+  it("clears only that family's guests, own events, photos and look", async () => {
+    const bride = await twoSides();
+    const r = await resetWedding(fx.weddingId, { guests: true, rsvps: true, events: true, photos: true, content: true, committee: false, side: "bride" }, fx.coupleId);
+    expect((await db.select().from(families).where(eq(families.id, bride))).length).toBe(0);
+    expect((await db.select().from(families).where(eq(families.id, fx.familyId))).length).toBe(1); // the groom's
+    expect((await db.select().from(rsvps).where(eq(rsvps.familyId, fx.familyId))).length).toBe(1);
+    expect((await db.select().from(events).where(eq(events.weddingId, fx.weddingId))).map((e) => e.name).sort()).toEqual(["Haldi", "Sangeet"]); // common ones stay
+    expect(r.photoUrls).toEqual(["https://blob.example.com/own.jpg"]); // the shared one is still the groom's
+    const b = await getLook(fx.weddingId, "bride"), g = await getLook(fx.weddingId, "groom");
+    expect(b).toMatchObject({ story: null, travel: null, rsvpOpen: true, theme: "ivory-editorial" });
+    expect(b.gallery?.photos).toEqual([]);
+    expect(g.story).toBe("Groom's story");
+    expect(g.gallery?.photos.map((p) => p.pathname)).toEqual(["shared.jpg"]);
+    expect(g.travel?.stays).toEqual([{ name: "Taj", note: "" }]); // the shared hotel becomes the groom's own
+    // committee logins are never part of a family's reset
+    expect((await db.select().from(users).where(eq(users.id, fx.committeeId))).length).toBe(1);
+  });
+
+  it("RSVP answers only: just that family's replies", async () => {
+    const bride = await twoSides();
+    await resetWedding(fx.weddingId, { ...NONE, rsvps: true, side: "groom" }, fx.coupleId);
+    expect((await db.select().from(rsvps).where(eq(rsvps.familyId, fx.familyId))).length).toBe(0);
+    expect((await db.select().from(rsvps).where(eq(rsvps.familyId, bride))).length).toBe(1);
+  });
+
+  it("says whose part goes", () => {
+    expect(resetItems({ ...NONE, events: true, side: "groom" })).toEqual(["Groom's family: This family's own celebrations — the common ones stay"]);
+    expect(resetItems({ ...NONE, committee: true, side: "groom" })).toEqual([]);
   });
 });
 

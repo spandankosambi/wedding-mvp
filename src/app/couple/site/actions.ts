@@ -28,15 +28,16 @@ async function scoped(formData: FormData) {
 
 type Ctx = Awaited<ReturnType<typeof scoped>>;
 
-/** Back to the family's editor (or, for shared details, the dashboard). */
-function done(ctx: Ctx, section: string, error?: string, page: "site" | "dashboard" = "site") {
+/** Back to the family's editor (or its section page, or for shared details the dashboard). */
+function done(ctx: Ctx, section: string, error?: string, page: "site" | "section" | "dashboard" = "site") {
   revalidatePath(`/w/${ctx.slug}`);
   revalidatePath(`/w/${ctx.slug}/rsvp`);
   revalidatePath("/couple", "layout");
   const q = new URLSearchParams(error ? { error, section } : { saved: section });
   if (ctx.admin) q.set("wedding", ctx.weddingId);
   if (page === "site") q.set("family", ctx.family);
-  redirect(`${page === "site" ? "/couple/site" : "/couple"}?${q}#${section}`);
+  const path = page === "site" ? "/couple/site" : page === "section" ? `/couple/${ctx.family}` : "/couple";
+  redirect(`${path}?${q}#${section}`);
 }
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "");
@@ -64,10 +65,10 @@ export async function saveWords(formData: FormData) {
 
 export async function saveRsvpSettings(formData: FormData) {
   const ctx = await scoped(formData);
-  const r = await editor.updateRsvpSettings(ctx.weddingId, {
+  const r = await editor.updateRsvpSettings(ctx.weddingId, ctx.family, {
     rsvpOpen: formData.get("rsvpOpen") === "on", rsvpDeadline: str(formData, "rsvpDeadline"),
   });
-  done(ctx, "rsvp", r.ok ? undefined : r.error, "dashboard");
+  done(ctx, "rsvp", r.ok ? undefined : r.error, "section");
 }
 
 /** "Same as your partner" for one part of this family's site. */
@@ -82,9 +83,9 @@ export async function copyPartAction(formData: FormData) {
 export async function saveTravel(formData: FormData) {
   const ctx = await scoped(formData);
   const stays = [];
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < editor.MAX_STAYS; i++) {
     const name = str(formData, `stay${i}name`).trim();
-    if (name) stays.push({ name, note: str(formData, `stay${i}note`), url: str(formData, `stay${i}url`) });
+    if (name) stays.push({ name, note: str(formData, `stay${i}note`), url: str(formData, `stay${i}url`), common: formData.get(`stay${i}common`) === "on" });
   }
   const r = await editor.updateTravel(ctx.weddingId, ctx.family, { stays, gettingThere: str(formData, "gettingThere") });
   done(ctx, "travel", r.ok ? undefined : r.error);

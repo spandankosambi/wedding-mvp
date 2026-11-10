@@ -3,6 +3,7 @@ import { getFamilyByToken } from "@/lib/rsvp";
 import { fmtWeddingDate } from "@/lib/format";
 import { Ornament } from "@/themes/ornaments";
 import { RsvpForm } from "./RsvpForm";
+import { namesFor } from "@/lib/looks";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ export default async function RsvpPage({
   }
 
   const { family, wedding, members, events } = data;
-  const coupleNames = `${wedding.brideName} & ${wedding.groomName}`;
+  const coupleNames = namesFor(wedding, family.side === "groom" ? "groom" : "bride").couple; // their family's order
 
   return (
     <main data-theme={wedding.theme} className="themed min-h-svh px-6 py-16 md:py-24">

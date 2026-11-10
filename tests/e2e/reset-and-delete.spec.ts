@@ -28,15 +28,25 @@ async function newCouple(page: Page, bride: string, groom: string) {
 
 const shots = process.env.SHOTS_DIR;
 
-test("a couple resets chosen parts after confirming by email", async ({ page }) => {
+test("a family resets its own part after confirming by email", async ({ page }) => {
   const email = await newCouple(page, "Isha", "Rohan");
   await page.getByRole("button", { name: "+ Haldi" }).click();
   await expect(page.getByText("2 events", { exact: true })).toBeVisible();
+  // the Haldi is the bride's family's own
+  const haldi = page.locator("details", { has: page.locator("input[name=name][value=Haldi]") });
+  await haldi.evaluate((d) => { (d as HTMLDetailsElement).open = true; }); // a new event may already be open
+  await haldi.getByLabel("Haldi is common for both families").uncheck();
+  await haldi.getByRole("button", { name: "Save" }).click();
+  await expect(haldi.locator("summary").getByText("This family only")).toBeVisible();
 
-  // reset and delete live on the main dashboard
+  // the dashboard only deletes; each family resets in its own section
   await page.goto("/couple");
+  await expect(page.locator("#danger").getByRole("button", { name: "Reset selected…" })).toHaveCount(0);
+  await page.goto("/couple/bride");
   const danger = page.locator("#danger");
-  await danger.getByLabel(/Celebrations/).check();
+  await expect(danger.getByRole("heading", { name: "Reset the bride's family's section" })).toBeVisible();
+  await expect(danger.getByRole("button", { name: "Delete wedding website…" })).toHaveCount(0);
+  await danger.getByLabel(/This family's own celebrations/).check();
   await danger.getByRole("button", { name: "Reset selected…" }).click();
   if (shots) { await danger.scrollIntoViewIfNeeded(); await danger.screenshot({ path: `${shots}/danger-reset.png` }); }
   await danger.getByRole("button", { name: "Email me the confirmation link" }).click();
@@ -49,7 +59,7 @@ test("a couple resets chosen parts after confirming by email", async ({ page }) 
   // the emailed link only shows a page; the button does the work
   await page.goto(latest(email, "confirmUrl"));
   await expect(page.getByRole("heading", { name: "Reset your wedding website?" })).toBeVisible();
-  await expect(page.getByText(/back to just the wedding day/)).toBeVisible();
+  await expect(page.getByText(/Bride's family: This family's own celebrations/)).toBeVisible();
   if (shots) await page.screenshot({ path: `${shots}/confirm-reset.png`, fullPage: true });
   const confirmUrl = page.url();
   await page.getByRole("button", { name: "Yes, reset these" }).click();

@@ -125,7 +125,7 @@ test("the couple can get from the guest list back to their dashboard", async ({ 
   await page.goto("/committee?family=groom");
   await page.getByRole("link", { name: "← Back to groom's family" }).click();
   await expect(page).toHaveURL(/\/couple\/groom$/);
-  await page.getByRole("link", { name: "Ananya & Arjun" }).first().click();
+  await page.getByRole("link", { name: "Arjun & Ananya" }).first().click(); // the groom's side puts him first
   await expect(page).toHaveURL(/\/couple$/);
 });
 

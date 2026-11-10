@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, migrateDb } from "@/db/client";
 import { weddings, weddingSides } from "@/db/schema";
-import { copyFromPartner, getLooks, hasPart, photoInUse, samePart, updateLook, withLook } from "@/lib/looks";
+import { copyFromPartner, getLooks, hasPart, namesFor, photoInUse, samePart, updateLook, withLook } from "@/lib/looks";
 
 let weddingId: string;
 beforeAll(async () => {
@@ -55,5 +55,28 @@ describe("each family's look", () => {
     expect(await photoInUse(weddingId, photo.pathname)).toBe(true);
     await updateLook(weddingId, "bride", { gallery: { enabled: true, photos: [] } });
     expect(await photoInUse(weddingId, photo.pathname)).toBe(false);
+  });
+});
+
+describe("each family's name order", () => {
+  const w = { brideName: "Pooja", groomName: "Spandan", brideParents: "Mr & Mrs Shah", groomParents: null };
+  it("the bride's family puts the bride first", () => {
+    expect(namesFor(w, "bride")).toEqual({ first: "Pooja", second: "Spandan", couple: "Pooja & Spandan", firstParents: "Mr & Mrs Shah", secondParents: null });
+  });
+  it("the groom's family puts the groom first, with his parents", () => {
+    expect(namesFor(w, "groom")).toEqual({ first: "Spandan", second: "Pooja", couple: "Spandan & Pooja", firstParents: null, secondParents: "Mr & Mrs Shah" });
+  });
+});
+
+describe("RSVP settings per family", () => {
+  it("a new family look starts from the wedding's settings, and withLook applies its own", async () => {
+    const [w] = await db.insert(weddings).values({
+      slug: `lk-r-${Date.now()}`, brideName: "A", groomName: "B", weddingDate: new Date("2027-01-29T04:30:00Z"), rsvpOpen: false,
+    }).returning();
+    const looks = await getLooks(w.id);
+    expect(looks.groom.rsvpOpen).toBe(false);
+    await updateLook(w.id, "groom", { rsvpOpen: true });
+    expect(withLook(w, (await getLooks(w.id)).groom).rsvpOpen).toBe(true);
+    expect(withLook(w, (await getLooks(w.id)).bride).rsvpOpen).toBe(false);
   });
 });

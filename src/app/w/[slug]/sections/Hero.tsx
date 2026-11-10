@@ -3,6 +3,7 @@ import { fmtWeddingDate } from "@/lib/format";
 import { Petals } from "./Petals";
 import { Countdown } from "./Countdown";
 import { Mark } from "@/themes/mark";
+import { namesFor, type FamilySide } from "@/lib/looks";
 
 type HeroWedding = {
   brideName: string;
@@ -29,7 +30,9 @@ function Letters({ text, from }: { text: string; from: number }) {
   );
 }
 
-export function Hero({ wedding, city }: { wedding: HeroWedding; city?: string }) {
+export function Hero({ wedding, city, side = "bride" }: { wedding: HeroWedding; city?: string; side?: FamilySide }) {
+  // each family puts its own child first (and its parents)
+  const n = namesFor(wedding, side);
   return (
     <section className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-6 py-20 text-center">
       <Petals />
@@ -43,12 +46,12 @@ export function Hero({ wedding, city }: { wedding: HeroWedding; city?: string })
         <Mark size="min(78vw, 880px)" />
       </span>
 
-      {(wedding.brideParents || wedding.groomParents) ? (
+      {(n.firstParents || n.secondParents) ? (
         <p className="kicker rise rise-1 max-w-xl leading-loose" style={{ letterSpacing: "0.18em" }}>
           With the blessings of
-          {wedding.brideParents && <><br />{wedding.brideParents}</>}
-          {wedding.brideParents && wedding.groomParents && <><br /><span aria-hidden>and</span></>}
-          {wedding.groomParents && <><br />{wedding.groomParents}</>}
+          {n.firstParents && <><br />{n.firstParents}</>}
+          {n.firstParents && n.secondParents && <><br /><span aria-hidden>and</span></>}
+          {n.secondParents && <><br />{n.secondParents}</>}
         </p>
       ) : (
         <p className="kicker rise rise-1">The wedding of</p>
@@ -58,16 +61,16 @@ export function Hero({ wedding, city }: { wedding: HeroWedding; city?: string })
         className="font-display mt-6 tracking-tight"
         style={{ fontSize: "clamp(3.75rem, 14vw, 10.5rem)", lineHeight: 0.95 }}
       >
-        <Letters text={wedding.brideName} from={0} />
+        <Letters text={n.first} from={0} />
         <br />
         <em
           className="foil ltr weds"
-          style={{ "--i": wedding.brideName.length + 1 } as React.CSSProperties}
+          style={{ "--i": n.first.length + 1 } as React.CSSProperties}
         >
           weds
         </em>
         <br />
-        <Letters text={wedding.groomName} from={wedding.brideName.length + 3} />
+        <Letters text={n.second} from={n.first.length + 3} />
       </h1>
 
       <div className="rise rise-3 mt-10">

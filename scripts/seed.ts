@@ -92,7 +92,9 @@ async function main() {
     },
   }).returning();
   // each family dresses its invitation its own way: the groom's in Raj Mahal
-  const look = { heroTagline: w.heroTagline, story: w.story, hashtag: w.hashtag, contactPhone: w.contactPhone, travel: w.travel, gallery: w.gallery };
+  // both families share the two hotels
+  const travel = w.travel && { ...w.travel, stays: w.travel.stays.map((s) => ({ ...s, common: true })) };
+  const look = { heroTagline: w.heroTagline, story: w.story, hashtag: w.hashtag, contactPhone: w.contactPhone, travel, gallery: w.gallery };
   await db.insert(weddingSides).values([
     { weddingId: w.id, side: "bride", theme: w.theme, ...look },
     { weddingId: w.id, side: "groom", theme: "raj-mahal", ...look },

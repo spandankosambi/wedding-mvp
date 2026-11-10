@@ -74,3 +74,61 @@ test("an event can be one family's own; each family's section, list and site fol
   await expect(page.getByRole("heading", { name: "Mehendi", level: 3 })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Sangeet", level: 3 })).toBeVisible();
 });
+
+test("hotels can be common or one family's own, and you can add as many as needed", async ({ page }) => {
+  await signIn(page, "couple2@example.com");
+  await page.goto("/couple/site?family=bride");
+  const travel = page.locator("#travel");
+  const stays = travel.getByTestId("stay");
+  const before = await stays.count();
+
+  // + adds a hotel, common for both families unless unticked
+  await travel.getByRole("button", { name: "+ Add another hotel" }).click();
+  await stays.last().getByLabel("Hotel", { exact: false }).first().fill("Shared Haveli");
+  await expect(stays.last().getByLabel("Shared Haveli is common for both families")).toBeChecked();
+  await travel.getByRole("button", { name: "+ Add another hotel" }).click();
+  await stays.last().getByLabel("Hotel", { exact: false }).first().fill("Bride Side Inn");
+  await stays.last().getByLabel("Bride Side Inn is common for both families").uncheck();
+  await expect(stays).toHaveCount(before + 2);
+  if (shots) await travel.screenshot({ path: `${shots}/stays-editor.png` });
+  await travel.getByRole("button", { name: "Save" }).click();
+  await expect(page).toHaveURL(/saved=travel/);
+
+  // the groom's family sees the shared one (and can edit it), not the bride's own
+  await page.goto("/couple/site?family=groom");
+  await expect(page.locator("#travel input[value='Shared Haveli']")).toBeVisible();
+  await expect(page.locator("#travel input[value='Bride Side Inn']")).toHaveCount(0);
+
+  const stay = (name: string) => page.getByRole("heading", { name, level: 3 });
+  await page.goto("/w/gaurav-weds-karishma?side=groom");
+  await expect(stay("Shared Haveli")).toBeAttached();
+  await expect(stay("Bride Side Inn")).toHaveCount(0);
+  await page.goto("/w/gaurav-weds-karishma?side=bride");
+  await expect(stay("Shared Haveli")).toBeAttached();
+  await expect(stay("Bride Side Inn")).toBeAttached();
+
+  // a hotel can be removed
+  await page.goto("/couple/site?family=bride");
+  await page.locator("#travel").getByRole("button", { name: "Remove Bride Side Inn" }).click();
+  await page.locator("#travel").getByRole("button", { name: "Save" }).click();
+  await expect(page).toHaveURL(/saved=travel/);
+  await page.goto("/w/gaurav-weds-karishma?side=bride");
+  await expect(stay("Bride Side Inn")).toHaveCount(0);
+});
+
+test("each family's site and section put its own child's name first", async ({ page }) => {
+  await page.goto("/w/gaurav-weds-karishma?side=groom");
+  await expect(page).toHaveTitle(/Gaurav weds Karishma/);
+  await expect(page.locator("h1").first()).toHaveText(/Gaurav\s*weds\s*Karishma/);
+  await expect(page.locator("footer")).toContainText("Gaurav & Karishma");
+  await page.goto("/w/gaurav-weds-karishma?side=bride");
+  await expect(page).toHaveTitle(/Karishma weds Gaurav/);
+  await expect(page.locator("h1").first()).toHaveText(/Karishma\s*weds\s*Gaurav/);
+  await page.goto("/w/gaurav-weds-karishma/rsvp?side=groom");
+  await expect(page.getByRole("link", { name: /Gaurav & Karishma/ })).toBeVisible();
+
+  await signIn(page, "couple2@example.com");
+  await page.goto("/couple/groom");
+  await expect(page.getByRole("link", { name: "Gaurav & Karishma", exact: true })).toBeVisible();
+});
+

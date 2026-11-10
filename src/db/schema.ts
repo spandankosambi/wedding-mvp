@@ -10,7 +10,8 @@ export const familySourceEnum = pgEnum("family_source", ["committee", "import", 
 
 /** Travel & stay copy the couple writes in their editor — prose, not relational data. */
 export type TravelInfo = {
-  stays: { name: string; note: string; url?: string }[];
+  /** `common`: shown by both families (kept in step on both sides) */
+  stays: { name: string; note: string; url?: string; common?: boolean }[];
   gettingThere: string;
 };
 
@@ -47,9 +48,9 @@ export const weddings = pgTable("weddings", {
  * Each family's own look for the one wedding site: the bride's family and
  * the groom's print and present their invitations differently. A guest sees
  * their family's side; the plain site address shows the bride's. Everything
- * shared (names, date, city, parents, events, RSVP settings) stays on
- * `weddings`; the matching columns there are the starting values a new side
- * is created from.
+ * shared (names, date, city, parents, events) stays on `weddings`; the
+ * matching columns there are the starting values a new side is created from.
+ * Each family also opens and closes its own RSVPs.
  */
 export const weddingSides = pgTable("wedding_sides", {
   weddingId: uuid("wedding_id").notNull().references(() => weddings.id, { onDelete: "cascade" }),
@@ -61,6 +62,8 @@ export const weddingSides = pgTable("wedding_sides", {
   contactPhone: text("contact_phone"),
   travel: jsonb("travel").$type<TravelInfo>(),
   gallery: jsonb("gallery").$type<GalleryInfo>(),
+  rsvpOpen: boolean("rsvp_open").notNull().default(true),
+  rsvpDeadline: timestamp("rsvp_deadline", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [primaryKey({ columns: [t.weddingId, t.side] })]);
 
@@ -190,6 +193,8 @@ export type ResetScope = {
   photos: boolean;      // gallery photos and their files
   content: boolean;     // story, tagline, parents, travel, hashtag, contact, theme, RSVP settings
   committee: boolean;   // other team members' logins
+  /** set: only this family's part (its guests, own events, photos, look, RSVP settings) */
+  side?: "bride" | "groom";
 };
 
 /** A destructive request waiting for its email confirmation. Only the

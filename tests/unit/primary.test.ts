@@ -80,7 +80,7 @@ describe("WhatsApp invite", () => {
     expect(r.url.startsWith("https://wa.me/919876543210?text=")).toBe(true);
     const text = decodeURIComponent(r.url.split("?text=")[1]);
     expect(text).toContain("Namaste Sonu!");
-    expect(text).toContain("Pooja & Spandan are getting married");
+    expect(text).toContain("Spandan & Pooja are getting married"); // a groom's-side household: his family's order
     expect(text).toContain("Wadiker Family");
     // the link opens the wedding site first; its RSVP button leads on
     expect(text).toContain(`/w/pr-${n}?invite=`);

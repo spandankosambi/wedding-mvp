@@ -6,13 +6,17 @@ import { weddings, events } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
 import { eventForSide, eventLabel } from "@/lib/sides";
 import { fmtWeddingDate } from "@/lib/format";
-import { asFamilySide, getLooks, otherSide, sideName } from "@/lib/looks";
+import { asFamilySide, getLooks, namesFor, otherSide, sideName } from "@/lib/looks";
 import { THEME_META } from "@/themes/catalog";
 import { ShareCard } from "../ShareCard";
 import { PrintInvitation } from "../PrintInvitation";
 import { NonResponders } from "../NonResponders";
 import { SummaryCards } from "../SummaryCards";
 import { Stat, weddingStats } from "../stats";
+import { SaveButton } from "../site/SaveButton";
+import { saveRsvpSettings } from "../site/actions";
+import { DangerZone } from "../danger/DangerZone";
+import { istParts } from "@/lib/editor";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +29,7 @@ export default async function FamilySection({
   searchParams,
 }: {
   params: Promise<{ family: string }>;
-  searchParams: Promise<{ wedding?: string }>;
+  searchParams: Promise<{ wedding?: string; saved?: string; error?: string }>;
 }) {
   const family = asFamilySide((await params).family);
   if (!family) notFound();
@@ -45,7 +49,7 @@ export default async function FamilySection({
     db.select().from(events).where(eq(events.weddingId, weddingId)).orderBy(events.sortOrder),
   ]);
   const look = looks[family];
-  const coupleNames = `${wedding.brideName} & ${wedding.groomName}`;
+  const coupleNames = namesFor(wedding, family).couple; // this family's name order
   const admin = staff.role === "admin";
   const q = (extra: string) => (admin ? `?wedding=${weddingId}&${extra}` : `?${extra}`);
   const meta = THEME_META[look.theme];
@@ -79,11 +83,20 @@ export default async function FamilySection({
             brideParents={wedding.brideParents}
             groomParents={wedding.groomParents}
             contactPhone={look.contactPhone}
-            hasDeadline={!!wedding.rsvpDeadline}
+            hasDeadline={!!look.rsvpDeadline}
             events={evs.filter((e) => eventForSide(e.side, family)).map((e) => ({ id: e.id, label: eventLabel(e), side: e.side, isPublished: e.isPublished }))}
           />
         </div>
       </header>
+
+      {sp.saved && (
+        <p className="mb-6 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-900" role="status">Saved.</p>
+      )}
+      {sp.error && (
+        <p className="mb-6 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
+          Couldn&apos;t save — {sp.error === "invalid input" ? "please check the fields." : sp.error}
+        </p>
+      )}
 
       <div className="mb-6">
         <ShareCard slug={wedding.slug} coupleNames={coupleNames} weddingDateText={fmtWeddingDate(wedding.weddingDate)} family={family} />
@@ -125,6 +138,33 @@ export default async function FamilySection({
           )}
         </section>
       </div>
+
+      <section id="rsvp" className="portal-panel mt-6 p-6">
+        <p className="portal-eyebrow">RSVP</p>
+        <h2 className="mt-1 font-semibold">Who can reply to the {who}&apos;s side, and until when</h2>
+        <form action={saveRsvpSettings} className="mt-5 space-y-4">
+          {admin && <input type="hidden" name="weddingId" value={weddingId} />}
+          <input type="hidden" name="family" value={family} />
+          <label className="flex items-start gap-3 text-sm">
+            <input type="checkbox" name="rsvpOpen" defaultChecked={look.rsvpOpen} className="mt-0.5 h-4 w-4" />
+            <span>
+              <span className="font-medium">Accept RSVPs from this family&apos;s shared link</span>
+              <span className="block text-xs text-neutral-500">Off = the {who}&apos;s site shows the family contact instead of the form. Personal invitation links keep working.</span>
+            </span>
+          </label>
+          <label className="block">
+            <span className="text-xs font-medium text-neutral-600">Reply-by date</span>
+            <span className="ml-2 text-xs text-neutral-400">optional; the form closes at midnight IST</span>
+            <div className="mt-1.5">
+              <input name="rsvpDeadline" type="date" defaultValue={look.rsvpDeadline ? istParts(look.rsvpDeadline).date : ""} className="portal-input md:max-w-xs" />
+            </div>
+          </label>
+          <SaveButton />
+        </form>
+      </section>
+
+      {/* only the couple themselves can reset; admins have their own tools */}
+      {staff.role === "couple" && <div className="mt-6"><DangerZone coupleNames={coupleNames} family={family} /></div>}
 
       <p className="mt-8 text-center text-xs text-neutral-400">
         Looking for the other side? Open the{" "}

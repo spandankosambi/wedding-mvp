@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FAMILY_SIDES, getLooks, updateLook, type LookPatch } from "@/lib/looks";
+import { FAMILY_SIDES, getLooks, otherSide, photoInUse, sideName, updateLook, type FamilySide, type LookPatch } from "@/lib/looks";
 import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
@@ -18,10 +18,11 @@ export const CONFIRM_MINUTES = 30;
 export const resetScopeSchema = z.object({
   guests: z.boolean(), rsvps: z.boolean(), events: z.boolean(),
   photos: z.boolean(), content: z.boolean(), committee: z.boolean(),
+  side: z.enum(["bride", "groom"]).optional(),
 }).refine((s) => Object.values(s).some(Boolean), "choose at least one thing to reset");
 
 /** In the couple's words — used on the confirmation page and in the email. */
-export const RESET_LABELS: Record<keyof ResetScope, string> = {
+export const RESET_LABELS: Record<Exclude<keyof ResetScope, "side">, string> = {
   guests: "Guest list — every family and guest, their invitations and replies",
   rsvps: "RSVP answers — every reply, keeping the guest list",
   events: "Celebrations — back to just the wedding day",
@@ -29,6 +30,25 @@ export const RESET_LABELS: Record<keyof ResetScope, string> = {
   content: "Site text and look — story, tagline, parents, travel, hashtag, contact, theme, RSVP settings",
   committee: "Committee logins — everyone else who can sign in to this wedding",
 };
+
+/** One family's reset: the same choices, minus committee logins (they serve both). */
+export const SIDE_RESET_LABELS: Record<Exclude<keyof ResetScope, "side" | "committee">, string> = {
+  guests: "Guest list — this family's households and guests, their invitations and replies",
+  rsvps: "RSVP answers — this family's replies, keeping its guest list",
+  events: "This family's own celebrations — the common ones stay",
+  photos: "This family's gallery photos",
+  content: "This family's site text and look — story, tagline, travel, hashtag, contact, theme, RSVP settings",
+};
+
+/** What a reset request will erase, in the couple's words. */
+export function resetItems(scope: ResetScope): string[] {
+  if (scope.side) {
+    const keys = Object.keys(SIDE_RESET_LABELS) as (keyof typeof SIDE_RESET_LABELS)[];
+    return keys.filter((k) => scope[k]).map((k) => `${sideName(scope.side!)}: ${SIDE_RESET_LABELS[k]}`);
+  }
+  const keys = Object.keys(RESET_LABELS) as (keyof typeof RESET_LABELS)[];
+  return keys.filter((k) => scope[k]).map((k) => RESET_LABELS[k]);
+}
 
 export async function createAction(
   kind: "delete" | "reset", weddingId: string, userId: string, scope?: ResetScope,
@@ -86,6 +106,7 @@ export async function deleteWedding(weddingId: string): Promise<{ photoUrls: str
 export async function resetWedding(weddingId: string, scope: ResetScope, keepUserId: string): Promise<{ photoUrls: string[] }> {
   const [w] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
   if (!w) return { photoUrls: [] };
+  if (scope.side) return resetSide(weddingId, scope.side, scope);
   let photoUrls: string[] = [];
 
   if (scope.guests) {
@@ -126,7 +147,7 @@ export async function resetWedding(weddingId: string, scope: ResetScope, keepUse
       lp.gallery = { enabled: scope.content ? true : g.enabled, photos: [] };
     }
     if (scope.content) {
-      Object.assign(lp, { heroTagline: "Two families, one big yes.", story: null, hashtag: null, contactPhone: null, travel: null, theme: "ivory-editorial" as const });
+      Object.assign(lp, { heroTagline: "Two families, one big yes.", story: null, hashtag: null, contactPhone: null, travel: null, theme: "ivory-editorial" as const, rsvpOpen: true, rsvpDeadline: null });
       if (!scope.photos) lp.gallery = { enabled: true, photos: g.photos };
     }
     if (Object.keys(lp).length) await updateLook(weddingId, side, lp);
@@ -140,6 +161,54 @@ export async function resetWedding(weddingId: string, scope: ResetScope, keepUse
       await db.delete(verificationTokens).where(inArray(verificationTokens.identifier, others.map((o) => o.email)));
       await db.delete(users).where(inArray(users.id, others.map((o) => o.id)));
     }
+  }
+  return { photoUrls };
+}
+
+/** Wipes the chosen parts of one family's section. The other family's
+    guests, own celebrations, photos and look, and the common celebrations,
+    stay. Returns the photo URLs no longer used by either family. */
+export async function resetSide(weddingId: string, side: FamilySide, scope: ResetScope): Promise<{ photoUrls: string[] }> {
+  const theirs = (await db.select({ id: families.id }).from(families)
+    .where(and(eq(families.weddingId, weddingId), eq(families.side, side)))).map((f) => f.id);
+  if (scope.guests) {
+    if (theirs.length) await db.delete(families).where(inArray(families.id, theirs)); // guests, invites, replies cascade
+  } else if (scope.rsvps) {
+    if (theirs.length) await db.delete(rsvps).where(inArray(rsvps.familyId, theirs));
+  }
+
+  if (scope.events) {
+    // only this family's own; their invitations and replies cascade
+    await db.delete(events).where(and(eq(events.weddingId, weddingId), eq(events.side, side)));
+  }
+
+  const looks = await getLooks(weddingId);
+  const look = looks[side];
+  const g = galleryOf(look);
+  const lp: LookPatch = {};
+  let removed: string[] = [];
+  if (scope.photos) {
+    removed = g.photos.map((p) => p.pathname);
+    lp.gallery = { enabled: scope.content ? true : g.enabled, photos: [] };
+  }
+  if (scope.content) {
+    Object.assign(lp, {
+      heroTagline: "Two families, one big yes.", story: null, hashtag: null, contactPhone: null, travel: null,
+      theme: "ivory-editorial" as const, rsvpOpen: true, rsvpDeadline: null,
+    });
+    if (!scope.photos) lp.gallery = { enabled: true, photos: g.photos };
+    // hotels this family shared become the other family's own
+    const other = looks[otherSide(side)];
+    if (other.travel?.stays?.some((st) => st.common)) {
+      await updateLook(weddingId, otherSide(side), { travel: { ...other.travel, stays: other.travel.stays.map(({ common: _c, ...st }) => st) } });
+    }
+  }
+  if (Object.keys(lp).length) await updateLook(weddingId, side, lp);
+
+  // a photo the other family also shows keeps its file
+  const photoUrls: string[] = [];
+  for (const pathname of removed) {
+    if (!(await photoInUse(weddingId, pathname))) photoUrls.push(g.photos.find((p) => p.pathname === pathname)!.url);
   }
   return { photoUrls };
 }

@@ -4,21 +4,28 @@ import { useState, useTransition } from "react";
 import type { ResetScope } from "@/db/schema";
 import { requestDeleteWedding, requestResetWedding } from "./actions";
 
-const RESET_OPTIONS: { key: keyof ResetScope; label: string; hint: string }[] = [
-  { key: "guests", label: "Guest list", hint: "Every family and guest, their invitations and replies" },
-  { key: "rsvps", label: "RSVP answers only", hint: "Clears every reply but keeps the guest list" },
-  { key: "events", label: "Celebrations", hint: "Back to just the wedding day" },
-  { key: "photos", label: "Gallery photos", hint: "Removes every uploaded photo" },
-  { key: "content", label: "Site text and look", hint: "Story, tagline, parents, travel, hashtag, contact, theme, RSVP settings" },
-  { key: "committee", label: "Committee logins", hint: "Everyone else who can sign in to this wedding" },
+type Option = { key: "guests" | "rsvps" | "events" | "photos" | "content"; label: string; hint: string };
+
+/** A family's reset: only its own part of the wedding. */
+const RESET_OPTIONS: Option[] = [
+  { key: "guests", label: "Guest list", hint: "This family's households and guests, their invitations and replies" },
+  { key: "rsvps", label: "RSVP answers only", hint: "Clears this family's replies but keeps its guest list" },
+  { key: "events", label: "This family's own celebrations", hint: "Removes the celebrations only this family holds; common ones stay" },
+  { key: "photos", label: "Gallery photos", hint: "Removes this family's photos (a photo the other family also shows stays there)" },
+  { key: "content", label: "Site text and look", hint: "Story, tagline, travel, hashtag, contact, theme and RSVP settings — back to the start" },
 ];
 
 const NONE: ResetScope = { guests: false, rsvps: false, events: false, photos: false, content: false, committee: false };
 
 type Sent = { email: string; minutes: number; kind: "delete" | "reset" };
 
-export function DangerZone({ coupleNames }: { coupleNames: string }) {
-  const [scope, setScope] = useState<ResetScope>(NONE);
+/**
+ * With `family`: that family's Reset (in its section). Without: Delete the
+ * whole wedding website (on the dashboard).
+ */
+export function DangerZone({ coupleNames, family }: { coupleNames: string; family?: "bride" | "groom" }) {
+  const [scope, setScope] = useState<ResetScope>({ ...NONE, ...(family && { side: family }) });
+  const whose = family === "groom" ? "the groom's family's" : "the bride's family's";
   const [confirming, setConfirming] = useState<"reset" | "delete" | null>(null);
   const [understood, setUnderstood] = useState(false);
   const [sent, setSent] = useState<Sent | null>(null);
@@ -54,13 +61,16 @@ export function DangerZone({ coupleNames }: { coupleNames: string }) {
   return (
     <section id="danger" className="portal-panel p-6" style={{ borderColor: "#ecc9c4" }}>
       <p className="portal-eyebrow" style={{ color: "#9b1c1c" }}>Danger zone</p>
-      <h2 className="mt-1 font-semibold">Reset or delete</h2>
-      <p className="mt-1 text-sm text-neutral-500">Both need a confirmation link we email to your login address, so nobody can do this from your laptop alone.</p>
+      <h2 className="mt-1 font-semibold">{family ? `Reset ${whose} section` : "Delete"}</h2>
+      <p className="mt-1 text-sm text-neutral-500">
+        This needs a confirmation link we email to your login address, so nobody can do it from your laptop alone.
+        {family ? " Each family's section has its own Reset; deleting the whole website is on the dashboard." : " Each family resets its own part in its section."}
+      </p>
 
       {/* ── Reset ─────────────────────────────── */}
-      <div className="mt-6 rounded-xl border border-neutral-200 p-4">
+      {family && <div className="mt-6 rounded-xl border border-neutral-200 p-4">
         <p className="font-medium">Reset</p>
-        <p className="mt-1 text-sm text-neutral-500">Start parts of the site again. Your login, names, wedding date, city and web address always stay.</p>
+        <p className="mt-1 text-sm text-neutral-500">Start parts of {whose} section again. Your login, names, wedding date, city and web address, and everything of the other family&apos;s, stay.</p>
         <fieldset className="mt-4 grid gap-3 sm:grid-cols-2">
           <legend className="sr-only">What to reset</legend>
           {RESET_OPTIONS.map((o) => {
@@ -84,7 +94,7 @@ export function DangerZone({ coupleNames }: { coupleNames: string }) {
         </fieldset>
         {confirming === "reset" ? (
           <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900" role="alertdialog" aria-labelledby="reset-q">
-            <p id="reset-q" className="font-medium">Reset {chosen.length} part{chosen.length === 1 ? "" : "s"} of {coupleNames}&apos;s site?</p>
+            <p id="reset-q" className="font-medium">Reset {chosen.length} part{chosen.length === 1 ? "" : "s"} of {whose} section of {coupleNames}&apos;s site?</p>
             <ul className="mt-2 list-disc pl-5">{chosen.map((o) => <li key={o.key}>{o.label}</li>)}</ul>
             <p className="mt-2">We&apos;ll email you a link to confirm. This can&apos;t be undone once confirmed.</p>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -99,10 +109,10 @@ export function DangerZone({ coupleNames }: { coupleNames: string }) {
             Reset selected…
           </button>
         )}
-      </div>
+      </div>}
 
       {/* ── Delete ────────────────────────────── */}
-      <div className="mt-4 rounded-xl border border-neutral-200 p-4">
+      {!family && <div className="mt-6 rounded-xl border border-neutral-200 p-4">
         <p className="font-medium">Delete wedding website</p>
         <p className="mt-1 text-sm text-neutral-500">Removes the site, every guest, RSVP and photo, and every login for this wedding, including yours.</p>
         {confirming === "delete" ? (
@@ -125,7 +135,7 @@ export function DangerZone({ coupleNames }: { coupleNames: string }) {
             Delete wedding website…
           </button>
         )}
-      </div>
+      </div>}
 
       {error && <p className="mt-4 text-sm text-red-700" role="alert">{error}</p>}
     </section>
