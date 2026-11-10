@@ -187,9 +187,8 @@ export function ReviewGrid({
                   </td>
                   <td>
                     <select value={r.side} onChange={(e) => update(r.key, { side: e.target.value as ImportRow["side"] })} className="portal-input min-w-[6.5rem]" aria-label="Side">
-                      <option value="bride">Bride</option>
-                      <option value="groom">Groom</option>
-                      <option value="both">Both</option>
+                      <option value="bride">Bride&apos;s family</option>
+                      <option value="groom">Groom&apos;s family</option>
                     </select>
                   </td>
                   <td>

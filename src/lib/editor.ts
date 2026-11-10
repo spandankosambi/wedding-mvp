@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { expandMapLink } from "@/lib/maplinks";
+import { updateLook, type FamilySide } from "@/lib/looks";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events, families, eventInvites, rsvps, type TravelInfo } from "@/db/schema";
@@ -12,15 +13,20 @@ const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const hm = z.string().regex(/^\d{2}:\d{2}$/);
 const optional = (max: number) => z.string().trim().max(max).optional().transform((v) => v || null);
 
+/** What both families share: who, when, where, whose children. */
 export const detailsSchema = z.object({
   brideName: z.string().trim().min(1).max(60),
   groomName: z.string().trim().min(1).max(60),
   weddingDate: ymd,
   city: optional(80),
-  heroTagline: optional(160),
-  story: optional(2000),
   brideParents: optional(160),
   groomParents: optional(160),
+});
+
+/** One family's own words on the site. */
+export const wordsSchema = z.object({
+  heroTagline: optional(160),
+  story: optional(2000),
   hashtag: optional(60).transform((v) => (v ? v.replace(/^#+/, "") : v)),
   contactPhone: optional(40),
   theme: z.enum(THEMES).optional(),
@@ -70,8 +76,16 @@ type Result = { ok: true } | { ok: false; error: string };
 export async function updateDetails(weddingId: string, input: unknown): Promise<Result> {
   const p = detailsSchema.safeParse(input);
   if (!p.success) return { ok: false, error: "invalid input" };
-  const { weddingDate, theme, ...rest } = p.data;
-  await db.update(weddings).set({ ...rest, ...(theme && { theme }), weddingDate: istDate(weddingDate) }).where(eq(weddings.id, weddingId));
+  const { weddingDate, ...rest } = p.data;
+  await db.update(weddings).set({ ...rest, weddingDate: istDate(weddingDate) }).where(eq(weddings.id, weddingId));
+  return { ok: true };
+}
+
+export async function updateWords(weddingId: string, side: FamilySide, input: unknown): Promise<Result> {
+  const p = wordsSchema.safeParse(input);
+  if (!p.success) return { ok: false, error: "invalid input" };
+  const { theme, ...words } = p.data;
+  await updateLook(weddingId, side, { ...words, ...(theme && { theme }) });
   return { ok: true };
 }
 
@@ -85,14 +99,14 @@ export async function updateRsvpSettings(weddingId: string, input: unknown): Pro
   return { ok: true };
 }
 
-export async function updateTravel(weddingId: string, input: unknown): Promise<Result> {
+export async function updateTravel(weddingId: string, side: FamilySide, input: unknown): Promise<Result> {
   const p = travelSchema.safeParse(input);
   if (!p.success) return { ok: false, error: "invalid input" };
   const travel: TravelInfo = {
     stays: await Promise.all(p.data.stays.map(async (s) => ({ name: s.name, note: s.note, ...(s.url && { url: await expandMapLink(s.url) }) }))),
     gettingThere: p.data.gettingThere,
   };
-  await db.update(weddings).set({ travel }).where(eq(weddings.id, weddingId));
+  await updateLook(weddingId, side, { travel });
   return { ok: true };
 }
 

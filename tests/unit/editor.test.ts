@@ -2,7 +2,8 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, migrateDb } from "@/db/client";
 import { weddings, events } from "@/db/schema";
-import { updateDetails, updateRsvpSettings, updateTravel, upsertEvent, setEventPublished, deleteEvent, moveEvent, istParts, sortEventsByTime } from "@/lib/editor";
+import { getLook } from "@/lib/looks";
+import { updateDetails, updateWords, updateRsvpSettings, updateTravel, upsertEvent, setEventPublished, deleteEvent, moveEvent, istParts, sortEventsByTime } from "@/lib/editor";
 import { getPublicWedding } from "@/lib/open-rsvp";
 
 let weddingId: string, other: string;
@@ -14,12 +15,17 @@ beforeAll(async () => {
 });
 
 describe("editor", () => {
-  it("updates details incl. parents, hashtag (hash stripped), theme", async () => {
-    const r = await updateDetails(weddingId, { brideName: "Ananya", groomName: "Arjun", weddingDate: "2027-02-01", city: "Pune", brideParents: "Sunita & Rajesh Sharma", groomParents: "", hashtag: "#AnanyaKaArjun", theme: "raj-mahal" });
+  it("updates the shared details incl. parents", async () => {
+    const r = await updateDetails(weddingId, { brideName: "Ananya", groomName: "Arjun", weddingDate: "2027-02-01", city: "Pune", brideParents: "Sunita & Rajesh Sharma", groomParents: "" });
     expect(r.ok).toBe(true);
     const [w] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
-    expect(w).toMatchObject({ brideName: "Ananya", city: "Pune", brideParents: "Sunita & Rajesh Sharma", groomParents: null, hashtag: "AnanyaKaArjun", theme: "raj-mahal" });
+    expect(w).toMatchObject({ brideName: "Ananya", city: "Pune", brideParents: "Sunita & Rajesh Sharma", groomParents: null });
     expect(istParts(w.weddingDate)).toEqual({ date: "2027-02-01", time: "10:00" });
+  });
+  it("each family keeps its own words and theme (hash stripped from the hashtag)", async () => {
+    expect((await updateWords(weddingId, "groom", { heroTagline: "Baraat at dawn", hashtag: "#ArjunKiShaadi", theme: "raj-mahal" })).ok).toBe(true);
+    expect(await getLook(weddingId, "groom")).toMatchObject({ heroTagline: "Baraat at dawn", hashtag: "ArjunKiShaadi", theme: "raj-mahal" });
+    expect((await getLook(weddingId, "bride")).hashtag).not.toBe("ArjunKiShaadi");
   });
   it("rsvp settings: deadline is end of that IST day, blank clears", async () => {
     expect((await updateRsvpSettings(weddingId, { rsvpOpen: false, rsvpDeadline: "2027-01-15" })).ok).toBe(true);
@@ -30,10 +36,10 @@ describe("editor", () => {
     [w] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
     expect(w.rsvpDeadline).toBeNull();
   });
-  it("travel stored as json", async () => {
-    await updateTravel(weddingId, { stays: [{ name: "Taj", note: "Wedding block", url: "" }], gettingThere: "Fly to PNQ" });
-    const [w] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
-    expect(w.travel).toEqual({ stays: [{ name: "Taj", note: "Wedding block" }], gettingThere: "Fly to PNQ" });
+  it("travel is each family's own", async () => {
+    await updateTravel(weddingId, "bride", { stays: [{ name: "Taj", note: "Wedding block", url: "" }], gettingThere: "Fly to PNQ" });
+    expect((await getLook(weddingId, "bride")).travel).toEqual({ stays: [{ name: "Taj", note: "Wedding block" }], gettingThere: "Fly to PNQ" });
+    expect((await getLook(weddingId, "groom")).travel?.gettingThere).not.toBe("Fly to PNQ");
   });
   it("events: create, edit, hide, reorder, delete — scoped to the wedding", async () => {
     const a = await upsertEvent(weddingId, { name: "Sangeet", date: "2027-01-31", time: "19:00", venueName: "Lawns", address: "Pune", mapUrl: "", isPublished: true });

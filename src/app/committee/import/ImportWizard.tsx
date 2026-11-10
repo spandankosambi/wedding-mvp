@@ -28,8 +28,11 @@ export function ImportWizard({
   backHref,
   initialMode,
   aiConfigured,
+  family,
 }: {
   weddingId: string;
+  /** whose list this import fills: households with no clear side join it */
+  family: "bride" | "groom";
   events: EventRef[];
   backHref: string;
   initialMode: "direct" | "scan" | null;
@@ -42,7 +45,10 @@ export function ImportWizard({
   const [mapping, setMapping] = useState<Mapping | null>(null);
   const [answers, setAnswers] = useState<Answers>({});
   const allEvents = events.map((e) => e.id);
-  const [rows, setRows] = useState<ImportRow[]>(initialMode === "direct" ? [blankRow(1, allEvents), blankRow(2, allEvents), blankRow(3, allEvents)] : []);
+  // every household belongs to one family; anything unclear joins this one
+  const ownSide = (rs: ImportRow[]) => rs.map((r) => (r.side === "bride" || r.side === "groom" ? r : { ...r, side: family }));
+  const [rows, setRowsRaw] = useState<ImportRow[]>(initialMode === "direct" ? ownSide([blankRow(1, allEvents), blankRow(2, allEvents), blankRow(3, allEvents)]) : []);
+  const setRows = (rs: ImportRow[]) => setRowsRaw(ownSide(rs));
   const [stats, setStats] = useState<BuildStats | null>(null);
   const [existsCount, setExistsCount] = useState(0);
   const [onExisting, setOnExisting] = useState<OnExisting>("merge");

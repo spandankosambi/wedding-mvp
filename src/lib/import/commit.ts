@@ -61,6 +61,8 @@ export async function commitImport(weddingId: string, rows: ImportRow[], opts: C
     const email = row.email.trim().toLowerCase();
     if (!name) { result.errors.push({ key: row.key, error: "household name is required" }); continue; }
     if (!row.eventIds.every((id) => validEvents.has(id))) { result.errors.push({ key: row.key, error: "invited to an event that isn't part of this wedding" }); continue; }
+    // every household belongs to one family (an unclear one joins the bride's)
+    if (row.side !== "bride" && row.side !== "groom") row = { ...row, side: "bride" };
     // "all events" for a bride's-side household means common ones and the bride's own
     row = { ...row, eventIds: row.eventIds.filter((id) => eventForSide(weddingEvents.find((e) => e.id === id)!.side, row.side)) };
     const members = row.members.map((m) => ({ fullName: m.fullName.trim(), ageGroup: m.ageGroup })).filter((m) => m.fullName);

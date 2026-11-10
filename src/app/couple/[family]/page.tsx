@@ -1,0 +1,135 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { weddings, events } from "@/db/schema";
+import { requireRole } from "@/lib/authz";
+import { eventForSide, eventLabel } from "@/lib/sides";
+import { fmtWeddingDate } from "@/lib/format";
+import { asFamilySide, getLooks, otherSide, sideName } from "@/lib/looks";
+import { THEME_META } from "@/themes/catalog";
+import { ShareCard } from "../ShareCard";
+import { PrintInvitation } from "../PrintInvitation";
+import { NonResponders } from "../NonResponders";
+import { SummaryCards } from "../SummaryCards";
+import { Stat, weddingStats } from "../stats";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * One family's section: its own site, guest list and printed cards, and the
+ * link it shares with its guests.
+ */
+export default async function FamilySection({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ family: string }>;
+  searchParams: Promise<{ wedding?: string }>;
+}) {
+  const family = asFamilySide((await params).family);
+  if (!family) notFound();
+  const staff = await requireRole(["couple", "admin"]);
+  const sp = await searchParams;
+  let weddingId = staff.role === "admin" ? (sp.wedding ?? null) : staff.weddingId;
+  if (staff.role === "admin" && !weddingId) {
+    const [first] = await db.select().from(weddings).limit(1);
+    weddingId = first?.id ?? null;
+  }
+  if (!weddingId) return <main className="p-10 text-sm text-neutral-500">No wedding assigned to this account.</main>;
+
+  const [wedding] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
+  const [st, looks, evs] = await Promise.all([
+    weddingStats(weddingId, family),
+    getLooks(weddingId),
+    db.select().from(events).where(eq(events.weddingId, weddingId)).orderBy(events.sortOrder),
+  ]);
+  const look = looks[family];
+  const coupleNames = `${wedding.brideName} & ${wedding.groomName}`;
+  const admin = staff.role === "admin";
+  const q = (extra: string) => (admin ? `?wedding=${weddingId}&${extra}` : `?${extra}`);
+  const meta = THEME_META[look.theme];
+  const who = family === "bride" ? "bride" : "groom";
+
+  return (
+    <main className="mx-auto max-w-6xl px-6 py-10">
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="portal-eyebrow">
+            <Link href={`/couple${admin ? `?wedding=${weddingId}` : ""}`} className="hover:text-stone-950">{coupleNames}</Link>
+            <span className="mx-1 text-stone-300">/</span> {sideName(family)}
+          </p>
+          <h1 className="mt-2 text-xl font-semibold">{sideName(family)}</h1>
+          <p className="mt-1 text-sm text-neutral-500">
+            The {who}&apos;s side&apos;s own site, guests and printed cards — in the{" "}
+            <span className="font-medium text-neutral-700">{meta.label}</span> look.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link href={`/couple/site${q(`family=${family}`)}`} className="portal-button">Edit your site</Link>
+          <Link href={`/committee${q(`family=${family}`)}`} className="portal-button-secondary">Guest list &amp; invites</Link>
+          <PrintInvitation
+            weddingId={weddingId}
+            admin={admin}
+            family={family}
+            siteEditorHref={`/couple${admin ? `?wedding=${weddingId}` : ""}#details`}
+            theme={look.theme}
+            brideName={wedding.brideName}
+            groomName={wedding.groomName}
+            brideParents={wedding.brideParents}
+            groomParents={wedding.groomParents}
+            contactPhone={look.contactPhone}
+            hasDeadline={!!wedding.rsvpDeadline}
+            events={evs.filter((e) => eventForSide(e.side, family)).map((e) => ({ id: e.id, label: eventLabel(e), side: e.side, isPublished: e.isPublished }))}
+          />
+        </div>
+      </header>
+
+      <div className="mb-6">
+        <ShareCard slug={wedding.slug} coupleNames={coupleNames} weddingDateText={fmtWeddingDate(wedding.weddingDate)} family={family} />
+      </div>
+
+      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Stat label="Families" value={st.families.length} />
+        <Stat label="Guests" value={st.guests.length} />
+        <Stat label="Response rate" value={`${st.responseRate}%`} sub={`${st.respondedCount} of ${st.families.length} families`} />
+        <Stat label="Peak attendance" value={st.peak} sub="largest single event" />
+      </div>
+
+      <div className="mb-6">
+        <SummaryCards summary={st.summary} />
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <NonResponders families={st.nonResponders.map((f) => ({ id: f.id, name: f.name, relation: f.relation, side: f.side }))} />
+
+        <section className="rounded-xl border border-neutral-200 bg-white p-6">
+          <h2 className="font-semibold">The {who}&apos;s guest list</h2>
+          <p className="mt-1 text-sm text-neutral-500">
+            Add families, import a spreadsheet or send invites in the{" "}
+            <Link href={`/committee${q(`family=${family}`)}`} className="underline">guest list</Link>.
+          </p>
+          {st.families.length === 0 ? (
+            <p className="mt-4 text-sm text-neutral-400">No families yet.</p>
+          ) : (
+            <ul className="mt-4 space-y-1.5">
+              {st.families.map((f) => (
+                <li key={f.id} className="text-sm">
+                  <span className="font-medium">{f.name}</span>
+                  <span className="text-neutral-500">
+                    {" "}— {st.guests.filter((g) => g.familyId === f.id).map((g) => g.fullName.split(" ")[0]).join(", ")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      <p className="mt-8 text-center text-xs text-neutral-400">
+        Looking for the other side? Open the{" "}
+        <Link href={`/couple/${otherSide(family)}${admin ? `?wedding=${weddingId}` : ""}`} className="underline">{sideName(otherSide(family)).toLowerCase()}&apos;s section</Link>.
+      </p>
+    </main>
+  );
+}

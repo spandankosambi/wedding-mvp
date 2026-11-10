@@ -1,8 +1,9 @@
 import { z } from "zod";
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events, families, guests, eventInvites, rsvps } from "@/db/schema";
 import { showsTravel } from "@/lib/travel";
+import { getLook } from "@/lib/looks";
 import { eventLabel, eventForSide } from "@/lib/sides";
 import { hashToken, isExpired } from "@/lib/tokens";
 import { rateLimit } from "@/lib/ratelimit";
@@ -28,7 +29,11 @@ export async function getFamilyByToken(token: string) {
       id: family.id, name: family.name, side: family.side, relation: family.relation,
       showTravel: showsTravel(family.showTravel, eventIds, allEvents.filter((e) => eventForSide(e.side, family.side)).map((e) => e.id)),
     },
-    wedding: { id: wedding.id, slug: wedding.slug, brideName: wedding.brideName, groomName: wedding.groomName, theme: wedding.theme, weddingDate: wedding.weddingDate },
+    // the household's family's look ("both" from before the split → the bride's)
+    wedding: {
+      id: wedding.id, slug: wedding.slug, brideName: wedding.brideName, groomName: wedding.groomName, weddingDate: wedding.weddingDate,
+      theme: (await getLook(wedding.id, family.side === "groom" ? "groom" : "bride")).theme,
+    },
     members: members.map((m) => ({ id: m.id, fullName: m.fullName, ageGroup: m.ageGroup })),
     events: evs.map((e) => {
       const r = existing.find((x) => x.eventId === e.id);
@@ -91,15 +96,26 @@ export async function submitRsvp(input: unknown, clientKey = "local"):
   return { ok: true };
 }
 
-export async function getRsvpSummary(weddingId: string) {
-  const evs = await db.select().from(events).where(eq(events.weddingId, weddingId)).orderBy(events.sortOrder);
+/** Per event: families invited, families who answered, heads coming. With a
+    `side`, only that family's events (common + its own) and its households. */
+export async function getRsvpSummary(weddingId: string, side?: "bride" | "groom") {
+  const evs = (await db.select().from(events).where(eq(events.weddingId, weddingId)).orderBy(events.sortOrder))
+    .filter((e) => !side || eventForSide(e.side, side));
+  const sideIds = side
+    ? (await db.select({ id: families.id }).from(families).where(and(eq(families.weddingId, weddingId), eq(families.side, side)))).map((f) => f.id)
+    : null;
   const out = [];
   for (const e of evs) {
-    const invited = await db.select({ n: sql<number>`count(*)::int` }).from(eventInvites).where(eq(eventInvites.eventId, e.id));
+    if (sideIds && !sideIds.length) {
+      out.push({ eventId: e.id, eventName: eventLabel(e), invitedFamilies: 0, responded: 0, attendingHeadcount: 0 });
+      continue;
+    }
+    const invited = await db.select({ n: sql<number>`count(*)::int` }).from(eventInvites)
+      .where(sideIds ? and(eq(eventInvites.eventId, e.id), inArray(eventInvites.familyId, sideIds)) : eq(eventInvites.eventId, e.id));
     const resp = await db.select({
       n: sql<number>`count(*)::int`,
       heads: sql<number>`coalesce(sum(case when status = 'attending' then headcount else 0 end), 0)::int`,
-    }).from(rsvps).where(eq(rsvps.eventId, e.id));
+    }).from(rsvps).where(sideIds ? and(eq(rsvps.eventId, e.id), inArray(rsvps.familyId, sideIds)) : eq(rsvps.eventId, e.id));
     out.push({ eventId: e.id, eventName: eventLabel(e), invitedFamilies: invited[0].n, responded: resp[0].n, attendingHeadcount: resp[0].heads });
   }
   return out;

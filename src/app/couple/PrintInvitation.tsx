@@ -13,6 +13,8 @@ type PrintEvent = { id: string; label: string; side: Side; isPublished: boolean 
 type Props = {
   weddingId: string;
   admin: boolean;
+  /** whose cards these are: each family prints its own */
+  family: "bride" | "groom";
   /** where the parents' names are edited */
   siteEditorHref: string;
   theme: Theme;
@@ -35,8 +37,8 @@ const defaultEvents = (events: PrintEvent[], version: Side) =>
 function initial(p: Props): Form {
   const rsvp = p.contactPhone ? `For RSVP ${p.contactPhone}` : "";
   return {
-    version: "bride", size: "5x7", orientation: "portrait", eventLayout: "together",
-    eventIds: defaultEvents(p.events, "bride"), output: "printer", cropMarks: false, colours: "theme",
+    version: p.family, size: "5x7", orientation: "portrait", eventLayout: "together",
+    eventIds: defaultEvents(p.events, p.family), output: "printer", cropMarks: false, colours: "theme",
     invocation: "", shloka: "", rsvpBride: rsvp, rsvpGroom: rsvp, complimentsBride: "", complimentsGroom: "", note: "",
     qr: true, dressCode: true, replyBy: p.hasDeadline,
     frame: "classic", toran: false, patternBorder: false, monogram: false, monogramText: "", monogramStyle: "circle",
@@ -56,7 +58,17 @@ function fromSaved(base: Form, saved: Record<string, unknown>): Form {
   return out as Form;
 }
 
-const storeKey = (id: string) => `print-invitation:${id}`;
+const storeKey = (id: string, family: "bride" | "groom") => `print-invitation:${id}:${family}`;
+const legacyKey = (id: string) => `print-invitation:${id}`;
+/** What "same as your partner's card" copies: the setup, words and design —
+    not whose card it is, its events or its RSVP/compliments. */
+const SHARED_KEYS = [
+  "size", "orientation", "eventLayout", "output", "cropMarks", "colours", "invocation", "shloka", "note", "qr", "dressCode", "replyBy",
+  "frame", "toran", "patternBorder", "monogram", "monogramStyle", "fill", "nameFont", "photo", "photoPlace", "photoShape", "customW", "customH", "unit",
+] as const;
+const readSaved = (key: string): Record<string, unknown> | null => {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; }
+};
 const STEPS = ["Setup", "Wording", "Design"] as const;
 type Step = 1 | 2 | 3;
 const label = "text-xs font-medium uppercase tracking-wide text-neutral-500";
@@ -200,20 +212,30 @@ export function PrintInvitation(props: Props) {
 
   // answers are remembered on this device for the next print
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(storeKey(props.weddingId));
-      if (saved) {
-        const known = new Set(props.events.map((e) => e.id));
-        setForm((f) => {
-          const next = fromSaved(f, JSON.parse(saved));
-          return { ...next, eventIds: next.eventIds.filter((id) => known.has(id)) };
-        });
-      }
-    } catch { /* storage unavailable: start fresh */ }
-  }, [props.weddingId, props.events]);
+    const saved = readSaved(storeKey(props.weddingId, props.family)) ?? readSaved(legacyKey(props.weddingId));
+    if (saved) {
+      const known = new Set(props.events.map((e) => e.id));
+      setForm((f) => {
+        const next = fromSaved(f, saved);
+        // always this family's card
+        return { ...next, version: props.family, eventIds: next.eventIds.filter((id) => known.has(id)) };
+      });
+    }
+    setPartnerSaved(!!readSaved(storeKey(props.weddingId, props.family === "bride" ? "groom" : "bride")));
+  }, [props.weddingId, props.events, props.family]);
+
+  const [partnerSaved, setPartnerSaved] = useState(false);
+  function copyPartner() {
+    const other = readSaved(storeKey(props.weddingId, props.family === "bride" ? "groom" : "bride"));
+    if (!other) return;
+    setForm((f) => {
+      const next: Record<string, unknown> = { ...f };
+      for (const k of SHARED_KEYS) if (k in other) next[k] = other[k];
+      return next as Form;
+    });
+  }
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
-  const pickVersion = (version: "bride" | "groom") => setForm((f) => ({ ...f, version, eventIds: defaultEvents(props.events, version) }));
   const toggleEvent = (id: string) =>
     setForm((f) => ({ ...f, eventIds: f.eventIds.includes(id) ? f.eventIds.filter((x) => x !== id) : [...f.eventIds, id] }));
 
@@ -282,9 +304,9 @@ export function PrintInvitation(props: Props) {
 
   function remember() {
     try {
-      localStorage.setItem(storeKey(props.weddingId), JSON.stringify(form));
+      localStorage.setItem(storeKey(props.weddingId, props.family), JSON.stringify(form));
     } catch {
-      try { localStorage.setItem(storeKey(props.weddingId), JSON.stringify({ ...form, photo: null })); } catch { /* fine */ }
+      try { localStorage.setItem(storeKey(props.weddingId, props.family), JSON.stringify({ ...form, photo: null })); } catch { /* fine */ }
     }
   }
 
@@ -368,13 +390,16 @@ export function PrintInvitation(props: Props) {
           <div className="space-y-7">
             {step === 1 && (
               <>
-                <fieldset>
-                  <legend className={label}>Whose invitation is this?</legend>
-                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                    <Choice name="version" value="bride" current={form.version} onPick={pickVersion} title="Bride's family" hint="Hosted by her parents; common + bride's events" />
-                    <Choice name="version" value="groom" current={form.version} onPick={pickVersion} title="Groom's family" hint="Hosted by his parents; common + groom's events" />
-                  </div>
-                </fieldset>
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white px-3 py-2.5 text-xs ring-1 ring-neutral-200">
+                  <p className="text-neutral-600">
+                    The <span className="font-medium text-neutral-800">{props.family === "bride" ? "bride" : "groom"}&apos;s family&apos;s</span> card — hosted by their parents, with the common events and their own.
+                  </p>
+                  {partnerSaved && (
+                    <button type="button" onClick={copyPartner} className="portal-button-secondary">
+                      Same as the {props.family === "bride" ? "groom" : "bride"}&apos;s family&apos;s card
+                    </button>
+                  )}
+                </div>
 
                 <fieldset>
                   <legend className={label}>Card size</legend>
@@ -470,7 +495,7 @@ export function PrintInvitation(props: Props) {
                   <p className="mb-1 font-medium text-neutral-700">Parents&apos; names on the card</p>
                   {parentsLine("Bride's parents", props.brideParents)}
                   {parentsLine("Groom's parents", props.groomParents)}
-                  <p className="mt-1.5 text-neutral-500">These come from your site. <a href={props.siteEditorHref} className="underline">Change them in Edit your site</a>.</p>
+                  <p className="mt-1.5 text-neutral-500">These are shared by both families. <a href={props.siteEditorHref} className="underline">Change them on the dashboard</a>.</p>
                 </div>
 
                 <fieldset>

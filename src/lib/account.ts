@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { FAMILY_SIDES, getLooks, updateLook, type LookPatch } from "@/lib/looks";
 import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
@@ -69,7 +70,8 @@ export async function findAction(token: string): Promise<{ ok: true; action: Pen
 export async function deleteWedding(weddingId: string): Promise<{ photoUrls: string[] }> {
   const [w] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
   if (!w) return { photoUrls: [] };
-  const photoUrls = galleryOf(w).photos.map((p) => p.url);
+  const looks = await getLooks(weddingId);
+  const photoUrls = [...new Set([...galleryOf(w).photos, ...FAMILY_SIDES.flatMap((s) => galleryOf(looks[s]).photos)].map((p) => p.url))];
   const staff = await db.select({ email: users.email }).from(users).where(eq(users.weddingId, weddingId));
   if (staff.length) await db.delete(verificationTokens).where(inArray(verificationTokens.identifier, staff.map((s) => s.email)));
   // logins first (they point at the wedding); their sessions go with them
@@ -113,6 +115,23 @@ export async function resetWedding(weddingId: string, scope: ResetScope, keepUse
     if (!scope.photos) patch.gallery = { enabled: true, photos: galleryOf(w).photos };
   }
   if (Object.keys(patch).length) await db.update(weddings).set(patch).where(eq(weddings.id, weddingId));
+
+  // and each family's own look
+  const looks = await getLooks(weddingId);
+  for (const side of FAMILY_SIDES) {
+    const g = galleryOf(looks[side]);
+    const lp: LookPatch = {};
+    if (scope.photos) {
+      photoUrls.push(...g.photos.map((p) => p.url));
+      lp.gallery = { enabled: scope.content ? true : g.enabled, photos: [] };
+    }
+    if (scope.content) {
+      Object.assign(lp, { heroTagline: "Two families, one big yes.", story: null, hashtag: null, contactPhone: null, travel: null, theme: "ivory-editorial" as const });
+      if (!scope.photos) lp.gallery = { enabled: true, photos: g.photos };
+    }
+    if (Object.keys(lp).length) await updateLook(weddingId, side, lp);
+  }
+  photoUrls = [...new Set(photoUrls)];
 
   if (scope.committee) {
     const others = await db.select({ id: users.id, email: users.email }).from(users)

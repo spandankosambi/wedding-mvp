@@ -13,7 +13,7 @@ import { openWhatsAppInvite } from "./whatsapp";
 export type Row = {
   id: string;
   name: string;
-  side: "bride" | "groom" | "both";
+  side: "bride" | "groom" | "both"; // "both" only on households from before the split
   relation: string | null;
   email: string;
   phone?: string | null;
@@ -37,8 +37,12 @@ export function FamilyTable({
   weddingId,
   events,
   rows,
+  family,
+  importHref,
 }: {
   weddingId: string;
+  family: "bride" | "groom";
+  importHref: string;
   events: { id: string; name: string; side: Side }[];
   rows: Row[];
 }) {
@@ -84,7 +88,7 @@ export function FamilyTable({
         >
           Add family
         </button>
-        <a href={`/committee/import?wedding=${weddingId}`} className="portal-button-secondary">
+        <a href={importHref} className="portal-button-secondary">
           Import guest list
         </a>
         <div className="mx-1 hidden h-6 w-px bg-neutral-200 sm:block" />
@@ -285,7 +289,7 @@ export function FamilyTable({
               <tr>
                 <td colSpan={8} className="p-10 text-center text-sm text-neutral-400">
                   No families yet — add the first one, or{" "}
-                  <a href={`/committee/import?wedding=${weddingId}`} className="portal-link">import a spreadsheet</a>.
+                  <a href={importHref} className="portal-link">import a spreadsheet</a>.
                 </td>
               </tr>
             )}
@@ -321,6 +325,7 @@ export function FamilyTable({
       {editing && (
         <FamilyForm
           weddingId={weddingId}
+          family={family}
           events={events}
           draft={editing === "new" ? null : editing}
           onClose={(saved) => {

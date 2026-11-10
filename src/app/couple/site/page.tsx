@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { EventSideField } from "./EventSideField";
-import { sideLabel } from "@/lib/sides";
+import { asFamilySide, getLooks, hasPart, otherSide, samePart, sideName, type FamilySide, type Look, type LookPart } from "@/lib/looks";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events } from "@/db/schema";
@@ -8,16 +8,13 @@ import { requireRole } from "@/lib/authz";
 import { istParts } from "@/lib/editor";
 import { EVENT_PRESETS } from "@/lib/presets";
 import { fmtWeddingDate } from "@/lib/format";
-import { THEMES, THEME_META } from "@/themes/catalog";
-import { ShareCard } from "../ShareCard";
 import { ThemeSwitcher } from "../ThemeSwitcher";
 import { SaveButton } from "./SaveButton";
 import { GalleryUploader } from "./GalleryUploader";
-import { DangerZone } from "../danger/DangerZone";
 import { galleryOf, photoStorageConfigured, MAX_GALLERY_PHOTOS } from "@/lib/gallery";
 import {
-  saveDetails, saveRsvpSettings, saveTravel, saveEvent, addPresetEvent, toggleEvent, removeEvent, moveEventAction, sortEvents,
-  saveGallerySettings, removeGalleryPhotoAction, moveGalleryPhotoAction,
+  saveWords, saveTravel, saveEvent, addPresetEvent, toggleEvent, removeEvent, moveEventAction, sortEvents,
+  saveGallerySettings, removeGalleryPhotoAction, moveGalleryPhotoAction, copyPartAction,
 } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +27,19 @@ const Field = ({ label, hint, children, className = "" }: { label: string; hint?
   </label>
 );
 
-export default async function SiteEditorPage({ searchParams }: { searchParams: Promise<{ wedding?: string; saved?: string; error?: string; section?: string }> }) {
+/** "Same as the groom's family" — offered once the other family has filled this part in. */
+function SameAsPartner({ part, family, partner, mine, hidden }: { part: LookPart; family: FamilySide; partner: Look; mine: Look; hidden: React.ReactNode }) {
+  if (!hasPart(partner, part) || samePart(partner, mine, part)) return null;
+  return (
+    <form action={copyPartAction}>
+      {hidden}
+      <input type="hidden" name="part" value={part} />
+      <button type="submit" className="portal-button-secondary">Same as the {otherSide(family)}&apos;s family</button>
+    </form>
+  );
+}
+
+export default async function SiteEditorPage({ searchParams }: { searchParams: Promise<{ wedding?: string; family?: string; saved?: string; error?: string; section?: string }> }) {
   const staff = await requireRole(["couple", "admin"]);
   const sp = await searchParams;
   let weddingId = staff.role === "admin" ? (sp.wedding ?? null) : staff.weddingId;
@@ -40,16 +49,27 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
   }
   if (!weddingId) return <main className="p-10 text-sm text-neutral-500">No wedding assigned to this account.</main>;
 
+  const family: FamilySide = asFamilySide(sp.family) ?? "bride";
   const [w] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
-  const evs = await db.select().from(events).where(eq(events.weddingId, weddingId)).orderBy(events.sortOrder, events.startsAt);
+  const looks = await getLooks(weddingId);
+  const look = looks[family], partner = looks[otherSide(family)];
+  // this family's section: common events and its own
+  const evs = (await db.select().from(events).where(eq(events.weddingId, weddingId)).orderBy(events.sortOrder, events.startsAt))
+    .filter((e) => e.side === "both" || e.side === family);
   const coupleNames = `${w.brideName} & ${w.groomName}`;
   const hidden = evs.filter((e) => !e.isPublished).length;
-  const wid = staff.role === "admin" ? <input type="hidden" name="weddingId" value={weddingId} /> : null;
-  const stays = [...(w.travel?.stays ?? [])];
+  const wid = (
+    <>
+      {staff.role === "admin" && <input type="hidden" name="weddingId" value={weddingId} />}
+      <input type="hidden" name="family" value={family} />
+    </>
+  );
+  const stays = [...(look.travel?.stays ?? [])];
   while (stays.length < 3) stays.push({ name: "", note: "", url: "" });
-  const dateParts = istParts(w.weddingDate);
-  const gal = galleryOf(w);
+  const gal = galleryOf(look);
   const uploadsOn = photoStorageConfigured();
+  const adminQ = staff.role === "admin" ? `wedding=${weddingId}&` : "";
+  const same = (part: LookPart) => <SameAsPartner part={part} family={family} partner={partner} mine={look} hidden={wid} />;
 
   return (
     <main className="portal-page">
@@ -57,16 +77,18 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
         <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div className="max-w-2xl">
             <p className="portal-eyebrow">
-              <Link href="/couple" className="hover:text-stone-950">{coupleNames}</Link>
-              <span className="mx-1 text-stone-300">/</span> your site
+              <Link href={`/couple${adminQ ? `?${adminQ.slice(0, -1)}` : ""}`} className="hover:text-stone-950">{coupleNames}</Link>
+              <span className="mx-1 text-stone-300">/</span>
+              <Link href={`/couple/${family}${adminQ ? `?${adminQ.slice(0, -1)}` : ""}`} className="hover:text-stone-950">{sideName(family)}</Link>
+              <span className="mx-1 text-stone-300">/</span> site
             </p>
-            <h1 className="portal-heading mt-2">Edit your invitation</h1>
+            <h1 className="portal-heading mt-2">Edit the {family === "bride" ? "bride" : "groom"}&apos;s family&apos;s site</h1>
             <p className="portal-subheading mt-3">
-              Everything guests see lives here. Save a section and the site updates instantly —
-              open it in another tab to watch.
+              What the {family}&apos;s guests see: your look, words, celebrations, travel and photos. The names, date
+              and city are shared — change them on the <Link href={`/couple${adminQ ? `?${adminQ.slice(0, -1)}` : ""}`} className="underline">dashboard</Link>.
             </p>
           </div>
-          <a href={`/w/${w.slug}`} target="_blank" rel="noreferrer" className="portal-button-secondary">Preview site ↗</a>
+          <a href={`/w/${w.slug}?side=${family}`} target="_blank" rel="noreferrer" className="portal-button-secondary">Preview site ↗</a>
         </header>
 
         {sp.saved && (
@@ -81,34 +103,31 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
         )}
 
         <div className="space-y-8">
-          <ShareCard slug={w.slug} coupleNames={coupleNames} weddingDateText={fmtWeddingDate(w.weddingDate)} compact />
+          {/* ── Theme ───────────────────────────────────────────── */}
+          <div id="theme">
+            <ThemeSwitcher weddingId={weddingId} current={look.theme} slug={w.slug} coupleNames={coupleNames} family={family} partnerTheme={partner.theme} />
+          </div>
 
-          {/* ── Details ─────────────────────────────────────────── */}
-          <section id="details" className="portal-panel p-6">
-            <p className="portal-eyebrow">The couple</p>
-            <h2 className="mt-1 font-semibold">Names, date, story</h2>
-            <form action={saveDetails} className="mt-5 grid gap-4 md:grid-cols-2">
+          {/* ── Words ───────────────────────────────────────────── */}
+          <section id="words" className="portal-panel p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="portal-eyebrow">Words</p>
+                <h2 className="mt-1 font-semibold">Tagline, story, hashtag, contact</h2>
+              </div>
+              {same("words")}
+            </div>
+            <form action={saveWords} className="mt-5 grid gap-4 md:grid-cols-2">
               {wid}
-              <Field label="Bride's name"><input name="brideName" defaultValue={w.brideName} required maxLength={60} className="portal-input" /></Field>
-              <Field label="Groom's name"><input name="groomName" defaultValue={w.groomName} required maxLength={60} className="portal-input" /></Field>
-              <Field label="Wedding day"><input name="weddingDate" type="date" defaultValue={dateParts.date} required className="portal-input" /></Field>
-              <Field label="City" hint="shown under the date"><input name="city" defaultValue={w.city ?? ""} maxLength={80} placeholder="Mumbai" className="portal-input" /></Field>
-              <Field label="Bride's parents" hint="“with the blessings of”"><input name="brideParents" defaultValue={w.brideParents ?? ""} maxLength={160} placeholder="Sunita & Rajesh Sharma" className="portal-input" /></Field>
-              <Field label="Groom's parents"><input name="groomParents" defaultValue={w.groomParents ?? ""} maxLength={160} placeholder="Kavita & Vikram Mehta" className="portal-input" /></Field>
-              <Field label="Tagline" hint="one line under your names" className="md:col-span-2"><input name="heroTagline" defaultValue={w.heroTagline ?? ""} maxLength={160} placeholder="Two families, five celebrations, one big yes." className="portal-input" /></Field>
-              <Field label="Your story" hint="how you met — leave blank to hide the section" className="md:col-span-2">
-                <textarea name="story" defaultValue={w.story ?? ""} maxLength={2000} rows={4} className="portal-input resize-y" placeholder="They met over a spilled filter coffee at a Bengaluru hackathon…" />
+              <Field label="Tagline" hint="one line under your names" className="md:col-span-2"><input name="heroTagline" defaultValue={look.heroTagline ?? ""} maxLength={160} placeholder="Two families, five celebrations, one big yes." className="portal-input" /></Field>
+              <Field label="Your story" hint="how they met — leave blank to hide the section" className="md:col-span-2">
+                <textarea name="story" defaultValue={look.story ?? ""} maxLength={2000} rows={4} className="portal-input resize-y" placeholder="They met over a spilled filter coffee at a Bengaluru hackathon…" />
               </Field>
-              <Field label="Hashtag" hint="without the #"><input name="hashtag" defaultValue={w.hashtag ?? ""} maxLength={60} placeholder="AnanyaKaArjun" className="portal-input" /></Field>
-              <Field label="Family contact" hint="shown if RSVPs close"><input name="contactPhone" defaultValue={w.contactPhone ?? ""} maxLength={40} placeholder="+91 98765 43210 (Rajesh)" className="portal-input" /></Field>
+              <Field label="Hashtag" hint="without the #"><input name="hashtag" defaultValue={look.hashtag ?? ""} maxLength={60} placeholder="AnanyaKaArjun" className="portal-input" /></Field>
+              <Field label="Family contact" hint="shown if RSVPs close"><input name="contactPhone" defaultValue={look.contactPhone ?? ""} maxLength={40} placeholder="+91 98765 43210 (Rajesh)" className="portal-input" /></Field>
               <div className="md:col-span-2"><SaveButton /></div>
             </form>
           </section>
-
-          {/* ── Theme ───────────────────────────────────────────── */}
-          <div id="theme">
-            <ThemeSwitcher weddingId={weddingId} current={w.theme} slug={w.slug} coupleNames={coupleNames} />
-          </div>
 
           {/* ── Events ──────────────────────────────────────────── */}
           <section id="events" className="portal-panel p-6">
@@ -119,7 +138,8 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                   {evs.length} event{evs.length === 1 ? "" : "s"}{hidden ? ` · ${hidden} hidden` : ""}
                 </h2>
                 <p className="mt-1 text-sm text-neutral-500">
-                  Switch an event off to hide it from the site and the RSVP form without deleting it — handy for family-only functions.
+                  Common events are shared with the other family — a change here shows on both sites.
+                  Switch an event off to hide it from the site and the RSVP form without deleting it.
                 </p>
               </div>
               {evs.length > 1 && (
@@ -137,9 +157,9 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                       <span className="w-6 text-xs tabular-nums text-neutral-400">{String(i + 1).padStart(2, "0")}</span>
                       <span className="min-w-0 flex-1">
                         <span className={`font-medium ${e.isPublished ? "" : "text-neutral-400 line-through decoration-neutral-300"}`}>{e.name}</span>
-                        {e.side !== "both" && (
-                          <span className="ml-2 rounded border border-neutral-200 px-1.5 py-0.5 text-xs text-neutral-600">{sideLabel(e.side)}</span>
-                        )}
+                        <span className="ml-2 rounded border border-neutral-200 px-1.5 py-0.5 text-xs text-neutral-600">
+                          {e.side === "both" ? "Common" : "This family only"}
+                        </span>
                         <span className="ml-2 text-xs text-neutral-400">{p.date} · {p.time} · {e.venueName}</span>
                       </span>
                       {!e.isPublished && <span className="portal-badge">hidden</span>}
@@ -160,7 +180,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                         <Field label="Map link" hint="Google Maps share link"><input name="mapUrl" type="url" defaultValue={e.mapUrl ?? ""} maxLength={500} placeholder="https://maps.app.goo.gl/…" className="portal-input" /></Field>
                         <Field label="Dress code"><input name="dressCode" defaultValue={e.dressCode ?? ""} maxLength={80} placeholder="Yellows / Traditional / Cocktail" className="portal-input" /></Field>
                         <Field label="A line about it" className="md:col-span-2"><input name="description" defaultValue={e.description ?? ""} maxLength={400} className="portal-input" /></Field>
-                        <EventSideField initial={e.side} eventName={e.name} />
+                        <EventSideField initial={e.side} eventName={e.name} family={family} />
                         <label className="flex items-center gap-2 text-sm md:col-span-2">
                           <input type="checkbox" name="isPublished" defaultChecked={e.isPublished} className="h-4 w-4" />
                           Show this event on the site and RSVP form
@@ -199,9 +219,14 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
 
           {/* ── Travel ──────────────────────────────────────────── */}
           <section id="travel" className="portal-panel p-6">
-            <p className="portal-eyebrow">Travel &amp; stay</p>
-            <h2 className="mt-1 font-semibold">Where out-of-town guests should stay</h2>
-            <p className="mt-1 text-sm text-neutral-500">Leave everything blank to hide the section.</p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="portal-eyebrow">Travel &amp; stay</p>
+                <h2 className="mt-1 font-semibold">Where out-of-town guests should stay</h2>
+                <p className="mt-1 text-sm text-neutral-500">Leave everything blank to hide the section.</p>
+              </div>
+              {same("travel")}
+            </div>
             <form action={saveTravel} className="mt-5 space-y-4">
               {wid}
               {stays.map((s, i) => (
@@ -212,7 +237,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                 </div>
               ))}
               <Field label="Getting there" hint="airport, distances, shuttles">
-                <textarea name="gettingThere" defaultValue={w.travel?.gettingThere ?? ""} maxLength={1200} rows={3} className="portal-input resize-y" placeholder="Fly into Mumbai (BOM). Both hotels are 20–40 minutes from the terminals…" />
+                <textarea name="gettingThere" defaultValue={look.travel?.gettingThere ?? ""} maxLength={1200} rows={3} className="portal-input resize-y" placeholder="Fly into Mumbai (BOM). Both hotels are 20–40 minutes from the terminals…" />
               </Field>
               <SaveButton />
             </form>
@@ -220,8 +245,13 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
 
           {/* ── Gallery ─────────────────────────────────────────── */}
           <section id="gallery" className="portal-panel p-6">
-            <p className="portal-eyebrow">Gallery</p>
-            <h2 className="mt-1 font-semibold">Your photos{gal.photos.length ? ` · ${gal.photos.length}` : ""}</h2>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="portal-eyebrow">Gallery</p>
+                <h2 className="mt-1 font-semibold">Your photos{gal.photos.length ? ` · ${gal.photos.length}` : ""}</h2>
+              </div>
+              {same("gallery")}
+            </div>
             <p className="mt-1 text-sm text-neutral-500">
               {gal.photos.length
                 ? "These appear on your site in this order."
@@ -260,38 +290,15 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
 
             <div className="mt-6 rounded-xl border border-dashed border-neutral-300 p-4">
               {uploadsOn ? (
-                <GalleryUploader weddingId={weddingId} admin={staff.role === "admin"} remaining={MAX_GALLERY_PHOTOS - gal.photos.length} />
+                <GalleryUploader weddingId={weddingId} admin={staff.role === "admin"} remaining={MAX_GALLERY_PHOTOS - gal.photos.length} family={family} />
               ) : (
                 <p className="text-sm text-neutral-500">Photo uploads aren&apos;t switched on for this site yet.</p>
               )}
             </div>
           </section>
 
-          {/* ── RSVP ────────────────────────────────────────────── */}
-          <section id="rsvp" className="portal-panel p-6">
-            <p className="portal-eyebrow">RSVP</p>
-            <h2 className="mt-1 font-semibold">Who can reply, and until when</h2>
-            <form action={saveRsvpSettings} className="mt-5 space-y-4">
-              {wid}
-              <label className="flex items-start gap-3 text-sm">
-                <input type="checkbox" name="rsvpOpen" defaultChecked={w.rsvpOpen} className="mt-0.5 h-4 w-4" />
-                <span>
-                  <span className="font-medium">Accept RSVPs from the shared link</span>
-                  <span className="block text-xs text-neutral-500">Off = the site shows your family contact instead of the form. Emailed personal links keep working.</span>
-                </span>
-              </label>
-              <Field label="Reply-by date" hint="optional; the form closes at midnight IST">
-                <input name="rsvpDeadline" type="date" defaultValue={w.rsvpDeadline ? istParts(w.rsvpDeadline).date : ""} className="portal-input md:max-w-xs" />
-              </Field>
-              <SaveButton />
-            </form>
-          </section>
-
-          {/* only the couple themselves can reset or delete; admins have their own tools */}
-          {staff.role === "couple" && <DangerZone coupleNames={coupleNames} />}
-
           <p className="text-center text-xs text-neutral-400">
-            Theme currently <span className="font-medium text-neutral-600">{THEME_META[w.theme as (typeof THEMES)[number]]?.label}</span>. Guest list and invites live in the <Link href="/committee" className="underline">committee view</Link>.
+            This family&apos;s guest list and invites live in its <Link href={`/committee?${adminQ}family=${family}`} className="underline">guest list</Link>.
           </p>
         </div>
       </div>

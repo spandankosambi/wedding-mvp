@@ -122,8 +122,10 @@ test("the couple can switch the gallery off and back on", async ({ page }) => {
 
 test("the couple can get from the guest list back to their dashboard", async ({ page }) => {
   await signIn(page, "couple@example.com");
-  await page.goto("/committee");
-  await page.getByRole("link", { name: "← Back to dashboard" }).click();
+  await page.goto("/committee?family=groom");
+  await page.getByRole("link", { name: "← Back to groom's family" }).click();
+  await expect(page).toHaveURL(/\/couple\/groom$/);
+  await page.getByRole("link", { name: "Ananya & Arjun" }).first().click();
   await expect(page).toHaveURL(/\/couple$/);
 });
 
@@ -191,10 +193,13 @@ test("a guest can be edited from the Guests view", async ({ page }) => {
 
 test("Travel & Stay is one tick per household, from either view, and follows the invitation", async ({ page }) => {
   await signIn(page, "committee@example.com");
-  await page.goto("/committee?view=guests");
-
-  // automatic until set: Chachu's family is invited to everything, the Office Gang to 3 of 5
+  // automatic until set: Chachu's family (the groom's) is invited to everything…
+  await page.goto("/committee?family=groom&view=guests");
   await expect(page.getByLabel("Show Travel & Stay to Rohit Mehta")).toBeChecked();
+  // …the bride's Office Gang to 3 of 5
+  await page.getByRole("link", { name: "Bride's family" }).click();
+  await expect(page).toHaveURL(/family=bride/);
+  await expect(page).toHaveURL(/view=guests/);
   const priya = page.getByLabel("Show Travel & Stay to Priya Nair");
   const kabir = page.getByLabel("Show Travel & Stay to Kabir Bose");
   const ishaan = page.getByLabel("Show Travel & Stay to Ishaan Verma");

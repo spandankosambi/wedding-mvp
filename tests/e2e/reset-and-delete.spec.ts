@@ -33,6 +33,8 @@ test("a couple resets chosen parts after confirming by email", async ({ page }) 
   await page.getByRole("button", { name: "+ Haldi" }).click();
   await expect(page.getByText("2 events", { exact: true })).toBeVisible();
 
+  // reset and delete live on the main dashboard
+  await page.goto("/couple");
   const danger = page.locator("#danger");
   await danger.getByLabel(/Celebrations/).check();
   await danger.getByRole("button", { name: "Reset selected…" }).click();
@@ -63,6 +65,7 @@ test("a couple resets chosen parts after confirming by email", async ({ page }) 
 
 test("a couple deletes their wedding after confirming by email", async ({ page }) => {
   const email = await newCouple(page, "Tara", "Kabir");
+  await page.goto("/couple");
   const danger = page.locator("#danger");
   await danger.getByRole("button", { name: "Delete wedding website…" }).click();
   const send = danger.getByRole("button", { name: "Email me the confirmation link" });

@@ -73,7 +73,7 @@ describe("commitImport", () => {
     expect(res).toMatchObject({ created: 0, updated: 1, skipped: 0 });
     const fams = await db.select().from(families).where(eq(families.email, "sharma@x.com"));
     expect(fams).toHaveLength(1);
-    expect(fams[0]).toMatchObject({ name: "Sharma Parivaar", side: "both" });
+    expect(fams[0]).toMatchObject({ name: "Sharma Parivaar", side: "bride" }); // no "both" any more: an unclear side joins the bride's family
     const members = await db.select().from(guests).where(eq(guests.familyId, fams[0].id));
     expect(members.map((m) => m.fullName)).toEqual(["Sunita Sharma"]);
     const invites = await db.select().from(eventInvites).where(eq(eventInvites.familyId, fams[0].id));

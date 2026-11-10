@@ -24,7 +24,7 @@ async function shrink(file: File): Promise<{ blob: Blob; width: number; height: 
   return { blob, width, height };
 }
 
-export function GalleryUploader({ weddingId, admin, remaining }: { weddingId: string; admin: boolean; remaining: number }) {
+export function GalleryUploader({ weddingId, admin, remaining, family }: { weddingId: string; admin: boolean; remaining: number; family: "bride" | "groom" }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -44,6 +44,7 @@ export function GalleryUploader({ weddingId, admin, remaining }: { weddingId: st
         const { blob, width, height } = await shrink(f);
         const fd = new FormData();
         if (admin) fd.set("weddingId", weddingId);
+        fd.set("family", family);
         fd.set("photo", new File([blob], f.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" }));
         fd.set("width", String(width));
         fd.set("height", String(height));

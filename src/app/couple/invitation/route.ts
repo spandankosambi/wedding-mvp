@@ -6,6 +6,7 @@ import { appOrigin } from "@/lib/origin";
 import { invitationSchema } from "@/lib/invitation/options";
 import { buildInvitation, fileName } from "@/lib/invitation/content";
 import { renderInvitationPdf } from "@/lib/invitation/pdf";
+import { getLook } from "@/lib/looks";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,7 +35,8 @@ export async function POST(req: Request) {
   }
 
   const inv = buildInvitation(wedding, evs, o, `${await appOrigin()}/w/${wedding.slug}`);
-  const pdf = await renderInvitationPdf(inv, o, wedding.theme);
+  // each family's cards in its own look
+  const pdf = await renderInvitationPdf(inv, o, (await getLook(weddingId, o.version)).theme);
   return new Response(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",

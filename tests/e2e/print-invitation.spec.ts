@@ -20,7 +20,8 @@ const shots = process.env.SHOTS_DIR;
 
 test("setup, wording and design — with the live preview on every page — then download", async ({ page }) => {
   await signIn(page, "couple@example.com");
-  await page.goto("/couple");
+  // each family prints its own cards, from its section
+  await page.goto("/couple/groom");
   await page.getByRole("button", { name: "Print invitation cards" }).click();
   const dialog = page.getByRole("dialog", { name: "Download invitation PDF to print" });
   await expect(dialog).toBeVisible();
@@ -28,8 +29,8 @@ test("setup, wording and design — with the live preview on every page — then
   const preview = dialog.getByTestId("pdf-preview");
 
   // ── 1 · setup ──
-  await expect(dialog.getByText("Joint card")).toHaveCount(0); // the bride's family or the groom's only
-  await dialog.getByText("Groom's family", { exact: true }).click();
+  await expect(dialog.getByText("Joint card")).toHaveCount(0);
+  await expect(dialog.getByText(/family.s card — hosted by their parents/)).toContainText("groom's family's");
   await dialog.getByRole("combobox", { name: "Card size" }).selectOption("a5");
   await dialog.getByText("A separate card for each event", { exact: true }).click();
   await dialog.getByRole("button", { name: "Haldi" }).click(); // leave one out
@@ -44,7 +45,7 @@ test("setup, wording and design — with the live preview on every page — then
   await dialog.getByPlaceholder(/वक्रतुण्ड/).fill("वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ");
   // parents' names come from the site
   await expect(dialog.getByText("Kavita & Vikram Mehta")).toBeVisible();
-  await expect(dialog.getByRole("link", { name: "Change them in Edit your site" })).toHaveAttribute("href", "/couple/site");
+  await expect(dialog.getByRole("link", { name: "Change them on the dashboard" })).toHaveAttribute("href", "/couple#details");
   await expect(dialog.getByPlaceholder("Mr. & Mrs. Rajesh Kosambi")).toHaveCount(0);
   // each family has its own RSVP and compliments; the groom's print on this card
   await dialog.getByLabel("Groom's family RSVP contacts").fill("Vikram Mehta +91 98200 11111");

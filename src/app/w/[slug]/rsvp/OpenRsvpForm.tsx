@@ -11,11 +11,11 @@ type Status = "attending" | "declined" | null;
 
 const field = { background: "var(--surface)", border: "1px solid var(--hairline)", color: "var(--ink)" } as const;
 
-export function OpenRsvpForm({ slug, events }: { slug: string; events: EventProp[] }) {
+export function OpenRsvpForm({ slug, events, initialSide = "bride" }: { slug: string; events: EventProp[]; initialSide?: "bride" | "groom" }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [side, setSide] = useState<"bride" | "groom" | "both" | "">("");
+  const [side, setSide] = useState<"bride" | "groom">(initialSide);
   const [diet, setDiet] = useState<string>("");
   const [guestNames, setGuestNames] = useState("");
   const [note, setNote] = useState("");
@@ -36,7 +36,7 @@ export function OpenRsvpForm({ slug, events }: { slug: string; events: EventProp
     startTransition(async () => {
       const res = await submitOpenRsvpAction({
         slug, name: name.trim(), phone: phone.trim() || undefined, email: email.trim() || undefined,
-        side: side || undefined, diet: diet || undefined,
+        side, diet: diet || undefined,
         guestNames: guestNames.split(/[,\n]/).map((s) => s.trim()).filter(Boolean).slice(0, MAX),
         note: note.trim() || undefined,
         responses: answered.map((e) => ({
@@ -96,7 +96,6 @@ export function OpenRsvpForm({ slug, events }: { slug: string; events: EventProp
           <label className="block">
             <span className="text-xs" style={{ color: "var(--ink-soft)" }}>You&apos;re here for</span>
             <select value={side} onChange={(e) => setSide(e.target.value as typeof side)} className="mt-1.5 w-full px-4 py-3 text-sm outline-none" style={field}>
-              <option value="">Both families</option>
               <option value="bride">The bride&apos;s side</option>
               <option value="groom">The groom&apos;s side</option>
             </select>

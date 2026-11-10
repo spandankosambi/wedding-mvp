@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getPublicWedding } from "@/lib/open-rsvp";
 import { fixShortMapLinks } from "@/lib/maplinks";
+import { asFamilySide, getLook, withLook, type FamilySide } from "@/lib/looks";
+import { eventForSide } from "@/lib/sides";
 import { rsvpWindow } from "@/lib/open-rsvp";
 import { Hero } from "./sections/Hero";
 import { Marquee } from "./sections/Marquee";
@@ -30,7 +32,7 @@ type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 /** The household behind ?invite=<token>, if the token is current and belongs
     to this wedding. Anything else just shows the ordinary site. */
 async function invitedGuest(weddingId: string, searchParams: SearchParams): Promise<
-  (InvitedGuest & { eventIds: Set<string>; showTravel: boolean }) | null
+  (InvitedGuest & { eventIds: Set<string>; showTravel: boolean; side: FamilySide }) | null
 > {
   const token = (await searchParams).invite;
   if (typeof token !== "string" || token.length < 20 || token.length > 100) return null;
@@ -42,6 +44,8 @@ async function invitedGuest(weddingId: string, searchParams: SearchParams): Prom
     answered: data.events.some((e) => e.rsvp),
     eventIds: new Set(data.events.map((e) => e.id)),
     showTravel: data.family.showTravel,
+    // a household from before the split ("both") sees the bride's family's look
+    side: (data.family.side === "groom" ? "groom" : "bride") as FamilySide,
   };
 }
 
@@ -78,15 +82,20 @@ export default async function WeddingPage({
 }) {
   const data = await getPublicWedding((await params).slug);
   if (!data) notFound();
+  const invite = await invitedGuest(data.wedding.id, searchParams);
+  // One site, two looks: a guest sees their family's side (from their
+  // invitation, or the ?side= of the family's shared link); the plain
+  // address shows the bride's.
+  const side: FamilySide = invite?.side ?? asFamilySide((await searchParams).side) ?? "bride";
+  const look = await getLook(data.wedding.id, side);
   // short Google Maps links some networks can't open → their full address (once)
-  const fixed = await fixShortMapLinks(data.wedding.id, data.events, data.wedding.travel);
-  const wedding = { ...data.wedding, travel: fixed.travel };
+  const fixed = await fixShortMapLinks(data.wedding.id, data.events, look.travel, side);
+  const wedding = withLook(data.wedding, { ...look, travel: fixed.travel });
   const events = data.events.map((e) => (fixed.eventUrls.has(e.id) ? { ...e, mapUrl: fixed.eventUrls.get(e.id)! } : e));
-  const invite = await invitedGuest(wedding.id, searchParams);
   // A household's own invitation shows only the events they're invited to
   // (the same list as their RSVP page), and Travel & Stay only if the
-  // committee shows it to them. The general site shows everything.
-  const shown = invite ? events.filter((e) => invite.eventIds.has(e.id)) : events;
+  // committee shows it to them. A family's link shows the common events and its own.
+  const shown = invite ? events.filter((e) => invite.eventIds.has(e.id)) : events.filter((e) => eventForSide(e.side, side));
   const window = rsvpWindow(wedding);
   // section numbers count only what this wedding actually shows
   const hasTravel = !!(wedding.travel?.stays?.length || wedding.travel?.gettingThere) && (!invite || invite.showTravel);
@@ -110,7 +119,7 @@ export default async function WeddingPage({
       <EventTimeline theme={wedding.theme} events={shown} no={eventsNo} />
       {hasTravel && <TravelStay travel={wedding.travel} no={travelNo} />}
       {gallery.enabled && <Gallery theme={wedding.theme} no={galleryNo} photos={gallery.photos} />}
-      <RsvpCta slug={wedding.slug} open={window.open} deadline={wedding.rsvpDeadline} contactPhone={wedding.contactPhone} invite={invite} />
+      <RsvpCta slug={wedding.slug} side={side} open={window.open} deadline={wedding.rsvpDeadline} contactPhone={wedding.contactPhone} invite={invite} />
       {/* room under the footer so the invitation bar never covers it */}
       <footer className="hairline-t px-6 py-10 text-center" style={invite ? { paddingBottom: "7rem" } : undefined}>
         <p className="kicker">

@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { getLook } from "@/lib/looks";
 import { db } from "@/db/client";
 import { weddings, families, guests, eventInvites, rsvps, emailLog } from "@/db/schema";
 import { generateInviteToken, tokenExpiry } from "@/lib/tokens";
@@ -66,7 +67,8 @@ export async function issueInvites(
       familyName: family.name,
       coupleNames,
       rsvpUrl: inviteUrl(appUrl, wedding.slug, token),
-      theme: wedding.theme,
+      // in the household's family's look
+      theme: (await getLook(wedding.id, family.side === "groom" ? "groom" : "bride")).theme,
       type: type === "remind" ? "reminder" : type,
     });
     results.push(res.ok ? { familyId, ok: true } : { familyId, ok: false, error: res.error });

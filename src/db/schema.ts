@@ -43,6 +43,27 @@ export const weddings = pgTable("weddings", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+/**
+ * Each family's own look for the one wedding site: the bride's family and
+ * the groom's print and present their invitations differently. A guest sees
+ * their family's side; the plain site address shows the bride's. Everything
+ * shared (names, date, city, parents, events, RSVP settings) stays on
+ * `weddings`; the matching columns there are the starting values a new side
+ * is created from.
+ */
+export const weddingSides = pgTable("wedding_sides", {
+  weddingId: uuid("wedding_id").notNull().references(() => weddings.id, { onDelete: "cascade" }),
+  side: sideEnum("side").notNull(), // "bride" or "groom" only
+  theme: themeEnum("theme").notNull().default("ivory-editorial"),
+  heroTagline: text("hero_tagline"),
+  story: text("story"),
+  hashtag: text("hashtag"),
+  contactPhone: text("contact_phone"),
+  travel: jsonb("travel").$type<TravelInfo>(),
+  gallery: jsonb("gallery").$type<GalleryInfo>(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [primaryKey({ columns: [t.weddingId, t.side] })]);
+
 export const events = pgTable("events", {
   id: uuid("id").defaultRandom().primaryKey(),
   weddingId: uuid("wedding_id").notNull().references(() => weddings.id, { onDelete: "cascade" }),

@@ -29,7 +29,7 @@ const familySchema = z.object({
   weddingId: z.string().uuid(),
   familyId: z.string().uuid().optional(),
   name: z.string().min(1).max(120),
-  side: z.enum(["bride", "groom", "both"]),
+  side: z.enum(["bride", "groom"]), // every household belongs to one family
   relation: z.string().max(120).optional(),
   members: z.array(z.object({
     id: z.string().uuid().optional(),

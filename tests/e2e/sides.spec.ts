@@ -23,51 +23,54 @@ async function signIn(page: Page, email: string) {
 
 const shots = process.env.SHOTS_DIR;
 
-test("an event can be one side's own, and households only see their side's events", async ({ page }) => {
+test("an event can be one family's own; each family's section, list and site follow", async ({ page }) => {
   await signIn(page, "couple2@example.com");
 
-  // ── the couple makes the Mehendi the bride's own ─────────────
-  await page.goto("/couple/site");
+  // ── in the bride's section, the couple makes the Mehendi the bride's own ──
+  await page.goto("/couple/site?family=bride");
   const mehendi = page.locator("details", { has: page.getByText("Mehendi", { exact: true }) }).first();
   await mehendi.locator("summary").click();
-  const common = mehendi.getByLabel("Mehendi is common for bride and groom");
+  const common = mehendi.getByLabel("Mehendi is common for both families");
   await expect(common).toBeChecked();
   await common.uncheck();
-  await expect(mehendi.getByRole("radiogroup", { name: "Whose Mehendi is this?" })).toBeVisible();
-  await mehendi.getByText("Bride's side", { exact: true }).click();
+  await expect(mehendi.getByText("Only the bride's family's event")).toBeVisible();
   if (shots) await mehendi.screenshot({ path: `${shots}/event-side.png` });
   await mehendi.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("Saved. Your site is up to date.")).toBeVisible();
-  await expect(mehendi.locator("summary").getByText("Bride's side")).toBeVisible();
+  await expect(mehendi.locator("summary").getByText("This family only")).toBeVisible();
 
-  // ── the guest list follows ───────────────────────────────────
-  await page.goto("/committee");
+  // the groom's section no longer has it
+  await page.goto("/couple/site?family=groom");
+  await expect(page.getByRole("heading", { name: /edit the groom's family's site/i })).toBeVisible();
+  await expect(page.locator("details", { has: page.getByText("Mehendi", { exact: true }) })).toHaveCount(0);
+
+  // ── each family's guest list follows ─────────────────────────
+  await page.goto("/committee?family=groom");
   // the groom's parents were invited to everything; the bride's Mehendi isn't theirs any more
   const saxena = page.getByRole("row", { name: /Saxena Family/ });
   await expect(saxena.getByText(/Sangeet/)).toBeVisible();
   await expect(saxena.getByText(/Mehendi/)).toHaveCount(0);
-  await expect(page.getByRole("row", { name: /Malhotra Family/ }).getByText(/Mehendi · Bride/)).toBeVisible();
+  await expect(page.getByRole("row", { name: /Malhotra Family/ })).toHaveCount(0); // the bride's
 
-  // the family form offers only common events and the family's own side's
+  await page.goto("/committee?family=bride");
+  await expect(page.getByRole("row", { name: /Malhotra Family/ }).getByText(/Mehendi · Bride/)).toBeVisible();
+  // a new family joins this list, offered common events and the bride's own
   await page.getByRole("button", { name: "Add family" }).click();
   const dialog = page.getByRole("dialog");
-  const side = dialog.getByRole("combobox").first();
-  await side.selectOption("groom");
-  await expect(dialog.getByRole("button", { name: "Sangeet" })).toBeVisible();
-  await expect(dialog.getByRole("button", { name: /Mehendi/ })).toHaveCount(0);
-  await expect(dialog.getByText("Showing common and groom's-side events.")).toBeVisible();
-  await side.selectOption("bride");
+  const side = dialog.getByRole("combobox", { name: "Side" });
+  await expect(side).toHaveValue("bride");
+  await expect(side.locator("option")).toHaveText(["Bride's family", "Groom's family"]); // no "both"
   await dialog.getByRole("button", { name: "Mehendi · Bride" }).click();
   await expect(dialog.getByRole("button", { name: "Mehendi · Bride" })).toHaveAttribute("aria-pressed", "true");
   if (shots) await page.screenshot({ path: `${shots}/family-side-events.png` });
-  // switching to the groom's side drops it
+  // moving it to the groom's family drops the bride's own event
   await side.selectOption("groom");
   await expect(dialog.getByRole("button", { name: /Mehendi/ })).toHaveCount(0);
-  await side.selectOption("both"); // both sides: every event, Mehendi not picked
-  await expect(dialog.getByRole("button", { name: "Mehendi · Bride" })).toHaveAttribute("aria-pressed", "false");
 
-  // ── guests see whose it is ───────────────────────────────────
-  await page.goto("/w/gaurav-weds-karishma");
-  const card = page.getByRole("listitem").filter({ has: page.getByRole("heading", { name: "Mehendi", level: 3 }) });
-  await expect(card.getByText("Bride's side")).toBeVisible();
+  // ── guests: each family's site shows its own events ──────────
+  await page.goto("/w/gaurav-weds-karishma?side=bride");
+  await expect(page.getByRole("heading", { name: "Mehendi", level: 3 })).toBeVisible();
+  await page.goto("/w/gaurav-weds-karishma?side=groom");
+  await expect(page.getByRole("heading", { name: "Mehendi", level: 3 })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Sangeet", level: 3 })).toBeVisible();
 });

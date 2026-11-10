@@ -1,5 +1,5 @@
 import { closeDb, db, migrateDb } from "@/db/client";
-import { weddings, events, families, guests, eventInvites, rsvps, users } from "@/db/schema";
+import { weddings, weddingSides, events, families, guests, eventInvites, rsvps, users } from "@/db/schema";
 import { generateInviteToken, tokenExpiry } from "@/lib/tokens";
 import { syncHousehold } from "@/lib/primary";
 import { eq, inArray, or } from "drizzle-orm";
@@ -29,7 +29,7 @@ const EVENTS = [
 ];
 
 // [familyName, side, relation, email, memberNames, closeFamily?]
-const FAMILIES: [string, "bride" | "groom" | "both", string, string, string[], boolean][] = [
+const FAMILIES: [string, "bride" | "groom", string, string, string[], boolean][] = [
   ["Sharma Family", "bride", "Ananya's parents", "sharma@example.com", ["Rajesh Sharma", "Sunita Sharma"], true],
   ["Mehta Family", "groom", "Arjun's parents", "mehta@example.com", ["Vikram Mehta", "Kavita Mehta"], true],
   ["Nani's House", "bride", "Maternal grandparents", "nani@example.com", ["Shakuntala Devi", "Ram Prasad"], true],
@@ -38,10 +38,10 @@ const FAMILIES: [string, "bride" | "groom" | "both", string, string, string[], b
   ["Bua's Family", "groom", "Arjun's bua", "bua@example.com", ["Meena Kapoor", "Anil Kapoor", "Riya Kapoor"], false],
   ["The Iyers", "bride", "Family friends", "iyer@example.com", ["Krishnan Iyer", "Padma Iyer"], false],
   ["The Khans", "groom", "College friends", "khan@example.com", ["Zoya Khan", "Imran Khan"], false],
-  ["The Guptas", "both", "Neighbours", "gupta@example.com", ["Manoj Gupta", "Rekha Gupta", "Tanvi Gupta"], false],
+  ["The Guptas", "bride", "Neighbours", "gupta@example.com", ["Manoj Gupta", "Rekha Gupta", "Tanvi Gupta"], false],
   ["Ananya's Office Gang", "bride", "Colleagues", "office-a@example.com", ["Priya Nair", "Kabir Bose", "Ishaan Verma"], false],
   ["Arjun's Batchmates", "groom", "IIT hostel wing", "batch@example.com", ["Aditya Singh", "Ravi Teja", "Nikhil Jain", "Sameer Kulkarni"], false],
-  ["The D'Souzas", "both", "Childhood friends", "dsouza@example.com", ["Maria D'Souza", "Kevin D'Souza"], false],
+  ["The D'Souzas", "groom", "Childhood friends", "dsouza@example.com", ["Maria D'Souza", "Kevin D'Souza"], false],
 ];
 
 // Second demo wedding — shows the platform is multi-tenant and carries the new themes.
@@ -54,12 +54,12 @@ const GK_EVENTS = [
   { name: "Reception", startsAt: "2026-12-11T19:30:00+05:30", venueName: "Taj Fateh Prakash Ballroom", address: "City Palace Road, Udaipur", dressCode: "Formal", sortOrder: 3 },
 ];
 
-const GK_FAMILIES: [string, "bride" | "groom" | "both", string, string, string[], boolean][] = [
+const GK_FAMILIES: [string, "bride" | "groom", string, string, string[], boolean][] = [
   ["Malhotra Family", "bride", "Karishma's parents", "malhotra@example.com", ["Deepak Malhotra", "Ritu Malhotra"], true],
   ["Saxena Family", "groom", "Gaurav's parents", "saxena@example.com", ["Ashok Saxena", "Poonam Saxena"], true],
   ["Masi's Family", "bride", "Karishma's masi", "masi@example.com", ["Anita Chopra", "Vinod Chopra", "Sana Chopra"], true],
   ["Tau ji & Family", "groom", "Gaurav's tau ji", "tauji@example.com", ["Rakesh Saxena", "Usha Saxena", "Mohit Saxena"], false],
-  ["The Bedis", "both", "Family friends", "bedi@example.com", ["Harpreet Bedi", "Simran Bedi"], false],
+  ["The Bedis", "groom", "Family friends", "bedi@example.com", ["Harpreet Bedi", "Simran Bedi"], false],
   ["Karishma's Design Studio", "bride", "Colleagues", "studio@example.com", ["Tara Menon", "Vivaan Shah", "Diya Paul"], false],
 ];
 
@@ -91,6 +91,12 @@ async function main() {
       gettingThere: "Flying in? Land at Mumbai (BOM). Both hotels are 20–40 minutes from the terminals, and the Pheras venue in Juhu is a fifteen-minute drive from either — leave buffer for Mumbai traffic on the wedding morning.",
     },
   }).returning();
+  // each family dresses its invitation its own way: the groom's in Raj Mahal
+  const look = { heroTagline: w.heroTagline, story: w.story, hashtag: w.hashtag, contactPhone: w.contactPhone, travel: w.travel, gallery: w.gallery };
+  await db.insert(weddingSides).values([
+    { weddingId: w.id, side: "bride", theme: w.theme, ...look },
+    { weddingId: w.id, side: "groom", theme: "raj-mahal", ...look },
+  ]);
 
   const evs = await db.insert(events).values(
     EVENTS.map((e) => ({ ...e, weddingId: w.id, startsAt: new Date(e.startsAt) })),

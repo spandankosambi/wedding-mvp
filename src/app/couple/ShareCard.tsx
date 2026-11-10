@@ -3,10 +3,14 @@ import { CopyButton } from "./CopyButton";
 import { appOrigin } from "@/lib/origin";
 
 /** The one thing a couple actually needs from the dashboard: the link. */
-export async function ShareCard({ slug, coupleNames, weddingDateText, compact = false }: {
+export async function ShareCard({ slug, coupleNames, weddingDateText, compact = false, family }: {
   slug: string; coupleNames: string; weddingDateText: string; compact?: boolean;
+  /** each family shares the site in its own look */
+  family?: "bride" | "groom";
 }) {
-  const url = `${await appOrigin()}/w/${slug}`;
+  const base = `${await appOrigin()}/w/${slug}`;
+  const q = family ? `?side=${family}` : "";
+  const url = `${base}${q}`;
   const message = `${coupleNames} are getting married on ${weddingDateText} — and you're invited! 🎉\n\nSee the celebrations and RSVP here: ${url}`;
   const wa = `https://wa.me/?text=${encodeURIComponent(message)}`;
   const qr = await QRCode.toString(url, { type: "svg", margin: 1, color: { dark: "#1c1917", light: "#ffffff00" } });
@@ -27,7 +31,7 @@ export async function ShareCard({ slug, coupleNames, weddingDateText, compact = 
           <div className="mt-3 flex flex-wrap gap-2">
             <a href={wa} target="_blank" rel="noreferrer" className="portal-button">Share on WhatsApp</a>
             <a href={url} target="_blank" rel="noreferrer" className="portal-button-secondary">Open site ↗</a>
-            <a href={`${url}/rsvp`} target="_blank" rel="noreferrer" className="portal-button-secondary">Open RSVP form ↗</a>
+            <a href={`${base}/rsvp${q}`} target="_blank" rel="noreferrer" className="portal-button-secondary">Open RSVP form ↗</a>
           </div>
         </div>
         {!compact && (

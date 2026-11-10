@@ -10,6 +10,7 @@ import * as editor from "@/lib/editor";
 import { EVENT_PRESETS, presetStart } from "@/lib/presets";
 import { put, del } from "@vercel/blob";
 import * as gallery from "@/lib/gallery";
+import { asFamilySide, copyFromPartner, photoInUse, type FamilySide, type LookPart } from "@/lib/looks";
 
 /* Every action re-resolves the wedding server-side: a couple is pinned to
    their own; admin passes one explicitly. Then the site + editor revalidate
@@ -20,31 +21,45 @@ async function scoped(formData: FormData) {
   if (!weddingId) redirect("/couple");
   const [w] = await db.select({ slug: weddings.slug, weddingDate: weddings.weddingDate }).from(weddings).where(eq(weddings.id, weddingId));
   if (!w) redirect("/couple");
-  return { weddingId, slug: w.slug, weddingDate: w.weddingDate, admin: staff.role === "admin" };
+  // which family's section this came from (the editor is per family)
+  const family: FamilySide = asFamilySide(formData.get("family")) ?? "bride";
+  return { weddingId, slug: w.slug, weddingDate: w.weddingDate, admin: staff.role === "admin", family };
 }
 
-function done(ctx: { slug: string; weddingId: string; admin: boolean }, section: string, error?: string) {
+type Ctx = Awaited<ReturnType<typeof scoped>>;
+
+/** Back to the family's editor (or, for shared details, the dashboard). */
+function done(ctx: Ctx, section: string, error?: string, page: "site" | "dashboard" = "site") {
   revalidatePath(`/w/${ctx.slug}`);
   revalidatePath(`/w/${ctx.slug}/rsvp`);
-  revalidatePath("/couple");
-  revalidatePath("/couple/site");
+  revalidatePath("/couple", "layout");
   const q = new URLSearchParams(error ? { error, section } : { saved: section });
   if (ctx.admin) q.set("wedding", ctx.weddingId);
-  redirect(`/couple/site?${q}#${section}`);
+  if (page === "site") q.set("family", ctx.family);
+  redirect(`${page === "site" ? "/couple/site" : "/couple"}?${q}#${section}`);
 }
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "");
 
+/** The shared wedding details, saved from the main dashboard. */
 export async function saveDetails(formData: FormData) {
   const ctx = await scoped(formData);
   const r = await editor.updateDetails(ctx.weddingId, {
     brideName: str(formData, "brideName"), groomName: str(formData, "groomName"),
     weddingDate: str(formData, "weddingDate"), city: str(formData, "city"),
-    heroTagline: str(formData, "heroTagline"), story: str(formData, "story"),
     brideParents: str(formData, "brideParents"), groomParents: str(formData, "groomParents"),
+  });
+  done(ctx, "details", r.ok ? undefined : r.error, "dashboard");
+}
+
+/** One family's tagline, story, hashtag and contact. */
+export async function saveWords(formData: FormData) {
+  const ctx = await scoped(formData);
+  const r = await editor.updateWords(ctx.weddingId, ctx.family, {
+    heroTagline: str(formData, "heroTagline"), story: str(formData, "story"),
     hashtag: str(formData, "hashtag"), contactPhone: str(formData, "contactPhone"),
   });
-  done(ctx, "details", r.ok ? undefined : r.error);
+  done(ctx, "words", r.ok ? undefined : r.error);
 }
 
 export async function saveRsvpSettings(formData: FormData) {
@@ -52,7 +67,16 @@ export async function saveRsvpSettings(formData: FormData) {
   const r = await editor.updateRsvpSettings(ctx.weddingId, {
     rsvpOpen: formData.get("rsvpOpen") === "on", rsvpDeadline: str(formData, "rsvpDeadline"),
   });
-  done(ctx, "rsvp", r.ok ? undefined : r.error);
+  done(ctx, "rsvp", r.ok ? undefined : r.error, "dashboard");
+}
+
+/** "Same as your partner" for one part of this family's site. */
+export async function copyPartAction(formData: FormData) {
+  const ctx = await scoped(formData);
+  const part = str(formData, "part");
+  if (!["words", "travel", "gallery", "theme"].includes(part)) return done(ctx, "words", "invalid input");
+  const r = await copyFromPartner(ctx.weddingId, ctx.family, part as LookPart);
+  done(ctx, part, r.ok ? undefined : r.error);
 }
 
 export async function saveTravel(formData: FormData) {
@@ -62,7 +86,7 @@ export async function saveTravel(formData: FormData) {
     const name = str(formData, `stay${i}name`).trim();
     if (name) stays.push({ name, note: str(formData, `stay${i}note`), url: str(formData, `stay${i}url`) });
   }
-  const r = await editor.updateTravel(ctx.weddingId, { stays, gettingThere: str(formData, "gettingThere") });
+  const r = await editor.updateTravel(ctx.weddingId, ctx.family, { stays, gettingThere: str(formData, "gettingThere") });
   done(ctx, "travel", r.ok ? undefined : r.error);
 }
 
@@ -74,7 +98,8 @@ export async function saveEvent(formData: FormData) {
     venueName: str(formData, "venueName"), address: str(formData, "address"), mapUrl: str(formData, "mapUrl"),
     dressCode: str(formData, "dressCode"), description: str(formData, "description"),
     isPublished: formData.get("isPublished") === "on",
-    side: str(formData, "side") || "both",
+    // in a family's editor an event is common, or that family's own
+    side: str(formData, "side") === "both" ? "both" : ctx.family,
   });
   done(ctx, id ? `event-${id}` : "events", r.ok ? undefined : r.error);
 }
@@ -87,7 +112,7 @@ export async function addPresetEvent(formData: FormData) {
   const r = await editor.upsertEvent(ctx.weddingId, {
     name: preset?.name ?? "New celebration", date: parts.date, time: parts.time,
     venueName: "Venue to be announced", address: "To be announced",
-    dressCode: preset?.dressCode ?? "", description: preset?.blurb ?? "", isPublished: true,
+    dressCode: preset?.dressCode ?? "", description: preset?.blurb ?? "", isPublished: true, side: "both",
   });
   done(ctx, r.ok && r.id ? `event-${r.id}` : "events", r.ok ? undefined : r.error);
 }
@@ -122,21 +147,24 @@ export async function sortEvents(formData: FormData) {
 
 export async function saveGallerySettings(formData: FormData) {
   const ctx = await scoped(formData);
-  const r = await gallery.setGalleryEnabled(ctx.weddingId, formData.get("galleryEnabled") === "on");
+  const r = await gallery.setGalleryEnabled(ctx.weddingId, ctx.family, formData.get("galleryEnabled") === "on");
   done(ctx, "gallery", r.ok ? undefined : r.error);
 }
 
 export async function removeGalleryPhotoAction(formData: FormData) {
   const ctx = await scoped(formData);
-  const r = await gallery.detachPhoto(ctx.weddingId, str(formData, "pathname"));
-  // the list is the source of truth; a file left behind in storage is harmless
-  if (r.ok && gallery.photoStorageConfigured()) await del(r.photo.url).catch(() => {});
+  const r = await gallery.detachPhoto(ctx.weddingId, ctx.family, str(formData, "pathname"));
+  // the list is the source of truth; a file left behind in storage is harmless.
+  // The other family may share this photo ("same as partner") — then it stays.
+  if (r.ok && gallery.photoStorageConfigured() && !(await photoInUse(ctx.weddingId, r.photo.pathname))) {
+    await del(r.photo.url).catch(() => {});
+  }
   done(ctx, "gallery", r.ok ? undefined : r.error);
 }
 
 export async function moveGalleryPhotoAction(formData: FormData) {
   const ctx = await scoped(formData);
-  const r = await gallery.movePhoto(ctx.weddingId, str(formData, "pathname"), str(formData, "dir") === "up" ? "up" : "down");
+  const r = await gallery.movePhoto(ctx.weddingId, ctx.family, str(formData, "pathname"), str(formData, "dir") === "up" ? "up" : "down");
   done(ctx, "gallery", r.ok ? undefined : r.error);
 }
 
@@ -151,16 +179,16 @@ export async function uploadGalleryPhoto(formData: FormData): Promise<{ ok: bool
   if (file.size > gallery.MAX_PHOTO_BYTES) return { ok: false, error: "that photo is too large" };
   const width = Math.round(Number(formData.get("width")));
   const height = Math.round(Number(formData.get("height")));
-  const room = await gallery.canAddPhoto(ctx.weddingId);
+  const room = await gallery.canAddPhoto(ctx.weddingId, ctx.family);
   if (!room.ok) return room;
 
   const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
   const blob = await put(`weddings/${ctx.weddingId}/gallery/${crypto.randomUUID()}.${ext}`, file, {
     access: "public", contentType: file.type,
   });
-  const r = await gallery.appendPhoto(ctx.weddingId, { url: blob.url, pathname: blob.pathname, width, height });
+  const r = await gallery.appendPhoto(ctx.weddingId, ctx.family, { url: blob.url, pathname: blob.pathname, width, height });
   if (!r.ok) { await del(blob.url).catch(() => {}); return r; }
   revalidatePath(`/w/${ctx.slug}`);
-  revalidatePath("/couple/site");
+  revalidatePath("/couple", "layout");
   return { ok: true };
 }

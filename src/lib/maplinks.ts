@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { events, weddings, type TravelInfo } from "@/db/schema";
+import { updateLook, type FamilySide } from "@/lib/looks";
 
 /**
  * Google Maps "share" links (maps.app.goo.gl/…) are short links that bounce
@@ -70,6 +71,8 @@ export async function fixShortMapLinks(
   weddingId: string,
   evs: { id: string; mapUrl: string | null }[],
   travel: TravelInfo | null,
+  /** whose look the travel belongs to */
+  side?: FamilySide,
 ): Promise<{ eventUrls: Map<string, string>; travel: TravelInfo | null }> {
   const eventUrls = new Map<string, string>();
   await Promise.all(evs.map(async (e) => {
@@ -85,7 +88,8 @@ export async function fixShortMapLinks(
     const stays = await Promise.all(travel.stays.map(async (s) => (s.url && isShortMapLink(s.url) ? { ...s, url: await expandMapLink(s.url) } : s)));
     if (stays.some((s, i) => s.url !== travel.stays[i].url)) {
       fixedTravel = { ...travel, stays };
-      await db.update(weddings).set({ travel: fixedTravel }).where(eq(weddings.id, weddingId));
+      if (side) await updateLook(weddingId, side, { travel: fixedTravel });
+      else await db.update(weddings).set({ travel: fixedTravel }).where(eq(weddings.id, weddingId));
     }
   }
   return { eventUrls, travel: fixedTravel };

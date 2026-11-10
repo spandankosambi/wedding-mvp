@@ -33,7 +33,7 @@ const schema = z.object({
   name: z.string().trim().min(2).max(120),
   phone: z.string().trim().max(30).optional(),
   email: z.string().trim().toLowerCase().email().max(254).optional().or(z.literal("")),
-  side: z.enum(["bride", "groom", "both"]).optional(),
+  side: z.enum(["bride", "groom"]).optional(),
   diet: z.enum(DIET_OPTIONS.map((d) => d.value) as [string, ...string[]]).optional(),
   guestNames: z.array(z.string().trim().min(1).max(120)).max(MAX_OPEN_HEADCOUNT).optional(),
   note: z.string().trim().max(500).optional(),
@@ -89,11 +89,11 @@ export async function submitOpenRsvp(input: unknown, clientKey = "local"): Promi
       email: family.email.trim() ? family.email : (email ?? ""),
       phone: family.phone ?? phone,
       diet: d.diet ?? family.diet,
-      side: family.side ?? d.side ?? "both",
+      side: family.side === "bride" || family.side === "groom" ? family.side : d.side ?? "bride",
     }).where(eq(families.id, family.id));
   } else {
     [family] = await db.insert(families).values({
-      weddingId: wedding.id, name: d.name, side: d.side ?? "both", relation: "RSVP'd via invitation link",
+      weddingId: wedding.id, name: d.name, side: d.side ?? "bride", relation: "RSVP'd via invitation link",
       email: email ?? "", phone, diet: d.diet ?? null, source: "guest",
     }).returning();
   }

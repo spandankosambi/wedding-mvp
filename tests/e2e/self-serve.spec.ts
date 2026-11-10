@@ -27,7 +27,8 @@ test("a couple signs up, edits their site, and a guest RSVPs from the shared lin
   // ── magic link lands in the editor ─────────────────────────
   await page.goto(signInUrl(email));
   await expect(page).toHaveURL(/\/couple\/site/);
-  await expect(page.getByRole("heading", { name: /edit your invitation/i })).toBeVisible();
+  // (the bride's family's section, to start)
+  await expect(page.getByRole("heading", { name: /edit the bride's family's site/i })).toBeVisible();
   // a new wedding starts with only the wedding day…
   await expect(page.getByText("1 event", { exact: true })).toBeVisible();
   // …and the couple adds the rest of the week from the picker
@@ -63,14 +64,16 @@ test("a couple signs up, edits their site, and a guest RSVPs from the shared lin
   await page.goto(editUrl);
   await expect(page.getByText(/The Kapoors/i).first()).toBeVisible();
 
-  // ── and the couple sees the guest on their dashboard ───────
+  // ── the dashboard counts them; the bride's section lists them ──
   await page.goto("/couple");
+  await expect(page.getByRole("region", { name: "Bride's family" })).toContainText("Families1");
+  await page.getByRole("link", { name: "Open bride's section →" }).click();
   await expect(page.getByText("The Kapoors")).toBeVisible();
 
-  // the link the couple is told to share must point at the host they are on —
+  // the link the bride's family is told to share must point at the host they are on —
   // an APP_URL left pointing elsewhere would hand 300 guests a dead link
   const shareUrl = await page.locator("#share input[readonly]").inputValue();
-  expect(shareUrl).toBe(new URL("/w/sanya-weds-kabir", page.url()).toString());
+  expect(shareUrl).toBe(new URL("/w/sanya-weds-kabir?side=bride", page.url()).toString());
 });
 
 test("RSVPs can be switched off by the couple", async ({ page }) => {
@@ -86,10 +89,13 @@ test("RSVPs can be switched off by the couple", async ({ page }) => {
   await expect(page.getByText(/check your inbox/i)).toBeVisible();
   await page.goto(signInUrl(email));
 
+  // the bride's family's contact, on its site…
   await page.fill("input[name=contactPhone]", "+91 90000 12345");
-  await page.locator("#details button[type=submit]").click();
-  await expect(page).toHaveURL(/saved=details/);
+  await page.locator("#words button[type=submit]").click();
+  await expect(page).toHaveURL(/saved=words/);
 
+  // …and RSVP settings, shared, on the dashboard
+  await page.goto("/couple");
   await page.locator("#rsvp input[name=rsvpOpen]").uncheck();
   await page.locator("#rsvp button[type=submit]").click();
   await expect(page).toHaveURL(/saved=rsvp/);

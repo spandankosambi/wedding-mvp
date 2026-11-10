@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { setTheme } from "./actions";
+import { setTheme, copyFromPartnerAction } from "./actions";
 import { THEMES, THEME_META, type Theme } from "@/themes/catalog";
 
 const SWATCHES = THEMES.map((theme) => ({ theme, ...THEME_META[theme] }));
@@ -12,11 +12,17 @@ export function ThemeSwitcher({
   current,
   slug,
   coupleNames,
+  family,
+  partnerTheme,
 }: {
   weddingId: string;
   current: Theme;
   slug: string;
   coupleNames: string;
+  /** whose look this is */
+  family: "bride" | "groom";
+  /** the other family's theme, to offer "same as your partner" */
+  partnerTheme: Theme;
 }) {
   const router = useRouter();
   const [active, setActive] = useState<Theme>(current);
@@ -27,7 +33,7 @@ export function ThemeSwitcher({
     const prev = active;
     setActive(theme); // optimistic — the swatch highlights instantly
     startTransition(async () => {
-      const res = await setTheme({ theme, weddingId });
+      const res = await setTheme({ theme, weddingId, family });
       if (!res.ok) setActive(prev);
       else router.refresh();
     });
@@ -37,18 +43,33 @@ export function ThemeSwitcher({
     <section className="rounded-xl border border-neutral-200 bg-white p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
-          <h2 className="font-semibold">Your look</h2>
+          <h2 className="font-semibold">{family === "bride" ? "The bride's family's" : "The groom's family's"} look</h2>
           <p className="mt-1 text-sm text-neutral-500">
-            One click restyles your whole site — invitations follow the same palette.
+            One click restyles the site your guests see — their emails and printed cards follow the same palette.
           </p>
         </div>
-        <a
-          href={`/w/${slug}`}
-          target="_blank"
-          className="text-sm text-neutral-600 underline underline-offset-4"
-        >
-          View your site ↗
-        </a>
+        <div className="flex flex-wrap items-center gap-3">
+          {partnerTheme !== active && (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => startTransition(async () => {
+                const res = await copyFromPartnerAction({ weddingId, family, part: "theme" });
+                if (res.ok) { setActive(partnerTheme); router.refresh(); }
+              })}
+              className="portal-button-secondary"
+            >
+              Same as the {family === "bride" ? "groom" : "bride"}&apos;s family ({THEME_META[partnerTheme].label})
+            </button>
+          )}
+          <a
+            href={`/w/${slug}?side=${family}`}
+            target="_blank"
+            className="text-sm text-neutral-600 underline underline-offset-4"
+          >
+            View this site ↗
+          </a>
+        </div>
       </div>
 
       <div className="mt-5 grid gap-4 md:grid-cols-3">

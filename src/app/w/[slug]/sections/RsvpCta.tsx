@@ -4,8 +4,8 @@ import { fmtWeddingDate } from "@/lib/format";
 export type InvitedGuest = { familyName: string; href: string; answered: boolean };
 
 export function RsvpCta({
-  slug, open, deadline, contactPhone, invite,
-}: { slug: string; open: boolean; deadline: Date | null; contactPhone: string | null; invite?: InvitedGuest | null }) {
+  slug, side, open, deadline, contactPhone, invite,
+}: { slug: string; side?: "bride" | "groom"; open: boolean; deadline: Date | null; contactPhone: string | null; invite?: InvitedGuest | null }) {
   return (
     <>
       {/* gota-style scalloped edge eases the jump into the full-bleed band */}
@@ -53,7 +53,7 @@ export function RsvpCta({
               {deadline ? ` Kindly reply by ${fmtWeddingDate(deadline)}.` : ""}
             </p>
             <a
-              href={`/w/${slug}/rsvp`}
+              href={`/w/${slug}/rsvp${side ? `?side=${side}` : ""}`}
               className="reveal mt-10 inline-block px-10 py-4 text-sm uppercase tracking-[0.2em] transition-opacity hover:opacity-90"
               style={{ background: "var(--band-ink)", color: "var(--band-bg)", "--rd": "0.25s" } as React.CSSProperties}
             >

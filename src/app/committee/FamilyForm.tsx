@@ -8,7 +8,7 @@ import { eventForSide, type Side } from "@/lib/sides";
 export type FamilyDraft = {
   familyId?: string;
   name: string;
-  side: "bride" | "groom" | "both";
+  side: "bride" | "groom";
   relation: string;
   members: DraftMember[];
   eventIds: string[];
@@ -22,13 +22,14 @@ type DraftMember = { id?: string; fullName: string; ageGroup: "adult" | "child";
 
 /** The edit-dialog draft for a family row, from either the Families or the Guests view. */
 export function draftFromFamily(r: {
-  id: string; name: string; side: FamilyDraft["side"]; relation: string | null;
+  id: string; name: string; side: Side; relation: string | null;
   members: { id: string; fullName: string; ageGroup: "adult" | "child"; email: string | null; phone: string | null; isPrimary: boolean }[];
   eventIds: string[];
   showTravel: boolean;
 }): FamilyDraft {
   return {
-    familyId: r.id, name: r.name, side: r.side, relation: r.relation ?? "",
+    // a household from before the split ("both sides") opens on the bride's family
+    familyId: r.id, name: r.name, side: r.side === "groom" ? "groom" : "bride", relation: r.relation ?? "",
     members: r.members.map(({ id, fullName, ageGroup, email, phone, isPrimary }) => ({ id, fullName, ageGroup, email: email ?? "", phone: phone ?? "", isPrimary })),
     eventIds: r.eventIds,
     showTravel: r.showTravel,
@@ -46,15 +47,18 @@ export function FamilyForm({
   draft,
   focusGuestId,
   onClose,
+  family = "bride",
 }: {
   weddingId: string;
+  /** whose guest list this is: a new family joins it */
+  family?: "bride" | "groom";
   events: { id: string; name: string; side: Side }[];
   draft: FamilyDraft | null;
   /** opened from the Guests view: put the cursor in this guest's name */
   focusGuestId?: string;
   onClose: (saved: boolean) => void;
 }) {
-  const [form, setForm] = useState<FamilyDraft>(draft ?? EMPTY);
+  const [form, setForm] = useState<FamilyDraft>(draft ?? { ...EMPTY, side: family });
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -70,10 +74,10 @@ export function FamilyForm({
   /* Travel & Stay ticks itself when every event is selected. Otherwise it's
      the committee's call: while the box still matches that rule it keeps
      following it; once they've set it by hand, it stays as they left it. */
-  // a family sees common events plus their own side's ("both" sees all)
+  // a family sees common events plus their own side's
   const idsFor = (side: Side) => events.filter((e) => eventForSide(e.side, side)).map((e) => e.id);
   const visible = events.filter((e) => eventForSide(e.side, form.side));
-  const withEvents = (f: FamilyDraft, side: Side, eventIds: string[]): FamilyDraft => {
+  const withEvents = (f: FamilyDraft, side: FamilyDraft["side"], eventIds: string[]): FamilyDraft => {
     const was = invitesAll(f.eventIds, idsFor(f.side)), now = invitesAll(eventIds, idsFor(side));
     const showTravel = now ? true : f.showTravel === was ? now : f.showTravel;
     return { ...f, side, eventIds, showTravel };
@@ -81,7 +85,7 @@ export function FamilyForm({
   const toggleEvent = (id: string) =>
     setForm((f) => withEvents(f, f.side, f.eventIds.includes(id) ? f.eventIds.filter((x) => x !== id) : [...f.eventIds, id]));
   // switching side drops the other side's own events
-  const changeSide = (side: Side) =>
+  const changeSide = (side: "bride" | "groom") =>
     setForm((f) => withEvents(f, side, f.eventIds.filter((id) => idsFor(side).includes(id))));
 
   /* Exactly one primary, always an adult when there is one */
@@ -156,15 +160,15 @@ export function FamilyForm({
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="text-xs font-medium uppercase tracking-wide text-neutral-500">Side</span>
+              <span className="text-xs font-medium uppercase tracking-wide text-neutral-500">Family</span>
               <select
                 value={form.side}
-                onChange={(e) => changeSide(e.target.value as Side)}
+                onChange={(e) => changeSide(e.target.value as FamilyDraft["side"])}
                 className="portal-input mt-1"
+                aria-label="Side"
               >
-                <option value="bride">Bride</option>
-                <option value="groom">Groom</option>
-                <option value="both">Both</option>
+                <option value="bride">Bride&apos;s family</option>
+                <option value="groom">Groom&apos;s family</option>
               </select>
             </label>
             <label className="block">
@@ -293,7 +297,7 @@ export function FamilyForm({
 
           <fieldset>
             <legend className="text-xs font-medium uppercase tracking-wide text-neutral-500">Invited to</legend>
-            {events.some((e) => e.side !== "both") && form.side !== "both" && (
+            {events.some((e) => e.side !== "both") && (
               <p className="mt-1 text-xs text-neutral-500">
                 Showing common and {form.side === "bride" ? "bride" : "groom"}&apos;s-side events.
               </p>

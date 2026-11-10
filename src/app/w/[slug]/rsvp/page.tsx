@@ -5,6 +5,7 @@ import { getPublicWedding, rsvpWindow } from "@/lib/open-rsvp";
 import { fmtWeddingDate } from "@/lib/format";
 import { Ornament } from "@/themes/ornaments";
 import { OpenRsvpForm } from "./OpenRsvpForm";
+import { asFamilySide, getLook, withLook, type FamilySide } from "@/lib/looks";
 
 export const dynamic = "force-dynamic";
 
@@ -13,11 +14,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return { title: data ? `RSVP · ${data.wedding.brideName} & ${data.wedding.groomName}` : "RSVP", robots: { index: false } };
 }
 
-export default async function OpenRsvpPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function OpenRsvpPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ side?: string }> }) {
   const { slug } = await params;
   const data = await getPublicWedding(slug);
   if (!data) notFound();
-  const { wedding, events } = data;
+  const side: FamilySide = asFamilySide((await searchParams).side) ?? "bride";
+  const wedding = withLook(data.wedding, await getLook(data.wedding.id, side));
+  const { events } = data;
   const window = rsvpWindow(wedding);
   const coupleNames = `${wedding.brideName} & ${wedding.groomName}`;
 
@@ -25,7 +28,7 @@ export default async function OpenRsvpPage({ params }: { params: Promise<{ slug:
     <main data-theme={wedding.theme} className="themed min-h-svh px-6 py-16 md:py-24">
       <div className="mx-auto max-w-2xl">
         <header className="text-center">
-          <Link href={`/w/${slug}`} className="kicker rise rise-1 inline-block underline-offset-4 hover:underline">
+          <Link href={`/w/${slug}?side=${side}`} className="kicker rise rise-1 inline-block underline-offset-4 hover:underline">
             ← {coupleNames} · {fmtWeddingDate(wedding.weddingDate)}
           </Link>
           <h1
@@ -49,6 +52,7 @@ export default async function OpenRsvpPage({ params }: { params: Promise<{ slug:
         {window.open && events.length > 0 && (
           <OpenRsvpForm
             slug={slug}
+            initialSide={side}
             events={events.map((e) => ({
               id: e.id, name: e.name, side: e.side, startsAtISO: e.startsAt.toISOString(),
               venueName: e.venueName, address: e.address, dressCode: e.dressCode,

@@ -1,9 +1,8 @@
 import { z } from "zod";
-import { eq } from "drizzle-orm";
-import { db } from "@/db/client";
-import { weddings, type GalleryInfo, type GalleryPhoto } from "@/db/schema";
+import type { GalleryInfo, GalleryPhoto } from "@/db/schema";
+import { getLook, updateLook, type FamilySide } from "@/lib/looks";
 
-/* The couple's Gallery section: an on/off switch and their own photos.
+/* Each family's Gallery section: an on/off switch and their own photos.
    Files live in Vercel Blob (public, unguessable URLs — the same exposure as
    the wedding site itself); this module only keeps the list on the wedding. */
 
@@ -20,15 +19,19 @@ export function galleryOf(w: { gallery: GalleryInfo | null }): GalleryInfo {
 
 export const photoStorageConfigured = () => !!process.env.BLOB_READ_WRITE_TOKEN;
 
-async function current(weddingId: string): Promise<GalleryInfo | null> {
-  const [w] = await db.select({ gallery: weddings.gallery }).from(weddings).where(eq(weddings.id, weddingId));
-  return w ? galleryOf(w) : null;
+async function current(weddingId: string, side: FamilySide): Promise<GalleryInfo | null> {
+  try {
+    return galleryOf(await getLook(weddingId, side));
+  } catch {
+    return null;
+  }
 }
+const save = (weddingId: string, side: FamilySide, gallery: GalleryInfo) => updateLook(weddingId, side, { gallery });
 
-export async function setGalleryEnabled(weddingId: string, enabled: boolean) {
-  const g = await current(weddingId);
+export async function setGalleryEnabled(weddingId: string, side: FamilySide, enabled: boolean) {
+  const g = await current(weddingId, side);
   if (!g) return { ok: false as const, error: "wedding not found" };
-  await db.update(weddings).set({ gallery: { ...g, enabled } }).where(eq(weddings.id, weddingId));
+  await save(weddingId, side, { ...g, enabled });
   return { ok: true as const };
 }
 
@@ -39,43 +42,42 @@ const photoSchema = z.object({
   height: z.number().int().min(1).max(20000),
 });
 
-export async function canAddPhoto(weddingId: string) {
-  const g = await current(weddingId);
+export async function canAddPhoto(weddingId: string, side: FamilySide) {
+  const g = await current(weddingId, side);
   if (!g) return { ok: false as const, error: "wedding not found" };
   if (g.photos.length >= MAX_GALLERY_PHOTOS) return { ok: false as const, error: `the gallery holds up to ${MAX_GALLERY_PHOTOS} photos` };
   return { ok: true as const };
 }
 
-export async function appendPhoto(weddingId: string, photo: GalleryPhoto) {
+export async function appendPhoto(weddingId: string, side: FamilySide, photo: GalleryPhoto) {
   const parsed = photoSchema.safeParse(photo);
   if (!parsed.success) return { ok: false as const, error: "invalid input" };
-  const g = await current(weddingId);
+  const g = await current(weddingId, side);
   if (!g) return { ok: false as const, error: "wedding not found" };
   if (g.photos.length >= MAX_GALLERY_PHOTOS) return { ok: false as const, error: `the gallery holds up to ${MAX_GALLERY_PHOTOS} photos` };
-  await db.update(weddings).set({ gallery: { ...g, photos: [...g.photos, parsed.data] } }).where(eq(weddings.id, weddingId));
+  await save(weddingId, side, { ...g, photos: [...g.photos, parsed.data] });
   return { ok: true as const };
 }
 
 /** Drops the photo from the list and returns it, so the caller can delete the
     stored file. Only photos already on this wedding can be removed. */
-export async function detachPhoto(weddingId: string, pathname: string) {
-  const g = await current(weddingId);
+export async function detachPhoto(weddingId: string, side: FamilySide, pathname: string) {
+  const g = await current(weddingId, side);
   if (!g) return { ok: false as const, error: "wedding not found" };
   const photo = g.photos.find((p) => p.pathname === pathname);
   if (!photo) return { ok: false as const, error: "photo not found" };
-  await db.update(weddings).set({ gallery: { ...g, photos: g.photos.filter((p) => p.pathname !== pathname) } })
-    .where(eq(weddings.id, weddingId));
+  await save(weddingId, side, { ...g, photos: g.photos.filter((p) => p.pathname !== pathname) });
   return { ok: true as const, photo };
 }
 
-export async function movePhoto(weddingId: string, pathname: string, dir: "up" | "down") {
-  const g = await current(weddingId);
+export async function movePhoto(weddingId: string, side: FamilySide, pathname: string, dir: "up" | "down") {
+  const g = await current(weddingId, side);
   if (!g) return { ok: false as const, error: "wedding not found" };
   const i = g.photos.findIndex((p) => p.pathname === pathname);
   const j = dir === "up" ? i - 1 : i + 1;
   if (i < 0 || j < 0 || j >= g.photos.length) return { ok: true as const };
   const photos = [...g.photos];
   [photos[i], photos[j]] = [photos[j], photos[i]];
-  await db.update(weddings).set({ gallery: { ...g, photos } }).where(eq(weddings.id, weddingId));
+  await save(weddingId, side, { ...g, photos });
   return { ok: true as const };
 }

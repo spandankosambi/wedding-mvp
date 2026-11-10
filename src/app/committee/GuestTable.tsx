@@ -32,8 +32,10 @@ export function GuestTable({
   events,
   rows,
   columns,
+  family,
 }: {
   weddingId: string;
+  family: "bride" | "groom";
   events: { id: string; name: string; side: Side }[];
   rows: Row[];
   columns: GuestColumn[];
@@ -254,6 +256,7 @@ export function GuestTable({
       {editing && (
         <FamilyForm
           weddingId={weddingId}
+          family={family}
           events={events}
           draft={editing.draft}
           focusGuestId={editing.guestId}
