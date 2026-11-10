@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getPublicWedding } from "@/lib/open-rsvp";
+import { fixShortMapLinks } from "@/lib/maplinks";
 import { rsvpWindow } from "@/lib/open-rsvp";
 import { Hero } from "./sections/Hero";
 import { Marquee } from "./sections/Marquee";
@@ -77,7 +78,10 @@ export default async function WeddingPage({
 }) {
   const data = await getPublicWedding((await params).slug);
   if (!data) notFound();
-  const { wedding, events } = data;
+  // short Google Maps links some networks can't open → their full address (once)
+  const fixed = await fixShortMapLinks(data.wedding.id, data.events, data.wedding.travel);
+  const wedding = { ...data.wedding, travel: fixed.travel };
+  const events = data.events.map((e) => (fixed.eventUrls.has(e.id) ? { ...e, mapUrl: fixed.eventUrls.get(e.id)! } : e));
   const invite = await invitedGuest(wedding.id, searchParams);
   // A household's own invitation shows only the events they're invited to
   // (the same list as their RSVP page), and Travel & Stay only if the

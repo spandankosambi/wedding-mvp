@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { expandMapLink } from "@/lib/maplinks";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events, families, eventInvites, rsvps, type TravelInfo } from "@/db/schema";
@@ -88,7 +89,7 @@ export async function updateTravel(weddingId: string, input: unknown): Promise<R
   const p = travelSchema.safeParse(input);
   if (!p.success) return { ok: false, error: "invalid input" };
   const travel: TravelInfo = {
-    stays: p.data.stays.map((s) => ({ name: s.name, note: s.note, ...(s.url && { url: s.url }) })),
+    stays: await Promise.all(p.data.stays.map(async (s) => ({ name: s.name, note: s.note, ...(s.url && { url: await expandMapLink(s.url) }) }))),
     gettingThere: p.data.gettingThere,
   };
   await db.update(weddings).set({ travel }).where(eq(weddings.id, weddingId));
@@ -99,7 +100,8 @@ export async function upsertEvent(weddingId: string, input: unknown): Promise<Re
   const p = eventSchema.safeParse(input);
   if (!p.success) return { ok: false, error: "invalid input" };
   const { id, date, time, ...rest } = p.data;
-  const values = { ...rest, startsAt: istDate(date, time) };
+  // a short Maps link is stored as its full google.com/maps address
+  const values = { ...rest, mapUrl: rest.mapUrl ? await expandMapLink(rest.mapUrl) : null, startsAt: istDate(date, time) };
   if (id) {
     const [row] = await db.update(events).set(values)
       .where(and(eq(events.id, id), eq(events.weddingId, weddingId))).returning();
