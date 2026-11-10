@@ -17,6 +17,8 @@ export type CardEvent = {
 };
 export type CardWedding = {
   brideName: string; groomName: string; weddingDate: Date; city: string | null; rsvpDeadline: Date | null;
+  /** from the couple's site editor */
+  brideParents: string | null; groomParents: string | null;
 };
 
 /** A line of wording; `name` lines (people) are set upright, phrases in italic. */
@@ -37,8 +39,6 @@ export type FrontCard = {
   enclosed: string | null;
   /** a blessing or shloka under the invocation, line by line */
   shloka: string[];
-  /** the names again in Hindi/Marathi */
-  namesLocal: string | null;
   /** the monogram crest's letters, when it's on */
   monogram: string | null;
 };
@@ -84,41 +84,29 @@ export function eventsFor(all: CardEvent[], o: Pick<InvitationOptions, "version"
 
 export function buildInvitation(w: CardWedding, all: CardEvent[], o: InvitationOptions, siteUrl: string): Invitation {
   const bride = w.brideName, groom = w.groomName;
-  const bp = o.brideParents || null, gp = o.groomParents || null;
-  const invocation = o.invocation || null;
+  const bp = w.brideParents?.trim() || null, gp = w.groomParents?.trim() || null;
+  const fromBride = o.version === "bride";
+  const hosts = fromBride ? (bp ?? `The family of ${bride}`) : (gp ?? `The family of ${groom}`);
 
-  let front: FrontCard;
-  if (o.version === "bride") {
-    front = {
-      invocation, lead: [named(bp ?? `The family of ${bride}`), phrase("request the pleasure of your company"), phrase("at the wedding of their daughter")],
-      first: bride, joiner: "with", second: groom, secondOf: gp ? `son of ${gp}` : null, after: [],
-      date: "", place: null, enclosed: null, shloka: [], namesLocal: null, monogram: null,
-    };
-  } else if (o.version === "groom") {
-    front = {
-      invocation, lead: [named(gp ?? `The family of ${groom}`), phrase("request the pleasure of your company"), phrase("at the wedding of their son")],
-      first: groom, joiner: "with", second: bride, secondOf: bp ? `daughter of ${bp}` : null, after: [],
-      date: "", place: null, enclosed: null, shloka: [], namesLocal: null, monogram: null,
-    };
-  } else {
-    const blessings = bp && gp ? [phrase("With the blessings of"), named(bp), phrase("and"), named(gp)]
-      : bp || gp ? [phrase("With the blessings of"), named((bp ?? gp)!)] : [];
-    front = {
-      invocation, lead: [...blessings, phrase("together with their families")],
-      first: bride, joiner: "&", second: groom, secondOf: null,
-      after: [phrase("request the pleasure of your company"), phrase("at their wedding")],
-      date: "", place: null, enclosed: null, shloka: [], namesLocal: null, monogram: null,
-    };
-  }
-  front.shloka = lines(o.shloka);
-  front.namesLocal = o.namesLocal || null;
-  front.monogram = o.monogram ? o.monogramText || defaultMonogram(bride, groom, o.version) : null;
-  front.date = fmtWeddingDate(w.weddingDate);
-  front.place = w.city;
+  const front: FrontCard = {
+    invocation: o.invocation || null,
+    shloka: lines(o.shloka),
+    lead: [named(hosts), phrase("request the pleasure of your company"), phrase(`at the wedding of their ${fromBride ? "daughter" : "son"}`)],
+    first: fromBride ? bride : groom,
+    joiner: "with",
+    second: fromBride ? groom : bride,
+    secondOf: fromBride ? (gp ? `son of ${gp}` : null) : (bp ? `daughter of ${bp}` : null),
+    after: [],
+    date: fmtWeddingDate(w.weddingDate),
+    place: w.city,
+    enclosed: null,
+    monogram: o.monogram ? o.monogramText || defaultMonogram(bride, groom, o.version) : null,
+  };
 
   const events: EventCard[] = eventsFor(all, o).map((e) => ({
     id: e.id, name: e.name,
-    sideLabel: e.side === "both" || o.version !== "both" ? null : e.side === "bride" ? "Bride's side" : "Groom's side",
+    // only an event the couple picked from the other side needs saying whose it is
+    sideLabel: e.side === "both" || e.side === o.version ? null : e.side === "bride" ? "Bride's side" : "Groom's side",
     date: fmtCardDate(e.startsAt), time: fmtEventTime(e.startsAt),
     venue: e.venueName, address: e.address, dressCode: o.dressCode ? e.dressCode : null,
   }));
@@ -126,14 +114,11 @@ export function buildInvitation(w: CardWedding, all: CardEvent[], o: InvitationO
   const separate = o.eventLayout === "separate" && events.length > 0;
   if (separate) front.enclosed = events.length === 1 ? "Details of the celebration are enclosed" : "Details of each celebration are enclosed";
 
-  const hosts = o.version === "bride" ? (bp ?? `The family of ${bride}`)
-    : o.version === "groom" ? (gp ?? `The family of ${groom}`)
-    : `${bride} & ${groom}`;
-  const couple = o.version === "groom" ? `${groom} & ${bride}` : `${bride} & ${groom}`;
+  const couple = `${front.first} & ${front.second}`;
   const inserts: InsertCard[] = separate
     ? events.map((event) => ({
         invocation: null, hosts, request: "request the pleasure of your company at the", event,
-        occasion: o.version === "both" ? "as we celebrate our wedding" : "on the occasion of the wedding of", couple: o.version === "both" ? "" : couple,
+        occasion: "on the occasion of the wedding of", couple,
       }))
     : [];
 
@@ -142,9 +127,9 @@ export function buildInvitation(w: CardWedding, all: CardEvent[], o: InvitationO
     back: {
       events: separate ? [] : events,
       details: {
-        rsvp: lines(o.rsvp),
+        rsvp: lines(fromBride ? o.rsvpBride : o.rsvpGroom),
         replyBy: o.replyBy && w.rsvpDeadline ? `Kindly reply by ${fmtWeddingDate(w.rsvpDeadline)}` : null,
-        compliments: lines(o.compliments),
+        compliments: lines(fromBride ? o.complimentsBride : o.complimentsGroom),
         note: o.note || null,
         qrUrl: o.qr ? siteUrl : null,
       },
@@ -155,6 +140,5 @@ export function buildInvitation(w: CardWedding, all: CardEvent[], o: InvitationO
 
 /** A short name for the download: invitation-bride-5x7.pdf */
 export function fileName(o: Pick<InvitationOptions, "version" | "size" | "eventLayout">): string {
-  const who = o.version === "both" ? "joint" : o.version;
-  return `invitation-${who}-${o.size}${o.eventLayout === "separate" ? "-with-event-cards" : ""}.pdf`;
+  return `invitation-${o.version}-${o.size}${o.eventLayout === "separate" ? "-with-event-cards" : ""}.pdf`;
 }

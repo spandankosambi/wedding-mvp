@@ -80,7 +80,13 @@ export function sheetFor(o: InvitationOptions): Sheet & { trim: [number, number]
 }
 
 /* ── drawing context ──────────────────────────────────────────── */
-type Ctx = { p: Palette; s: number; trim: [number, number]; sheet: Sheet; theme: Theme; o: InvitationOptions; script: boolean };
+type Ctx = {
+  p: Palette; s: number; trim: [number, number]; sheet: Sheet; theme: Theme; o: InvitationOptions; script: boolean;
+  /** the arch frame is drawn on portrait cards only */
+  arch: boolean;
+  /** how far type may grow to fill the space: 1 (classic spacing) or more (fill the card) */
+  grow: number;
+};
 const ink = (p: Palette, k?: Ink) => (k ? p[k === "hair" ? "hair" : k] : undefined);
 
 /** Text that switches to the Devanagari face for Hindi/Marathi/Sanskrit runs. */
@@ -136,6 +142,7 @@ function CropMarks({ sheet, trim }: { sheet: Sheet; trim: [number, number] }) {
 /** Insets (pt, from the bleed edge) where the frame and the content sit. */
 function layout(c: Ctx, withToran: boolean) {
   const { sheet, trim, o, s } = c;
+  void o;
   const bleedW = pt(trim[0] + 2 * sheet.bleed), bleedH = pt(trim[1] + 2 * sheet.bleed);
   const frame = pt(sheet.bleed + SAFE_MM * 0.55);
   const band = o.patternBorder ? pt(Math.min(trim[0], trim[1]) * 0.035 + 1.5) : 0;
@@ -143,12 +150,12 @@ function layout(c: Ctx, withToran: boolean) {
   const pad = pt(3) * Math.min(1.3, s);
   const toranH = withToran ? toranMotif(bleedW - 2 * inside, s).h : 0;
   const archBox = { x: inside + pt(2), y: inside + pt(2) + toranH * 0.35, w: bleedW - 2 * (inside + pt(2)), h: bleedH - 2 * (inside + pt(2)) - toranH * 0.35 };
-  const crown = o.frame === "arch" ? archBox.w * ARCH_CROWN * 0.62 : 0;
+  const crown = c.arch ? archBox.w * ARCH_CROWN * 0.62 : 0;
   const content = {
-    left: inside + pad + (o.frame === "arch" ? pt(2) : 0),
-    right: inside + pad + (o.frame === "arch" ? pt(2) : 0),
-    top: inside + pad + Math.max(toranH * 0.9, crown) + (o.frame === "arch" && toranH ? toranH * 0.35 : 0),
-    bottom: inside + pad + (o.frame === "arch" ? pt(2) : 0),
+    left: inside + pad + (c.arch ? pt(2) : 0),
+    right: inside + pad + (c.arch ? pt(2) : 0),
+    top: inside + pad + Math.max(toranH * 0.9, crown) + (c.arch && toranH ? toranH * 0.35 : 0),
+    bottom: inside + pad + (c.arch ? pt(2) : 0),
   };
   return { bleedW, bleedH, frame, band, inside, toranH, archBox, content };
 }
@@ -172,7 +179,7 @@ function Card({ c, children, toran = c.o.toran }: { c: Ctx; children: React.Reac
           </>
         )}
         {/* the arch, double-ruled */}
-        {o.frame === "arch" && (
+        {c.arch && (
           <Svg style={{ position: "absolute", left: 0, top: 0 }} width={L.bleedW} height={L.bleedH}>
             <Path d={archPath(L.archBox.x, L.archBox.y, L.archBox.w, L.archBox.h)} stroke={p.accent} strokeWidth={1} fill="none" />
             <Path d={archPath(L.archBox.x + pt(1.6), L.archBox.y + pt(2.4), L.archBox.w - pt(3.2), L.archBox.h - pt(2.4))} stroke={p.accent} strokeWidth={0.4} fill="none" />
@@ -274,11 +281,10 @@ function Front({ c: base, inv }: { c: Ctx; inv: Invitation }) {
     (f.invocation ? 12 : 0) + f.shloka.length * 13 + (78 * top.h) / top.w + 10 +
     f.lead.reduce((n, l) => n + (l.name ? 16 : 14), 0) + 10 +
     nameSize(f.first, nameBase) * 1.15 + 18 + nameSize(f.second, nameBase) * 1.15 +
-    (f.namesLocal ? 17 : 0) + (f.secondOf ? 14 : 0) + (f.after.length ? f.after.length * 14 + 8 : 0) +
+    (f.secondOf ? 14 : 0) + (f.after.length ? f.after.length * 14 + 8 : 0) +
     16 + 14 + (f.place ? 14 : 0) + (f.enclosed ? 20 : 0) + (crestSeal ? 30 : 0);
   const room = contentHeight(base, o.toran);
-  const grow = o.fill === "fuller" ? 1.4 : 1;
-  const k = Math.max(0.55, Math.min(grow, room / (need * base.s)));
+  const k = Math.max(0.55, Math.min(base.grow, room / (need * base.s)));
   const c = { ...base, s: base.s * k };
   const nameStyle = (name: string) => o.nameFont === "script"
     ? { fontFamily: "GreatVibes", fontWeight: 400, fontSize: nameSize(name, nameBase) * c.s, lineHeight: 1.15, color: c.p.accent }
@@ -297,7 +303,6 @@ function Front({ c: base, inv }: { c: Ctx; inv: Invitation }) {
       <Tx style={{ ...nameStyle(f.first), marginTop: 9 * c.s }}>{f.first}</Tx>
       <Tx style={{ fontStyle: "italic", fontSize: 13 * c.s, color: c.p.accent, marginVertical: 2 * c.s }}>{f.joiner}</Tx>
       <Tx style={nameStyle(f.second)}>{f.second}</Tx>
-      {f.namesLocal && <Tx style={{ fontSize: 12 * c.s, marginTop: 3 * c.s, color: c.p.ink }}>{f.namesLocal}</Tx>}
       {f.secondOf && <Tx style={{ fontStyle: "italic", fontSize: 9.5 * c.s, color: c.p.soft, marginTop: 3 * c.s }}>{f.secondOf}</Tx>}
       {f.after.length > 0 && <View style={{ marginTop: 8 * c.s, alignItems: "center" }}><Wording c={c} lines={f.after} /></View>}
       <Draw m={div} width={56 * c.s} p={c.p} style={{ marginVertical: 6 * c.s }} />
@@ -373,7 +378,7 @@ function Back({ c, inv, qr }: { c: Ctx; inv: Invitation; qr: string | null }) {
   const photoW = Math.min(contentWidth(c) * 0.32, 90 * c.s);
   const need = (photo ? (photoW / c.s) * (c.o.photoShape === "arch" ? 1.25 : 1) + 12 : 0) +
     (evs.length ? 30 : 0) + rows * 74 + (hasDetails ? (qr ? 105 : 60) : 0);
-  const k = Math.max(0.5, Math.min(1, contentHeight(c, false) / (need * c.s)));
+  const k = Math.max(0.5, Math.min(c.grow, contentHeight(c, false) / (need * c.s)));
   const cc = { ...c, s: c.s * k };
   const div = dividerMotif(c.theme);
   return (
@@ -395,7 +400,7 @@ function Insert({ c: base, card }: { c: Ctx; card: InsertCard }) {
   const top = topMotif(base.theme), div = dividerMotif(base.theme);
   const need = 16 + 14 + (66 * top.h) / top.w + 12 + nameSize(e.name, 28) * 1.2 + (e.sideLabel ? 10 : 0) + 18 +
     (card.couple ? 17 : 0) + 16 + 12 + 13 + 20 + 13 + (e.dressCode ? 17 : 0);
-  const k = Math.max(0.55, Math.min(o.fill === "fuller" ? 1.4 : 1, contentHeight(base, o.toran) / (need * base.s)));
+  const k = Math.max(0.55, Math.min(base.grow, contentHeight(base, o.toran) / (need * base.s)));
   const c = { ...base, s: base.s * k };
   return (
     <Card c={base}>
@@ -423,7 +428,11 @@ export async function renderInvitationPdf(inv: Invitation, o: InvitationOptions,
   registerFonts();
   const sheet = sheetFor(o);
   const trim = sheet.trim;
-  const c: Ctx = { p: paletteFor(theme, o.colours), s: Math.min(trim[0], trim[1]) / 127, trim, sheet, theme, o, script: o.nameFont === "script" };
+  const c: Ctx = {
+    p: paletteFor(theme, o.colours), s: Math.min(trim[0], trim[1]) / 127, trim, sheet, theme, o, script: o.nameFont === "script",
+    arch: o.frame === "arch" && trim[1] > trim[0],
+    grow: o.fill === "fuller" ? 1.4 : 1,
+  };
   const qr = inv.back.details.qrUrl
     ? await QRCode.toDataURL(inv.back.details.qrUrl, { margin: 1, width: 360, errorCorrectionLevel: "M", color: { dark: "#000000", light: "#ffffff" } })
     : null;

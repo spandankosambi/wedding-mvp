@@ -39,14 +39,14 @@ export type MonogramStyle = (typeof MONOGRAM_STYLES)[number];
 export const MAX_PHOTO_CHARS = 2_800_000;
 
 /** Default crest letters: the hosting side's initial first. */
-export function defaultMonogram(bride: string, groom: string, version: "bride" | "groom" | "both"): string {
+export function defaultMonogram(bride: string, groom: string, version: "bride" | "groom"): string {
   const b = bride.trim().charAt(0).toUpperCase(), g = groom.trim().charAt(0).toUpperCase();
   return version === "groom" ? `${g} | ${b}` : `${b} | ${g}`;
 }
 
 export const invitationSchema = z.object({
-  /** whose invitation: the bride's family, the groom's, or a joint card */
-  version: z.enum(["bride", "groom", "both"]).default("both"),
+  /** whose invitation: the bride's family's or the groom's */
+  version: z.enum(["bride", "groom"]).default("bride"),
   size: z.enum([...SIZE_IDS, "custom"]).default("5x7"),
   /** custom trim size, in mm (the dialog converts inches) */
   customWidthMm: z.number().min(CUSTOM_MIN_MM).max(CUSTOM_MAX_MM).optional(),
@@ -62,18 +62,24 @@ export const invitationSchema = z.object({
   cropMarks: z.boolean().default(false),
   /** "theme": the website's colours, full bleed. "light": white card, coloured ink. */
   colours: z.enum(["theme", "light"]).default("theme"),
+  /* ── the words. Parents' names come from the site (Edit your site). ── */
   invocation: text(80),
-  brideParents: text(160),
-  groomParents: text(160),
-  rsvp: text(240),
-  compliments: text(240),
+  /** a blessing or shloka under the invocation, in any language (Devanagari prints too) */
+  shloka: text(200),
+  /** each family's own RSVP contacts and "with best compliments from";
+      the card prints the hosting family's */
+  rsvpBride: text(240),
+  rsvpGroom: text(240),
+  complimentsBride: text(240),
+  complimentsGroom: text(240),
   note: text(160),
   qr: z.boolean().default(true),
   dressCode: z.boolean().default(true),
   replyBy: z.boolean().default(true),
 
-  /* ── page 2: design. The theme's own motifs are always drawn. ── */
-  /** "classic" double-rule frame, or a mehrab (temple/palace arch) */
+  /* ── design. The theme's own motifs are always drawn. ── */
+  /** "classic" double-rule frame, or a mehrab (temple/palace arch) —
+      portrait cards only; a landscape or square card keeps the classic frame */
   frame: z.enum(["classic", "arch"]).default("classic"),
   /** a hanging toran of mango leaves and marigolds across the top */
   toran: z.boolean().default(false),
@@ -90,10 +96,6 @@ export const invitationSchema = z.object({
   photo: z.string().max(MAX_PHOTO_CHARS).regex(/^data:image\/(jpeg|png);base64,[A-Za-z0-9+/=]+$/).optional(),
   photoPlace: z.enum(["front", "back"]).default("front"),
   photoShape: z.enum(["arch", "circle"]).default("arch"),
-  /** a blessing or shloka, in any language (Devanagari prints too) */
-  shloka: text(200),
-  /** the couple's names in Hindi/Marathi, printed under the names */
-  namesLocal: text(80),
 }).refine((o) => o.size !== "custom" || (o.customWidthMm !== undefined && o.customHeightMm !== undefined), {
   message: "a custom size needs a width and a height",
 });
@@ -114,3 +116,9 @@ export function trimSize(o: Pick<InvitationOptions, "size" | "customWidthMm" | "
 }
 
 export const MM_PER_INCH = 25.4;
+
+/** The arch frame needs a portrait card (taller than wide). */
+export function isPortrait(o: Pick<InvitationOptions, "size" | "customWidthMm" | "customHeightMm" | "orientation">): boolean {
+  const [w, h] = trimSize(o);
+  return h > w;
+}

@@ -5,13 +5,15 @@ import { renderInvitationPdf, sheetFor } from "@/lib/invitation/pdf";
 
 const o = (over: Record<string, unknown> = {}) => invitationSchema.parse(over);
 const d = (s: string) => new Date(s);
-const wedding = { brideName: "Pooja", groomName: "Spandan", weddingDate: d("2027-01-29T04:30:00Z"), city: "Pune", rsvpDeadline: d("2027-01-10T00:00:00Z") };
+const parents = { brideParents: "Mr. & Mrs. Anil Kulkarni", groomParents: "Mr. & Mrs. Rajesh Kosambi" };
+// parents' names come from the couple's site, not the print dialog
+const wedding = { brideName: "Pooja", groomName: "Spandan", weddingDate: d("2027-01-29T04:30:00Z"), city: "Pune", rsvpDeadline: d("2027-01-10T00:00:00Z"), ...parents };
+const noParents = { ...wedding, brideParents: null, groomParents: null };
 const ev = (n: number, name: string, side: CardEvent["side"], isPublished = true): CardEvent => ({
   id: `00000000-0000-4000-8000-00000000000${n}`, name, side, startsAt: d("2027-01-27T04:30:00Z"),
   venueName: `${name} venue`, address: "Pune", dressCode: "Yellow", isPublished, sortOrder: n,
 });
 const events = [ev(1, "Haldi", "bride"), ev(2, "Haldi", "groom"), ev(3, "Sangeet", "both"), ev(4, "Wedding", "both"), ev(5, "Puja", "both", false)];
-const parents = { brideParents: "Mr. & Mrs. Anil Kulkarni", groomParents: "Mr. & Mrs. Rajesh Kosambi" };
 
 describe("card sizes", () => {
   it("uses standard trim sizes, turned for landscape", () => {
@@ -33,10 +35,13 @@ describe("card sizes", () => {
 
 describe("which events", () => {
   it("each version shows common events plus its own side's, from the site", () => {
-    const names = (v: "bride" | "groom" | "both") => eventsFor(events, o({ version: v })).map((e) => e.id.slice(-1));
+    const names = (v: "bride" | "groom") => eventsFor(events, o({ version: v })).map((e) => e.id.slice(-1));
     expect(names("bride")).toEqual(["1", "3", "4"]);
     expect(names("groom")).toEqual(["2", "3", "4"]);
-    expect(names("both")).toEqual(["1", "2", "3", "4"]);
+  });
+  it("there are only the bride's family's and the groom's family's cards", () => {
+    expect(invitationSchema.safeParse({ version: "both" }).success).toBe(false);
+    expect(o().version).toBe("bride");
   });
   it("the couple's own pick wins, including none or a hidden event", () => {
     expect(eventsFor(events, o({ eventIds: [events[4].id, events[3].id] })).map((e) => e.name)).toEqual(["Wedding", "Puja"]);
@@ -46,51 +51,57 @@ describe("which events", () => {
 
 describe("wording", () => {
   it("the bride's family invites to the wedding of their daughter", () => {
-    const inv = buildInvitation(wedding, events, o({ version: "bride", ...parents }), "https://x/w/p");
+    const inv = buildInvitation(wedding, events, o({ version: "bride" }), "https://x/w/p");
     expect(inv.front.lead.map((l) => l.t)).toEqual(["Mr. & Mrs. Anil Kulkarni", "request the pleasure of your company", "at the wedding of their daughter"]);
     expect([inv.front.first, inv.front.joiner, inv.front.second, inv.front.secondOf]).toEqual(["Pooja", "with", "Spandan", "son of Mr. & Mrs. Rajesh Kosambi"]);
     expect(inv.front.date).toBe("29 January 2027");
   });
   it("the groom's family invites to the wedding of their son", () => {
-    const inv = buildInvitation(wedding, events, o({ version: "groom", ...parents }), "https://x/w/p");
+    const inv = buildInvitation(wedding, events, o({ version: "groom" }), "https://x/w/p");
     expect(inv.front.lead[0]).toEqual({ t: "Mr. & Mrs. Rajesh Kosambi", name: true });
     expect(inv.front.lead[2].t).toBe("at the wedding of their son");
     expect([inv.front.first, inv.front.second, inv.front.secondOf]).toEqual(["Spandan", "Pooja", "daughter of Mr. & Mrs. Anil Kulkarni"]);
   });
-  it("a joint card carries both families' blessings; without names it still reads well", () => {
-    const joint = buildInvitation(wedding, events, o({ ...parents }), "https://x/w/p");
-    expect(joint.front.lead.map((l) => l.t)).toEqual(["With the blessings of", parents.brideParents, "and", parents.groomParents, "together with their families"]);
-    expect(joint.front.after.map((l) => l.t)).toEqual(["request the pleasure of your company", "at their wedding"]);
-    const plain = buildInvitation(wedding, events, o({ version: "bride" }), "https://x/w/p");
+  it("without parents' names on the site it still reads well", () => {
+    const plain = buildInvitation(noParents, events, o({ version: "bride" }), "https://x/w/p");
     expect(plain.front.lead[0].t).toBe("The family of Pooja");
     expect(plain.front.secondOf).toBeNull();
   });
-  it("events go on the back, or on a card each; side labels only on the joint card", () => {
-    const back = buildInvitation(wedding, events, o(), "https://x/w/p");
-    expect(back.back.events.map((e) => [e.name, e.sideLabel])).toEqual([["Haldi", "Bride's side"], ["Haldi", "Groom's side"], ["Sangeet", null], ["Wedding", null]]);
+  it("events go on the back, or on a card each; an event from the other side says whose it is", () => {
+    const back = buildInvitation(wedding, events, o({ version: "bride", eventIds: [events[1].id, events[2].id, events[3].id] }), "https://x/w/p");
+    expect(back.back.events.map((e) => [e.name, e.sideLabel])).toEqual([["Haldi", "Groom's side"], ["Sangeet", null], ["Wedding", null]]);
     expect(back.inserts).toEqual([]);
-    const cards = buildInvitation(wedding, events, o({ version: "groom", eventLayout: "separate", ...parents }), "https://x/w/p");
+    const cards = buildInvitation(wedding, events, o({ version: "groom", eventLayout: "separate" }), "https://x/w/p");
     expect(cards.back.events).toEqual([]);
-    expect(cards.inserts.map((i) => [i.hosts, i.event.name, i.event.sideLabel])).toEqual([
-      [parents.groomParents, "Haldi", null], [parents.groomParents, "Sangeet", null], [parents.groomParents, "Wedding", null],
+    expect(cards.inserts.map((i) => [i.hosts, i.event.name, i.event.sideLabel, i.couple])).toEqual([
+      [parents.groomParents, "Haldi", null, "Spandan & Pooja"], [parents.groomParents, "Sangeet", null, "Spandan & Pooja"], [parents.groomParents, "Wedding", null, "Spandan & Pooja"],
     ]);
     expect(cards.front.enclosed).toBe("Details of each celebration are enclosed");
   });
-  it("RSVP, compliments, reply-by date and QR as asked", () => {
-    const inv = buildInvitation(wedding, events, o({ rsvp: "Rajesh  +91 98220 12345\n\nSonu  +91 98765 43210", compliments: "Kosambi family", dressCode: false }), "https://x/w/p");
-    expect(inv.back.details).toEqual({
-      rsvp: ["Rajesh +91 98220 12345", "Sonu +91 98765 43210"], replyBy: "Kindly reply by 10 January 2027",
-      compliments: ["Kosambi family"], note: null, qrUrl: "https://x/w/p",
+  it("prints the hosting family's own RSVP contacts and compliments", () => {
+    const words = { rsvpBride: "Anil  +91 98220 12345\n\nSunita +91 98765 43210", rsvpGroom: "Rajesh +91 90000 00000", complimentsBride: "Kulkarni family", complimentsGroom: "Kosambi family", dressCode: false };
+    const bride = buildInvitation(wedding, events, o({ version: "bride", ...words }), "https://x/w/p");
+    expect(bride.back.details).toEqual({
+      rsvp: ["Anil +91 98220 12345", "Sunita +91 98765 43210"], replyBy: "Kindly reply by 10 January 2027",
+      compliments: ["Kulkarni family"], note: null, qrUrl: "https://x/w/p",
     });
-    expect(inv.back.events[0].dressCode).toBeNull();
+    expect(bride.back.events[0].dressCode).toBeNull();
+    const groom = buildInvitation(wedding, events, o({ version: "groom", ...words }), "https://x/w/p");
+    expect(groom.back.details).toMatchObject({ rsvp: ["Rajesh +91 90000 00000"], compliments: ["Kosambi family"] });
     expect(buildInvitation(wedding, events, o({ qr: false, replyBy: false }), "u").back.details).toMatchObject({ qrUrl: null, replyBy: null });
-    expect(fileName(o({ version: "both", size: "a5", eventLayout: "separate" }))).toBe("invitation-joint-a5-with-event-cards.pdf");
+    expect(fileName(o({ version: "groom", size: "a5", eventLayout: "separate" }))).toBe("invitation-groom-a5-with-event-cards.pdf");
+  });
+  it("the arch frame is only for portrait cards", async () => {
+    const { isPortrait } = await import("@/lib/invitation/options");
+    expect(isPortrait(o())).toBe(true);
+    expect(isPortrait(o({ orientation: "landscape" }))).toBe(false);
+    expect(isPortrait(o({ size: "6x6" }))).toBe(false);
   });
 });
 
 describe("the PDF", () => {
   it("has the invitation, its back, and one page per event card", async () => {
-    const opts = o({ version: "bride", eventLayout: "separate", size: "a5", ...parents, rsvp: "Rajesh  +91 98220 12345" });
+    const opts = o({ version: "bride", eventLayout: "separate", size: "a5", rsvpBride: "Rajesh  +91 98220 12345" });
     const pdf = await renderInvitationPdf(buildInvitation(wedding, events, opts, "https://x/w/p"), opts, "raj-mahal");
     const text = pdf.toString("latin1");
     expect(text.startsWith("%PDF")).toBe(true);
@@ -109,7 +120,7 @@ describe("design", () => {
   it("suggests monogram letters with the hosting side first", async () => {
     const { defaultMonogram } = await import("@/lib/invitation/options");
     expect(defaultMonogram("Pooja", "Spandan", "groom")).toBe("S | P");
-    expect(defaultMonogram("Pooja", "Spandan", "both")).toBe("P | S");
+    expect(defaultMonogram("Pooja", "Spandan", "bride")).toBe("P | S");
   });
   it("takes only a real image as the photo", () => {
     expect(invitationSchema.safeParse({ photo: "data:image/jpeg;base64,/9j/AAAA" }).success).toBe(true);
@@ -120,7 +131,7 @@ describe("design", () => {
     for (const theme of ["raj-mahal", "ivory-editorial", "gulaab-rococo", "mehfil-noor", "pichwai-bagh", "neel-chhapa"] as const) {
       const opts = o({
         frame: "arch", toran: true, patternBorder: true, monogram: true, monogramStyle: "wreath", nameFont: "script", fill: "fuller",
-        photo: png, photoPlace: theme === "raj-mahal" ? "back" : "front", invocation: "॥ श्री गणेशाय नमः ॥", namesLocal: "पूजा • स्पंदन",
+        photo: png, photoPlace: theme === "raj-mahal" ? "back" : "front", invocation: "॥ श्री गणेशाय नमः ॥", shloka: "वक्रतुण्ड महाकाय",
       });
       const pdf = await renderInvitationPdf(buildInvitation(wedding, events, opts, "https://x/w/p"), opts, theme);
       const text = pdf.toString("latin1");

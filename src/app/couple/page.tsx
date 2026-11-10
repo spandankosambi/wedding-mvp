@@ -68,6 +68,7 @@ export default async function CouplePage({
           <PrintInvitation
             weddingId={weddingId}
             admin={staff.role === "admin"}
+            siteEditorHref={staff.role === "admin" ? `/couple/site?wedding=${weddingId}` : "/couple/site"}
             theme={wedding.theme}
             brideName={wedding.brideName}
             groomName={wedding.groomName}
