@@ -255,33 +255,6 @@ export function toranMotif(width: number, s: number): Motif {
   return { w: width, h: f(top + sag + 14 * s), shapes };
 }
 
-/* ── patterned border: a band of stamped diamonds and dots ──────── */
-export function borderMotif(w: number, h: number, band: number): Motif {
-  const shapes: Shape[] = [
-    { k: "path", d: `M 0 0 H ${f(w)} V ${f(h)} H 0 Z`, stroke: "accent", sw: 0.9 },
-    { k: "path", d: `M ${f(band)} ${f(band)} H ${f(w - band)} V ${f(h - band)} H ${f(band)} Z`, stroke: "accent", sw: 0.5 },
-  ];
-  const mid = band / 2, r = band * 0.3;
-  const along = (len: number, place: (t: number) => [number, number]) => {
-    const n = Math.max(2, Math.floor((len - band) / (band * 1.2)));
-    for (let i = 0; i <= n; i++) {
-      const t = band + ((len - 2 * band) * i) / n;
-      const [x, y] = place(t);
-      shapes.push(i % 2
-        ? { k: "circle", cx: f(x), cy: f(y), r: f(r * 0.38), fill: "accent2" }
-        : { k: "path", d: diamond(x, y, r), fill: "accent", op: 0.85 });
-    }
-  };
-  along(w, (t) => [t, mid]);
-  along(w, (t) => [t, h - mid]);
-  along(h, (t) => [mid, t]);
-  along(h, (t) => [w - mid, t]);
-  for (const [x, y] of [[mid, mid], [w - mid, mid], [mid, h - mid], [w - mid, h - mid]]) {
-    shapes.push({ k: "path", d: diamond(x, y, r * 1.25), fill: "accent2" });
-  }
-  return { w, h, shapes };
-}
-
 /* ── arch (mehrab) frame for a w×h box ──────────────────────────── */
 export function archPath(x: number, y: number, w: number, h: number): string {
   const shoulder = y + Math.min(w * 0.55, h * 0.36), mid = x + w / 2;

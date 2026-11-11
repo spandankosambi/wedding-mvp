@@ -99,6 +99,13 @@
       "when": 1794393898530,
       "tag": "0013_rsvp-people",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794422538222,
+      "tag": "0014_site-decor",
+      "breakpoints": true
     }
   ]
 }

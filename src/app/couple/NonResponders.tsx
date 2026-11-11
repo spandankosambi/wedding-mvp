@@ -17,7 +17,7 @@ export function NonResponders({
             <li key={f.id} className="flex items-baseline justify-between py-2.5 text-sm">
               <span className="font-medium">{f.name}</span>
               <span className="text-xs text-neutral-500">
-                {f.relation ?? "—"} · {f.side}
+                {f.relation ?? ""}
               </span>
             </li>
           ))}

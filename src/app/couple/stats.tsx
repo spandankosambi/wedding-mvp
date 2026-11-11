@@ -31,8 +31,8 @@ export async function weddingStats(weddingId: string, side?: FamilySide) {
 
 export function Stat({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">{label}</p>
+    <div className="portal-panel p-4">
+      <p className="portal-stat-label">{label}</p>
       <p className="mt-2 text-3xl font-semibold tabular-nums">{value}</p>
       {sub && <p className="mt-1 text-xs text-neutral-500">{sub}</p>}
     </div>

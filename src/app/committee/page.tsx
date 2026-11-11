@@ -1,3 +1,6 @@
+import { namesFor } from "@/lib/looks";
+import { PortalNav } from "../couple/PortalNav";
+import { SummaryCards } from "../couple/SummaryCards";
 import Link from "next/link";
 import { and, eq, inArray, desc } from "drizzle-orm";
 import { db } from "@/db/client";
@@ -83,6 +86,7 @@ export default async function CommitteePage({
 
   return (
     <main className="portal-page">
+      <PortalNav names={namesFor(wedding, family).couple} current={family} weddingId={weddingId} admin={staff.role === "admin"} committee={staff.role === "committee"} />
       <div className="portal-shell">
       <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3">
         <div className="max-w-2xl">
@@ -95,7 +99,7 @@ export default async function CommitteePage({
               {staff.role === "admin" && (
                 <><Link href="/admin" className="hover:text-stone-950">All weddings</Link><span className="mx-1 text-stone-300">/</span></>
               )}
-              <Link href={coupleHref} className="hover:text-stone-950">{wedding.brideName} &amp; {wedding.groomName}</Link>
+              <Link href={coupleHref} className="hover:text-stone-950">Dashboard</Link>
               <span className="mx-1 text-stone-300">/</span>
               <Link href={sectionHref} className="hover:text-stone-950">{sideName(family)}</Link>
               <span className="mx-1 text-stone-300">/</span> guest list
@@ -117,17 +121,7 @@ export default async function CommitteePage({
       </header>
 
       {/* per-event summary strip */}
-      <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-5">
-        {summary.map((s) => (
-          <div key={s.eventId} className="portal-panel portal-stat">
-            <p className="portal-stat-label">{s.eventName}</p>
-            <p className="portal-stat-value tabular-nums">{s.attendingHeadcount}</p>
-            <p className="portal-stat-note tabular-nums">
-              attending · {s.responded}/{s.invitedFamilies} families answered
-            </p>
-          </div>
-        ))}
-      </div>
+      <div className="mb-8"><SummaryCards summary={summary} /></div>
 
       {/* whose list: the bride's family or the groom's */}
       <nav className="mb-4 mr-3 inline-flex rounded-lg border border-neutral-200 bg-white p-1 text-sm" aria-label="Family">

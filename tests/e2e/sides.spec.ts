@@ -129,6 +129,42 @@ test("each family's site and section put its own child's name first", async ({ p
 
   await signIn(page, "couple2@example.com");
   await page.goto("/couple/groom");
-  await expect(page.getByRole("link", { name: "Gaurav & Karishma", exact: true })).toBeVisible();
+  await expect(page.locator(".portal-nav-brand")).toHaveText("Gaurav & Karishma");
+});
+
+test("design touches: an opening screen, what falls, decorations and celebration icons", async ({ page }) => {
+  await signIn(page, "couple2@example.com");
+  await page.goto("/couple/site?family=groom");
+  // the long editor has jump links
+  await page.getByRole("navigation", { name: "Jump to" }).getByRole("link", { name: "Design touches" }).click();
+  const decor = page.locator("#decor");
+  await decor.getByText("Palace doors").click();
+  await decor.getByLabel("Falling over the opening screen").selectOption("sparkles");
+  await decor.getByLabel("Flourish between sections").selectOption("lotus");
+  await decor.getByLabel(/Toran across the top/).check();
+  await decor.getByLabel(/Corner motifs/).check();
+  await decor.getByLabel(/Celebration icons/).check();
+  await decor.getByRole("button", { name: "Save" }).click();
+  await expect(page).toHaveURL(/saved=decor/);
+
+  // guests first see the closed doors; one tap opens the invitation
+  await page.goto("/w/gaurav-weds-karishma?side=groom");
+  const doors = page.getByTestId("reveal");
+  await expect(doors).toContainText("Gaurav & Karishma");
+  await page.getByRole("button", { name: "Open the invitation" }).click();
+  await expect(doors).toHaveCount(0);
+  await expect(page.getByTestId("site-toran")).toBeVisible();
+  await expect(page.getByTestId("site-corner")).toHaveCount(2); // the toran takes the top two corners
+  await expect(page.locator("[data-falling=sparkles]")).toBeAttached();
+  await expect(page.getByTestId("event-icon").first()).toBeAttached();
+  // opened once per visit
+  await page.reload();
+  await expect(page.getByTestId("reveal")).toHaveCount(0);
+
+  // the bride's family keeps its own (none of these)
+  await page.goto("/w/gaurav-weds-karishma?side=bride");
+  await expect(page.getByTestId("reveal")).toHaveCount(0);
+  await expect(page.getByTestId("site-toran")).toHaveCount(0);
+  await expect(page.getByTestId("event-icon")).toHaveCount(0);
 });
 

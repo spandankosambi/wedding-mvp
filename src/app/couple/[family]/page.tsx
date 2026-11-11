@@ -15,6 +15,7 @@ import { SummaryCards } from "../SummaryCards";
 import { Stat, weddingStats } from "../stats";
 import { SaveButton } from "../site/SaveButton";
 import { saveRsvpSettings } from "../site/actions";
+import { PortalNav } from "../PortalNav";
 import { DangerZone } from "../danger/DangerZone";
 import { istParts } from "@/lib/editor";
 
@@ -56,22 +57,36 @@ export default async function FamilySection({
   const who = family === "bride" ? "bride" : "groom";
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10">
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="portal-eyebrow">
-            <Link href={`/couple${admin ? `?wedding=${weddingId}` : ""}`} className="hover:text-stone-950">{coupleNames}</Link>
-            <span className="mx-1 text-stone-300">/</span> {sideName(family)}
-          </p>
-          <h1 className="mt-2 text-xl font-semibold">{sideName(family)}</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            The {who}&apos;s side&apos;s own site, guests and printed cards — in the{" "}
-            <span className="font-medium text-neutral-700">{meta.label}</span> look.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+    <main className="portal-page">
+      <PortalNav names={coupleNames} current={family} weddingId={weddingId} admin={admin} />
+      <div className="portal-shell">
+      <header className="mb-6">
+        <p className="portal-eyebrow">
+          <Link href={`/couple${admin ? `?wedding=${weddingId}` : ""}`} className="hover:text-stone-950">Dashboard</Link>
+          <span className="mx-1 text-stone-300">/</span> {sideName(family)}
+        </p>
+        <h1 className="portal-heading mt-2">{sideName(family)}</h1>
+        <p className="portal-subheading mt-3">
+          The {who}&apos;s side&apos;s own site, guests and printed cards — in the{" "}
+          <span className="font-medium text-neutral-700">{meta.label}</span> look.
+        </p>
+      </header>
+
+      {/* the three things a family does here */}
+      <div className="mb-6 grid gap-3 md:grid-cols-3">
+        <div className="portal-panel portal-action">
+          <p className="portal-eyebrow">1 · Design</p>
+          <p>The look, design touches, invitation wording, celebrations, travel and photos guests see.</p>
           <Link href={`/couple/site${q(`family=${family}`)}`} className="portal-button">Edit your site</Link>
-          <Link href={`/committee${q(`family=${family}`)}`} className="portal-button-secondary">Guest list &amp; invites</Link>
+        </div>
+        <div className="portal-panel portal-action">
+          <p className="portal-eyebrow">2 · Invite</p>
+          <p>Add or import households, choose their events, send invitations and track replies.</p>
+          <Link href={`/committee${q(`family=${family}`)}`} className="portal-button">Guest list &amp; invites</Link>
+        </div>
+        <div className="portal-panel portal-action">
+          <p className="portal-eyebrow">3 · Print</p>
+          <p>The traditional card as a print-ready PDF, in this family&apos;s look and wording.</p>
           <PrintInvitation
             weddingId={weddingId}
             admin={admin}
@@ -88,7 +103,8 @@ export default async function FamilySection({
             events={evs.filter((e) => eventForSide(e.side, family)).map((e) => ({ id: e.id, label: eventLabel(e), side: e.side, isPublished: e.isPublished }))}
           />
         </div>
-      </header>
+      </div>
+
 
       {sp.saved && (
         <p className="mb-6 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-900" role="status">Saved.</p>
@@ -171,6 +187,7 @@ export default async function FamilySection({
         Looking for the other side? Open the{" "}
         <Link href={`/couple/${otherSide(family)}${admin ? `?wedding=${weddingId}` : ""}`} className="underline">{sideName(otherSide(family)).toLowerCase()}&apos;s section</Link>.
       </p>
+      </div>
     </main>
   );
 }

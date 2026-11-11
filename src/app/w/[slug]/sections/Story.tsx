@@ -1,5 +1,6 @@
 import { SectionHeader } from "./SectionHeader";
-import { Ornament } from "@/themes/ornaments";
+import { Divider } from "./Divider";
+import type { Decor } from "@/lib/site-decor";
 
 /** Shorter stories set large; longer ones smaller, so the whole story fits one screen. */
 export function storySize(story: string): "l" | "m" | "s" | "xs" {
@@ -7,7 +8,7 @@ export function storySize(story: string): "l" | "m" | "s" | "xs" {
   return n <= 280 ? "l" : n <= 550 ? "m" : n <= 900 ? "s" : "xs";
 }
 
-export function Story({ theme, story, no = "01" }: { theme: string; story: string | null; no?: string }) {
+export function Story({ theme, story, no = "01", divider }: { theme: string; story: string | null; no?: string; divider?: Decor["divider"] }) {
   if (!story) return null;
   const paras = story.split(/\n\s*\n|\n/).map((p) => p.trim()).filter(Boolean);
   return (
@@ -25,7 +26,7 @@ export function Story({ theme, story, no = "01" }: { theme: string; story: strin
         </blockquote>
       </div>
       <div className="reveal mt-12 md:mt-14">
-        <Ornament theme={theme} slot="divider" anim="scroll" />
+        <Divider theme={theme} style={divider} anim="scroll" />
       </div>
     </section>
   );

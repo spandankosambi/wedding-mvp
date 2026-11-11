@@ -1,6 +1,8 @@
 import { SectionHeader } from "./SectionHeader";
 import { fmtEventDate, fmtEventTime } from "@/lib/format";
 import { sideLabel, type Side } from "@/lib/sides";
+import { icon, iconFor } from "@/lib/invitation/decor";
+import { MotifSvg } from "@/components/MotifSvg";
 
 type EventRow = {
   id: string;
@@ -14,7 +16,7 @@ type EventRow = {
   side?: Side;
 };
 
-export function EventTimeline({ theme: _theme, events, no = "02" }: { theme: string; events: EventRow[]; no?: string }) {
+export function EventTimeline({ theme: _theme, events, no = "02", icons = false }: { theme: string; events: EventRow[]; no?: string; icons?: boolean }) {
   return (
     <section className="mx-auto max-w-5xl px-6 py-24 md:py-32">
       <SectionHeader no={no} title="The Celebrations" />
@@ -28,9 +30,11 @@ export function EventTimeline({ theme: _theme, events, no = "02" }: { theme: str
           >
             <span
               className="font-display text-2xl md:col-span-1 md:text-3xl"
-              style={{ color: "var(--ink-soft)", opacity: 0.55 }}
+              style={{ color: "var(--ink-soft)", opacity: icons ? 1 : 0.55 }}
             >
-              {String(i + 1).padStart(2, "0")}
+              {icons
+                ? <span data-testid="event-icon"><MotifSvg m={icon(iconFor(e.name))} className="event-icon" /></span>
+                : String(i + 1).padStart(2, "0")}
             </span>
             <div className="md:col-span-6">
               <h3 className="font-display text-4xl tracking-tight md:text-5xl">{e.name}</h3>

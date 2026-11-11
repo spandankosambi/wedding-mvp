@@ -2,6 +2,7 @@ import { z } from "zod";
 import { expandMapLink } from "@/lib/maplinks";
 import { getLook, saveTravelLook, updateLook, type FamilySide, type LookPatch } from "@/lib/looks";
 import { contactsOf, MAX_CONTACTS } from "@/lib/contacts";
+import { decorSchema } from "@/lib/site-decor";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events, families, eventInvites, rsvps, type TravelInfo } from "@/db/schema";
@@ -150,6 +151,14 @@ export async function adoptCardWording(weddingId: string, side: FamilySide, inpu
   if (people.length && !contactsOf(look).length) patch.rsvpPeople = people;
   if (Object.keys(patch).length) await updateLook(weddingId, side, patch);
   return { ok: true, filled: Object.keys(patch).length };
+}
+
+/** The family's design touches: opening reveal, falling effect, decorations, icons. */
+export async function updateDecor(weddingId: string, side: FamilySide, input: unknown): Promise<Result> {
+  const p = decorSchema.safeParse(input);
+  if (!p.success) return { ok: false, error: "invalid input" };
+  await updateLook(weddingId, side, { decor: p.data });
+  return { ok: true };
 }
 
 /** Each family opens, closes and dates its own RSVPs. */

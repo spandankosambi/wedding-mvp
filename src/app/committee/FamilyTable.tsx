@@ -27,11 +27,6 @@ export type Row = {
   lastEmail: { type: string; status: string; sentAt: string } | null;
 };
 
-const SIDE_BADGE: Record<Row["side"], string> = {
-  bride: "bg-rose-50 text-rose-700 border-rose-200",
-  groom: "bg-sky-50 text-sky-700 border-sky-200",
-  both: "bg-amber-50 text-amber-700 border-amber-200",
-};
 
 export function FamilyTable({
   weddingId,
@@ -163,9 +158,6 @@ export function FamilyTable({
                 <td>
                   <p className="font-medium">{r.name}</p>
                   <p className="mt-1 text-xs text-neutral-500">
-                    <span className={`mr-1 inline-block rounded border px-1.5 py-0.5 font-medium ${SIDE_BADGE[r.side]}`}>
-                      {r.side}
-                    </span>
                     {r.relation}
                     {r.source === "guest" && <span className="ml-1 rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 font-medium text-violet-700">via link</span>}
                     {r.diet && <span className="ml-1 rounded border border-neutral-200 px-1.5 py-0.5">{r.diet}</span>}

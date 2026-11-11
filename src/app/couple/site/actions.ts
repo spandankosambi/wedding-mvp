@@ -76,6 +76,15 @@ export async function saveWording(formData: FormData) {
   done(ctx, "wording", r.ok ? undefined : r.error);
 }
 
+export async function saveDecor(formData: FormData) {
+  const ctx = await scoped(formData);
+  const r = await editor.updateDecor(ctx.weddingId, ctx.family, {
+    reveal: str(formData, "reveal") || undefined, falling: str(formData, "falling") || undefined, divider: str(formData, "divider") || undefined,
+    toran: formData.get("toran") === "on", corners: formData.get("corners") === "on", icons: formData.get("icons") === "on",
+  });
+  done(ctx, "decor", r.ok ? undefined : r.error);
+}
+
 export async function saveRsvpSettings(formData: FormData) {
   const ctx = await scoped(formData);
   const r = await editor.updateRsvpSettings(ctx.weddingId, ctx.family, {
@@ -88,7 +97,7 @@ export async function saveRsvpSettings(formData: FormData) {
 export async function copyPartAction(formData: FormData) {
   const ctx = await scoped(formData);
   const part = str(formData, "part");
-  if (!["wording", "words", "travel", "gallery", "theme"].includes(part)) return done(ctx, "words", "invalid input");
+  if (!["decor", "wording", "words", "travel", "gallery", "theme"].includes(part)) return done(ctx, "words", "invalid input");
   const r = await copyFromPartner(ctx.weddingId, ctx.family, part as LookPart);
   done(ctx, part, r.ok ? undefined : r.error);
 }

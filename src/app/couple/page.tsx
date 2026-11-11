@@ -7,6 +7,7 @@ import { istParts } from "@/lib/editor";
 import { FAMILY_SIDES, getLooks, sideName } from "@/lib/looks";
 import { THEME_META } from "@/themes/catalog";
 import { SummaryCards } from "./SummaryCards";
+import { PortalNav } from "./PortalNav";
 import { DangerZone } from "./danger/DangerZone";
 import { SaveButton } from "./site/SaveButton";
 import { saveDetails } from "./site/actions";
@@ -53,10 +54,13 @@ export default async function CouplePage({
   const attending = all.guests.length;
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10">
+    <main className="portal-page">
+      <PortalNav names={coupleNames} current="dashboard" weddingId={weddingId} admin={staff.role === "admin"} />
+      <div className="portal-shell">
       <header className="mb-8">
-        <h1 className="text-xl font-semibold">{coupleNames} — your wedding at a glance</h1>
-        <p className="mt-1 text-sm text-neutral-500">
+        <p className="portal-eyebrow">Dashboard</p>
+        <h1 className="portal-heading mt-2">Your wedding at a glance</h1>
+        <p className="portal-subheading mt-3 max-w-2xl">
           Both families together. Each family designs its own site, guest list and printed cards in its section below.
         </p>
       </header>
@@ -135,6 +139,7 @@ export default async function CouplePage({
 
       {/* only the couple themselves can delete; each family resets its own part in its section */}
       {staff.role === "couple" && <div className="mt-8"><DangerZone coupleNames={coupleNames} /></div>}
+      </div>
     </main>
   );
 }

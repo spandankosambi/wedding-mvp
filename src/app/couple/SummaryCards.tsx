@@ -6,8 +6,8 @@ export function SummaryCards({
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
       {summary.map((s) => (
-        <div key={s.eventId} className="rounded-lg border border-neutral-200 bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">{s.eventName}</p>
+        <div key={s.eventId} className="portal-panel p-4">
+          <p className="portal-stat-label">{s.eventName}</p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">{s.attendingHeadcount}</p>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-neutral-100">
             <div

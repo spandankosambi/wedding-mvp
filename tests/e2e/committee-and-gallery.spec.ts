@@ -125,8 +125,20 @@ test("the couple can get from the guest list back to their dashboard", async ({ 
   await page.goto("/committee?family=groom");
   await page.getByRole("link", { name: "← Back to groom's family" }).click();
   await expect(page).toHaveURL(/\/couple\/groom$/);
-  await page.getByRole("link", { name: "Arjun & Ananya" }).first().click(); // the groom's side puts him first
+  // the bar across the top is the same on every screen, in this family's name order
+  const bar = page.getByRole("navigation", { name: "Sections" });
+  await expect(page.locator(".portal-nav-brand")).toHaveText("Arjun & Ananya");
+  await expect(bar.getByRole("link", { name: "Groom's side" })).toHaveAttribute("aria-current", "page");
+  await bar.getByRole("link", { name: "Dashboard" }).click();
   await expect(page).toHaveURL(/\/couple$/);
+  await expect(page.getByRole("heading", { name: "Your wedding at a glance" })).toBeVisible();
+  await bar.getByRole("link", { name: "Bride's side" }).click();
+  await expect(page).toHaveURL(/\/couple\/bride$/);
+  // …and it signs you out
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/signin/);
+  await page.goto("/couple");
+  await expect(page).not.toHaveURL(/\/couple$/);
 });
 
 test("a family can be saved without an email", async ({ page }) => {

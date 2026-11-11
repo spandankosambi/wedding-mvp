@@ -141,3 +141,21 @@ describe("design", () => {
     }
   }, 120_000);
 });
+
+describe("more design: borders, symbols, patterns, icons", () => {
+  it("picks an icon from the celebration's name", async () => {
+    const { iconFor } = await import("@/lib/invitation/decor");
+    expect([iconFor("Haldi"), iconFor("Mehendi Night"), iconFor("Garba & Dandiya"), iconFor("Sangeet"), iconFor("Pheras"), iconFor("Reception"), iconFor("Ganesh Puja"), iconFor("Something else")])
+      .toEqual(["haldi", "mehendi", "dandiya", "music", "fire", "glass", "diya", "kalash"]);
+  });
+  it("renders every border, symbol and pattern", async () => {
+    const { BORDER_STYLES, SYMBOLS, PATTERNS } = await import("@/lib/invitation/decor");
+    const n = Math.max(BORDER_STYLES.length, SYMBOLS.length, PATTERNS.length);
+    for (let i = 0; i < n; i++) {
+      const opts = o({ patternBorder: true, borderStyle: BORDER_STYLES[i % BORDER_STYLES.length], symbol: SYMBOLS[i % SYMBOLS.length], pattern: PATTERNS[i % PATTERNS.length], icons: true });
+      const pdf = await renderInvitationPdf(buildInvitation(wedding, events, opts, "https://x.test/w/a"), opts, "raj-mahal");
+      expect(pdf.subarray(0, 4).toString()).toBe("%PDF");
+    }
+  }, 120_000);
+});
+

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { BORDER_STYLES, PATTERNS, SYMBOLS } from "./decor";
 
 /**
  * Printed invitation cards: the choices the couple makes before downloading
@@ -86,6 +87,14 @@ export const invitationSchema = z.object({
   toran: z.boolean().default(false),
   /** a patterned band inside the edge, like a block-printed border */
   patternBorder: z.boolean().default(false),
+  /** which pattern the band carries */
+  borderStyle: z.enum(BORDER_STYLES).default("diamond"),
+  /** a faint pattern behind the words */
+  pattern: z.enum(PATTERNS).default("none"),
+  /** an auspicious symbol at the very top of the front */
+  symbol: z.enum(SYMBOLS).default("motif"),
+  /** a small line icon beside each celebration */
+  icons: z.boolean().default(false),
   monogram: z.boolean().default(false),
   /** the crest's letters, e.g. "S | P" */
   monogramText: z.string().trim().max(9).default(""),

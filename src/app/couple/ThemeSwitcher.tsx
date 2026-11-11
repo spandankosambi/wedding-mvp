@@ -40,7 +40,7 @@ export function ThemeSwitcher({
   }
 
   return (
-    <section className="rounded-xl border border-neutral-200 bg-white p-6">
+    <section className="portal-panel p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <h2 className="font-semibold">{family === "bride" ? "The bride's family's" : "The groom's family's"} look</h2>

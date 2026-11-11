@@ -35,7 +35,7 @@ export async function setTheme(input: unknown): Promise<{ ok: boolean; error?: s
 const copySchema = z.object({
   weddingId: z.string().uuid(),
   family: z.enum(["bride", "groom"]),
-  part: z.enum(["theme", "wording", "words", "travel", "gallery"]),
+  part: z.enum(["theme", "decor", "wording", "words", "travel", "gallery"]),
 });
 
 /** "Same as your partner": copy one part of the other family's look. */

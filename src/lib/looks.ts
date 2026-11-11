@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, weddingSides, type GalleryInfo, type TravelInfo } from "@/db/schema";
+import { decorOf, type Decor } from "@/lib/site-decor";
 import { contactLine, contactsOf, type RsvpPerson } from "@/lib/contacts";
 
 /**
@@ -53,11 +54,11 @@ export const wordingOf = (look: Look): Wording => ({
 export function withLook<W extends {
   theme: Look["theme"]; heroTagline: string | null; story: string | null; hashtag: string | null; contactPhone: string | null;
   travel: TravelInfo | null; gallery: GalleryInfo | null; rsvpOpen: boolean; rsvpDeadline: Date | null;
-}>(w: W, look: Look): W & Wording & { contacts: RsvpPerson[] } {
+}>(w: W, look: Look): W & Wording & { contacts: RsvpPerson[]; decor: Decor } {
   return {
     ...w, theme: look.theme, heroTagline: look.heroTagline, story: look.story, hashtag: look.hashtag, contactPhone: look.contactPhone,
     travel: look.travel, gallery: look.gallery, rsvpOpen: look.rsvpOpen, rsvpDeadline: look.rsvpDeadline, ...wordingOf(look),
-    contacts: contactsOf(look),
+    contacts: contactsOf(look), decor: decorOf(look),
   };
 }
 
@@ -79,7 +80,7 @@ export function namesFor(
   };
 }
 
-export type LookPatch = Partial<Pick<Look, "theme" | "heroTagline" | "story" | "hashtag" | "contactPhone" | "travel" | "gallery" | "rsvpOpen" | "rsvpDeadline" | "rsvpPeople" | (typeof WORDING_KEYS)[number]>>;
+export type LookPatch = Partial<Pick<Look, "theme" | "heroTagline" | "story" | "hashtag" | "contactPhone" | "travel" | "gallery" | "rsvpOpen" | "rsvpDeadline" | "rsvpPeople" | "decor" | (typeof WORDING_KEYS)[number]>>;
 
 export async function updateLook(weddingId: string, side: FamilySide, patch: LookPatch) {
   await getLooks(weddingId); // make sure the row exists
@@ -116,12 +117,13 @@ export async function saveTravelLook(weddingId: string, side: FamilySide, travel
 
 /* ── "Same as your partner": copy one part of the other family's look ── */
 
-export type LookPart = "theme" | "wording" | "words" | "travel" | "gallery";
+export type LookPart = "theme" | "decor" | "wording" | "words" | "travel" | "gallery";
 
 /** Whether the other family has filled this part in (so copying it means something). */
 export function hasPart(look: Look, part: LookPart): boolean {
   switch (part) {
     case "theme": return true;
+    case "decor": return !!look.decor;
     case "wording": return Object.values(wordingOf(look)).some(Boolean);
     case "words": return !!(look.heroTagline || look.story || look.hashtag);
     case "travel": return !!(look.travel?.stays?.length || look.travel?.gettingThere);
@@ -133,6 +135,7 @@ export function hasPart(look: Look, part: LookPart): boolean {
 export function samePart(a: Look, b: Look, part: LookPart): boolean {
   switch (part) {
     case "theme": return a.theme === b.theme;
+    case "decor": return JSON.stringify(decorOf(a)) === JSON.stringify(decorOf(b));
     case "wording": return JSON.stringify(wordingOf(a)) === JSON.stringify(wordingOf(b))
       && JSON.stringify(contactsOf(a)) === JSON.stringify(contactsOf(b)); // WhatsApp ticks too
     case "words": return a.heroTagline === b.heroTagline && a.story === b.story && a.hashtag === b.hashtag;
@@ -147,6 +150,7 @@ export async function copyFromPartner(weddingId: string, side: FamilySide, part:
   if (!hasPart(from, part)) return { ok: false, error: "nothing to copy yet" };
   const patch: LookPatch =
     part === "theme" ? { theme: from.theme }
+    : part === "decor" ? { decor: decorOf(from) }
     : part === "wording" ? {
       invocation: from.invocation, shloka: from.shloka, compliments: from.compliments, closingLine: from.closingLine,
       rsvpPeople: contactsOf(from), rsvpContacts: null, contactPhone: null,

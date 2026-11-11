@@ -17,29 +17,50 @@ const PETALS = [
   { x: 94, sz: 15, dur: 14, delay: 15, drift: -6, spin: 390, o: 0.55, alt: true },
 ];
 
-export function Petals() {
+type Falling = "petals" | "marigold" | "sparkles" | "diyas" | "none";
+
+const SHAPES: Record<Exclude<Falling, "none">, React.ReactNode> = {
+  petals: <path d="M10 0 C 15.5 5.5 15.5 14 10 20 C 4.5 14 4.5 5.5 10 0 Z" />,
+  marigold: (
+    <>
+      {[0, 1, 2, 3, 4, 5, 6, 7].map((k) => (
+        <circle key={k} cx={10 + Math.cos((k / 8) * Math.PI * 2) * 5.2} cy={10 + Math.sin((k / 8) * Math.PI * 2) * 5.2} r="3.6" />
+      ))}
+      <circle cx="10" cy="10" r="3.4" opacity="0.6" />
+    </>
+  ),
+  sparkles: <path d="M10 0 L12.2 7.8 L20 10 L12.2 12.2 L10 20 L7.8 12.2 L0 10 L7.8 7.8 Z" />,
+  diyas: (
+    <>
+      <path d="M10 1 C 13 5 13 8 10 10.5 C 7 8 7 5 10 1 Z" />
+      <path d="M2 12 H18 C 17 17 14 19 10 19 C 6 19 3 17 2 12 Z" opacity="0.75" />
+    </>
+  ),
+};
+
+/** What drifts over the opening screen: the family's choice. */
+export function Petals({ kind = "petals" }: { kind?: Falling }) {
+  if (kind === "none") return null;
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden" data-falling={kind}>
       {PETALS.map((p, i) => (
         <span
           key={i}
-          className="petal"
+          className={`petal petal-${kind}`}
           style={
             {
               "--x": `${p.x}%`,
-              "--sz": `${p.sz}px`,
-              "--dur": `${p.dur}s`,
+              "--sz": `${kind === "petals" ? p.sz : kind === "sparkles" ? p.sz * 0.8 : p.sz * 1.25}px`,
+              "--dur": `${kind === "diyas" ? p.dur * 1.5 : p.dur}s`,
               "--delay": `-${p.delay}s`,
               "--drift": `${p.drift}vw`,
-              "--spin": `${p.spin}deg`,
-              "--o": p.o,
+              "--spin": `${kind === "diyas" ? 0 : kind === "marigold" ? p.spin / 2 : p.spin}deg`,
+              "--o": kind === "petals" ? p.o : Math.min(0.85, p.o + 0.2),
               color: p.alt ? "var(--accent-2)" : "var(--accent)",
             } as React.CSSProperties
           }
         >
-          <svg viewBox="0 0 20 20" width="100%" height="100%" fill="currentColor">
-            <path d="M10 0 C 15.5 5.5 15.5 14 10 20 C 4.5 14 4.5 5.5 10 0 Z" />
-          </svg>
+          <svg viewBox="0 0 20 20" width="100%" height="100%" fill="currentColor">{SHAPES[kind]}</svg>
         </span>
       ))}
     </div>

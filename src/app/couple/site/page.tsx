@@ -13,11 +13,13 @@ import { SaveButton } from "./SaveButton";
 import { GalleryUploader } from "./GalleryUploader";
 import { StaysEditor } from "./StaysEditor";
 import { StoryField } from "./StoryField";
+import { PortalNav } from "../PortalNav";
 import { ContactsEditor } from "./ContactsEditor";
 import { contactsOf, MAX_CONTACTS } from "@/lib/contacts";
+import { decorOf, REVEALS, REVEAL_LABELS, FALLING, FALLING_LABELS, DIVIDERS, DIVIDER_LABELS } from "@/lib/site-decor";
 import { galleryOf, photoStorageConfigured, MAX_GALLERY_PHOTOS } from "@/lib/gallery";
 import {
-  saveWords, saveWording, saveTravel, saveEvent, addPresetEvent, toggleEvent, removeEvent, moveEventAction, sortEvents,
+  saveWords, saveWording, saveDecor, saveTravel, saveEvent, addPresetEvent, toggleEvent, removeEvent, moveEventAction, sortEvents,
   saveGallerySettings, removeGalleryPhotoAction, moveGalleryPhotoAction, copyPartAction,
 } from "./actions";
 
@@ -57,6 +59,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
   const [w] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
   const looks = await getLooks(weddingId);
   const look = looks[family], partner = looks[otherSide(family)];
+  const decor = decorOf(look);
   // this family's section: common events and its own
   const evs = (await db.select().from(events).where(eq(events.weddingId, weddingId)).orderBy(events.sortOrder, events.startsAt))
     .filter((e) => e.side === "both" || e.side === family);
@@ -75,11 +78,12 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
 
   return (
     <main className="portal-page">
-      <div className="portal-shell max-w-5xl">
+      <PortalNav names={coupleNames} current={family} weddingId={weddingId} admin={!!adminQ} />
+      <div className="portal-shell">
         <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div className="max-w-2xl">
             <p className="portal-eyebrow">
-              <Link href={`/couple${adminQ ? `?${adminQ.slice(0, -1)}` : ""}`} className="hover:text-stone-950">{coupleNames}</Link>
+              <Link href={`/couple${adminQ ? `?${adminQ.slice(0, -1)}` : ""}`} className="hover:text-stone-950">Dashboard</Link>
               <span className="mx-1 text-stone-300">/</span>
               <Link href={`/couple/${family}${adminQ ? `?${adminQ.slice(0, -1)}` : ""}`} className="hover:text-stone-950">{sideName(family)}</Link>
               <span className="mx-1 text-stone-300">/</span> site
@@ -106,9 +110,61 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
 
         <div className="space-y-8">
           {/* ── Theme ───────────────────────────────────────────── */}
+          <nav className="portal-jump !mb-0" aria-label="Jump to">
+            {[["theme", "Look"], ["decor", "Design touches"], ["wording", "Invitation wording"], ["words", "Tagline & story"], ["events", "Celebrations"], ["travel", "Travel & stay"], ["gallery", "Photos"]].map(([id, label]) => (
+              <a key={id} href={`#${id}`}>{label}</a>
+            ))}
+          </nav>
           <div id="theme">
             <ThemeSwitcher weddingId={weddingId} current={look.theme} slug={w.slug} coupleNames={coupleNames} family={family} partnerTheme={partner.theme} />
           </div>
+
+          {/* ── Design touches ─────────────────────────────────── */}
+          <section id="decor" className="portal-panel p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="portal-eyebrow">Design touches</p>
+                <h2 className="mt-1 font-semibold">Make the site livelier</h2>
+                <p className="mt-1 max-w-2xl text-sm text-neutral-500">Extras on top of your theme. Each family chooses its own; save, then open your site to see them.</p>
+              </div>
+              {same("decor")}
+            </div>
+            <form action={saveDecor} className="mt-5 space-y-6">
+              {wid}
+              <fieldset>
+                <legend className="text-sm font-medium">How the site opens</legend>
+                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                  {REVEALS.map((r) => (
+                    <label key={r} className="portal-choice">
+                      <input type="radio" name="reveal" value={r} defaultChecked={decor.reveal === r} className="mt-0.5 h-4 w-4" />
+                      <span><span className="block text-sm font-medium">{REVEAL_LABELS[r][0]}</span><span className="block text-xs text-neutral-500">{REVEAL_LABELS[r][1]}</span></span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Falling over the opening screen">
+                  <select name="falling" defaultValue={decor.falling} className="portal-input">
+                    {FALLING.map((v) => <option key={v} value={v}>{FALLING_LABELS[v]}</option>)}
+                  </select>
+                </Field>
+                <Field label="Flourish between sections">
+                  <select name="divider" defaultValue={decor.divider} className="portal-input">
+                    {DIVIDERS.map((v) => <option key={v} value={v}>{DIVIDER_LABELS[v]}</option>)}
+                  </select>
+                </Field>
+              </div>
+              <fieldset>
+                <legend className="text-sm font-medium">Decorations</legend>
+                <div className="mt-2 space-y-2 text-sm">
+                  <label className="flex items-start gap-2"><input type="checkbox" name="toran" defaultChecked={decor.toran} className="mt-0.5 h-4 w-4" /><span>Toran across the top <span className="text-xs text-neutral-500">— mango leaves and marigolds, as on the card</span></span></label>
+                  <label className="flex items-start gap-2"><input type="checkbox" name="corners" defaultChecked={decor.corners} className="mt-0.5 h-4 w-4" /><span>Corner motifs <span className="text-xs text-neutral-500">— your theme&apos;s corners round the opening screen</span></span></label>
+                  <label className="flex items-start gap-2"><input type="checkbox" name="icons" defaultChecked={decor.icons} className="mt-0.5 h-4 w-4" /><span>Celebration icons <span className="text-xs text-neutral-500">— a small drawing beside each event (haldi bowl, mehendi, dhol, sacred fire…)</span></span></label>
+                </div>
+              </fieldset>
+              <SaveButton />
+            </form>
+          </section>
 
           {/* ── Invitation wording: the site's opening and the printed cards ── */}
           <section id="wording" className="portal-panel p-6">

@@ -9,6 +9,16 @@ export const emailTypeEnum = pgEnum("email_type", ["invite", "reminder", "resend
 export const familySourceEnum = pgEnum("family_source", ["committee", "import", "guest"]);
 
 /** Travel & stay copy the couple writes in their editor — prose, not relational data. */
+/** A family's design touches on its site (see lib/site-decor.ts for the choices). */
+export type SiteDecor = {
+  reveal?: "none" | "envelope" | "doors";
+  falling?: "petals" | "marigold" | "sparkles" | "diyas" | "none";
+  toran?: boolean;
+  corners?: boolean;
+  divider?: "theme" | "lotus" | "paisley" | "diamonds";
+  icons?: boolean;
+};
+
 /** Someone guests can reach about their RSVP. */
 export type RsvpPerson = { name: string; phone: string; whatsapp: boolean };
 
@@ -78,6 +88,8 @@ export const weddingSides = pgTable("wedding_sides", {
   /** "with best compliments from", line by line */
   compliments: text("compliments"),
   closingLine: text("closing_line"),
+  /** design touches on the site: opening reveal, falling effect, decorations, icons */
+  decor: jsonb("decor").$type<SiteDecor>(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [primaryKey({ columns: [t.weddingId, t.side] })]);
 

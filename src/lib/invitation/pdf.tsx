@@ -7,8 +7,9 @@ import type { Style } from "@react-pdf/stylesheet";
 import type { Theme } from "@/themes/catalog";
 import type { Invitation, EventCard, InsertCard, Details, Line } from "./content";
 import { BLEED_MM, SAFE_MM, trimSize, type InvitationOptions } from "./options";
+import { backgroundPattern, borderBand, icon, iconFor, symbol, OM } from "./decor";
 import {
-  paletteFor, topMotif, dividerMotif, cornerMotif, toranMotif, borderMotif, archPath, crest, scriptRuns, ARCH_CROWN,
+  paletteFor, topMotif, dividerMotif, cornerMotif, toranMotif, archPath, crest, scriptRuns, ARCH_CROWN,
   type Motif, type Ink, type Palette,
 } from "./motifs";
 
@@ -169,9 +170,14 @@ function Card({ c, children, toran = c.o.toran }: { c: Ctx; children: React.Reac
   return (
     <Page size={[pt(sheet.page[0]), pt(sheet.page[1])]} style={{ backgroundColor: sheet.marks ? "#ffffff" : p.bg }}>
       <View style={{ position: "absolute", left: pt(sheet.x), top: pt(sheet.y), width: L.bleedW, height: L.bleedH, backgroundColor: p.bg }}>
+        {/* a faint pattern behind everything, inside the frame */}
+        {o.pattern !== "none" && (
+          <Draw m={backgroundPattern(L.bleedW - 2 * L.inside, L.bleedH - 2 * L.inside, o.pattern)} width={L.bleedW - 2 * L.inside} p={p}
+            style={{ position: "absolute", left: L.inside, top: L.inside }} />
+        )}
         {/* edge: a patterned band, or the classic double rule */}
         {o.patternBorder ? (
-          <Draw m={borderMotif(L.bleedW - 2 * L.frame, L.bleedH - 2 * L.frame, L.band)} width={L.bleedW - 2 * L.frame} p={p} style={{ position: "absolute", left: L.frame, top: L.frame }} />
+          <Draw m={borderBand(L.bleedW - 2 * L.frame, L.bleedH - 2 * L.frame, L.band, o.borderStyle)} width={L.bleedW - 2 * L.frame} p={p} style={{ position: "absolute", left: L.frame, top: L.frame }} />
         ) : (
           <>
             <View style={{ position: "absolute", left: L.frame, top: L.frame, right: L.frame, bottom: L.frame, borderWidth: 0.9, borderColor: p.accent }} />
@@ -277,7 +283,7 @@ function Front({ c: base, inv }: { c: Ctx; inv: Invitation }) {
   // how tall the stack is at scale 1 (pt), to grow or shrink the type to fit
   const top = topMotif(base.theme), div = dividerMotif(base.theme);
   const need =
-    (crestTop ? 42 : 0) + (photoFront ? (photoW / base.s) * (o.photoShape === "arch" ? 1.25 : 1) + 10 : 0) +
+    (o.symbol !== "motif" ? 34 : 0) + (crestTop ? 42 : 0) + (photoFront ? (photoW / base.s) * (o.photoShape === "arch" ? 1.25 : 1) + 10 : 0) +
     (f.invocation ? 12 : 0) + f.shloka.length * 13 + (78 * top.h) / top.w + 10 +
     f.lead.reduce((n, l) => n + (l.name ? 16 : 14), 0) + 10 +
     nameSize(f.first, nameBase) * 1.15 + 18 + nameSize(f.second, nameBase) * 1.15 +
@@ -292,6 +298,8 @@ function Front({ c: base, inv }: { c: Ctx; inv: Invitation }) {
 
   return (
     <Card c={base}>
+      {o.symbol === "om" && <Text style={{ fontFamily: "Tiro", fontSize: 26 * c.s, color: c.p.accent, lineHeight: 1.1, marginBottom: 2 * c.s }}>{OM}</Text>}
+      {o.symbol !== "motif" && o.symbol !== "om" && <Draw m={symbol(o.symbol)} width={30 * c.s} p={c.p} style={{ marginBottom: 4 * c.s }} />}
       {crestTop && <Crest c={c} text={f.monogram!} size={38 * c.s} />}
       {photoFront && <Photo c={c} src={o.photo!} width={photoW * k} />}
       {f.invocation && <Kicker c={c}>{f.invocation}</Kicker>}
@@ -319,6 +327,7 @@ function Front({ c: base, inv }: { c: Ctx; inv: Invitation }) {
 function EventBlock({ c, e, width }: { c: Ctx; e: EventCard; width: string }) {
   return (
     <View style={{ width, alignItems: "center", paddingHorizontal: 4 * c.s, marginBottom: 9 * c.s }} wrap={false}>
+      {c.o.icons && <Draw m={icon(iconFor(e.name))} width={15 * c.s} p={c.p} style={{ marginBottom: 2 * c.s }} />}
       <Tx style={{ fontWeight: 700, fontSize: 15 * c.s, lineHeight: 1.1 }}>{e.name}</Tx>
       {e.sideLabel && <Kicker c={c} size={5.6}>{e.sideLabel}</Kicker>}
       <Text style={{ fontSize: 9.5 * c.s, marginTop: 2 * c.s }}>{e.date} · {e.time}</Text>
@@ -377,7 +386,7 @@ function Back({ c, inv, qr }: { c: Ctx; inv: Invitation; qr: string | null }) {
   const rows = Math.ceil(evs.length / cols);
   const photoW = Math.min(contentWidth(c) * 0.32, 90 * c.s);
   const need = (photo ? (photoW / c.s) * (c.o.photoShape === "arch" ? 1.25 : 1) + 12 : 0) +
-    (evs.length ? 30 : 0) + rows * 74 + (hasDetails ? (qr ? 105 : 60) : 0);
+    (evs.length ? 30 : 0) + rows * (c.o.icons ? 92 : 74) + (hasDetails ? (qr ? 105 : 60) : 0);
   const k = Math.max(0.5, Math.min(c.grow, contentHeight(c, false) / (need * c.s)));
   const cc = { ...c, s: c.s * k };
   const div = dividerMotif(c.theme);
@@ -399,7 +408,7 @@ function Insert({ c: base, card }: { c: Ctx; card: InsertCard }) {
   const o = base.o;
   const top = topMotif(base.theme), div = dividerMotif(base.theme);
   const need = 16 + 14 + (66 * top.h) / top.w + 12 + nameSize(e.name, 28) * 1.2 + (e.sideLabel ? 10 : 0) + 18 +
-    (card.couple ? 17 : 0) + 16 + 12 + 13 + 20 + 13 + (e.dressCode ? 17 : 0);
+    (card.couple ? 17 : 0) + 16 + 12 + 13 + 20 + 13 + (e.dressCode ? 17 : 0) + (o.icons ? 30 : 0);
   const k = Math.max(0.55, Math.min(base.grow, contentHeight(base, o.toran) / (need * base.s)));
   const c = { ...base, s: base.s * k };
   return (
@@ -407,6 +416,7 @@ function Insert({ c: base, card }: { c: Ctx; card: InsertCard }) {
       <Tx style={{ fontWeight: 600, fontSize: 11 * c.s }}>{card.hosts}</Tx>
       <Tx style={{ fontStyle: "italic", fontSize: 10.5 * c.s, color: c.p.soft, marginTop: 2 * c.s }}>{card.request}</Tx>
       <Draw m={top} width={66 * c.s} p={c.p} style={{ marginVertical: 5 * c.s }} />
+      {o.icons && <Draw m={icon(iconFor(e.name))} width={24 * c.s} p={c.p} style={{ marginBottom: 4 * c.s }} />}
       <Tx style={o.nameFont === "script"
         ? { fontFamily: "GreatVibes", fontWeight: 400, fontSize: nameSize(e.name, 34) * c.s, lineHeight: 1.15, color: c.p.accent }
         : { fontWeight: 700, fontSize: nameSize(e.name, 28) * c.s, lineHeight: 1.05 }}>{e.name}</Tx>

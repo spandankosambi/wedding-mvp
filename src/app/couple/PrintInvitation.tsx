@@ -10,6 +10,11 @@ import {
   defaultMonogram, isPortrait, trimSize, type InvitationOptions, type MonogramStyle, type SizeId,
 } from "@/lib/invitation/options";
 import { crest, paletteFor, type Motif, type Palette } from "@/lib/invitation/motifs";
+import {
+  BORDER_STYLES, BORDER_LABELS, PATTERNS, PATTERN_LABELS, SYMBOLS, SYMBOL_LABELS, OM,
+  backgroundPattern, borderBand, symbol as symbolMotif,
+} from "@/lib/invitation/decor";
+import { MotifSvg as Art } from "@/components/MotifSvg";
 
 type PrintEvent = { id: string; label: string; side: Side; isPublished: boolean };
 type Props = {
@@ -50,7 +55,7 @@ function initial(p: Props): Form {
     version: p.family, size: "5x7", orientation: "portrait", eventLayout: "together",
     eventIds: defaultEvents(p.events, p.family), output: "printer", cropMarks: false, colours: "theme",
     qr: true, dressCode: true, replyBy: p.hasDeadline,
-    frame: "classic", toran: false, patternBorder: false, monogram: false, monogramText: "", monogramStyle: "circle",
+    frame: "classic", toran: false, patternBorder: false, borderStyle: "diamond", pattern: "none", symbol: "motif", icons: false, monogram: false, monogramText: "", monogramStyle: "circle",
     fill: "classic", nameFont: "serif", photo: null, photoPlace: "front", photoShape: "arch",
     customW: "", customH: "", unit: "in",
   };
@@ -88,7 +93,7 @@ const legacyKey = (id: string) => `print-invitation:${id}`;
     whose card it is or its events (the wording has its own "Same as" on the site). */
 const SHARED_KEYS = [
   "size", "orientation", "eventLayout", "output", "cropMarks", "colours", "qr", "dressCode", "replyBy",
-  "frame", "toran", "patternBorder", "monogram", "monogramStyle", "fill", "nameFont", "photo", "photoPlace", "photoShape", "customW", "customH", "unit",
+  "frame", "toran", "patternBorder", "borderStyle", "pattern", "symbol", "icons", "monogram", "monogramStyle", "fill", "nameFont", "photo", "photoPlace", "photoShape", "customW", "customH", "unit",
 ] as const;
 const readSaved = (key: string): Record<string, unknown> | null => {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; }
@@ -118,6 +123,17 @@ function Check({ checked, onChange, children }: { checked: boolean; onChange: (v
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0" />
       <span>{children}</span>
     </label>
+  );
+}
+
+/** A picture choice in a radio group (borders, symbols, patterns). */
+function Thumb({ label, on, bg, onPick, children }: { label: string; on: boolean; bg: string; onPick: () => void; children: React.ReactNode }) {
+  return (
+    <button type="button" role="radio" aria-checked={on} aria-label={label} onClick={onPick}
+      className={`flex flex-col items-center gap-1 rounded-xl p-1.5 text-[11px] ${on ? "ring-2 ring-stone-800" : "ring-1 ring-neutral-200 hover:ring-neutral-400"}`}>
+      <span className="grid place-items-center rounded-lg p-1.5" style={{ background: bg }}>{children}</span>
+      <span className={on ? "font-medium text-stone-900" : "text-neutral-600"}>{label}</span>
+    </button>
   );
 }
 
@@ -574,8 +590,47 @@ export function PrintInvitation(props: Props) {
                   )}
                   <div className="mt-3 space-y-2">
                     <Check checked={form.toran} onChange={(v) => set("toran", v)}>Toran across the top <span className="text-xs text-neutral-500">— mango leaves and marigolds</span></Check>
-                    <Check checked={form.patternBorder} onChange={(v) => set("patternBorder", v)}>Patterned border <span className="text-xs text-neutral-500">— a block-printed band round the edge</span></Check>
                   </div>
+                </fieldset>
+
+                <fieldset>
+                  <legend className={label}>Border</legend>
+                  <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label="Border">
+                    <Thumb label="Classic rule" on={!form.patternBorder} bg={palette.bg} onPick={() => set("patternBorder", false)}>
+                      <svg viewBox="0 0 60 78" width={52} aria-hidden><rect x="1" y="1" width="58" height="76" fill="none" stroke={palette.accent} strokeWidth="1" /><rect x="4" y="4" width="52" height="70" fill="none" stroke={palette.accent} strokeWidth="0.4" /></svg>
+                    </Thumb>
+                    {BORDER_STYLES.map((b) => (
+                      <Thumb key={b} label={BORDER_LABELS[b]} on={form.patternBorder && form.borderStyle === b} bg={palette.bg}
+                        onPick={() => setForm((f) => ({ ...f, patternBorder: true, borderStyle: b }))}>
+                        <Art m={borderBand(60, 78, 7, b)} colours={palette} width={52} />
+                      </Thumb>
+                    ))}
+                  </div>
+                </fieldset>
+
+                <fieldset>
+                  <legend className={label}>Symbol at the top</legend>
+                  <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label="Symbol at the top">
+                    {SYMBOLS.map((sy) => (
+                      <Thumb key={sy} label={SYMBOL_LABELS[sy]} on={form.symbol === sy} bg={palette.bg} onPick={() => set("symbol", sy)}>
+                        {sy === "motif" ? <span className="grid h-[44px] w-[44px] place-items-center text-lg" style={{ color: palette.hair }}>—</span>
+                          : sy === "om" ? <span className="indic grid h-[44px] w-[44px] place-items-center text-3xl leading-none" style={{ color: palette.accent }}>{OM}</span>
+                          : <Art m={symbolMotif(sy)} colours={palette} width={44} />}
+                      </Thumb>
+                    ))}
+                  </div>
+                </fieldset>
+
+                <fieldset>
+                  <legend className={label}>Background pattern</legend>
+                  <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label="Background pattern">
+                    {PATTERNS.map((pt) => (
+                      <Thumb key={pt} label={PATTERN_LABELS[pt]} on={form.pattern === pt} bg={palette.bg} onPick={() => set("pattern", pt)}>
+                        {pt === "none" ? <span className="block h-[68px] w-[52px]" /> : <Art m={backgroundPattern(60, 78, pt)} colours={palette} width={52} style={{ filter: "brightness(1.6) contrast(1.6)" }} />}
+                      </Thumb>
+                    ))}
+                  </div>
+                  <p className="mt-1.5 text-xs text-neutral-500">Printed faintly behind the words (shown stronger here).</p>
                 </fieldset>
 
                 <fieldset>
@@ -650,6 +705,7 @@ export function PrintInvitation(props: Props) {
                   <legend className={label}>Also on the card</legend>
                   <div className="mt-2 space-y-2">
                     <Check checked={form.qr} onChange={(v) => set("qr", v)}>QR code to the wedding website <span className="text-xs text-neutral-500">— on the back, for guests to RSVP</span></Check>
+                    <Check checked={form.icons} onChange={(v) => set("icons", v)}>Celebration icons <span className="text-xs text-neutral-500">— a small drawing beside each event (haldi bowl, mehendi, dhol…)</span></Check>
                     <Check checked={form.dressCode} onChange={(v) => set("dressCode", v)}>Dress codes <span className="text-xs text-neutral-500">— under each celebration</span></Check>
                     {props.hasDeadline && <Check checked={form.replyBy} onChange={(v) => set("replyBy", v)}>“Kindly reply by” date</Check>}
                   </div>

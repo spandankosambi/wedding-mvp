@@ -5,6 +5,10 @@ import { Countdown } from "./Countdown";
 import { Mark } from "@/themes/mark";
 import { hostWords, wordingLines } from "@/lib/invitation/content";
 import type { FamilySide } from "@/lib/looks";
+import { cornerMotif, toranMotif } from "@/lib/invitation/motifs";
+import { MotifSvg } from "@/components/MotifSvg";
+import { DEFAULT_DECOR, type Decor } from "@/lib/site-decor";
+import type { Theme } from "@/themes/catalog";
 
 type HeroWedding = {
   brideName: string;
@@ -38,7 +42,7 @@ function Letters({ text, from }: { text: string; from: number }) {
  * hosting parents inviting guests to their child's wedding, the couple, the
  * other child's parents — then the date and place.
  */
-export function Hero({ wedding, city, side = "bride" }: { wedding: HeroWedding; city?: string; side?: FamilySide }) {
+export function Hero({ wedding, city, side = "bride", decor = DEFAULT_DECOR }: { wedding: HeroWedding; city?: string; side?: FamilySide; decor?: Decor }) {
   const h = hostWords(wedding, side);
   const shloka = wordingLines(wedding.shloka);
   const top = !!(wedding.invocation || shloka.length);
@@ -46,8 +50,20 @@ export function Hero({ wedding, city, side = "bride" }: { wedding: HeroWedding; 
      globals.css) so everything from the invocation to the countdown fits one
      screen, on a laptop and on a phone. */
   return (
-    <section className="hero relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-6 text-center">
-      <Petals />
+    <section className={`hero relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-6 text-center ${decor.toran ? "has-toran" : ""}`}>
+      <Petals kind={decor.falling} />
+      {decor.toran && (
+        <div className="hero-toran" aria-hidden data-testid="site-toran">
+          <MotifSvg m={toranMotif(300, 1)} className="t-narrow" />
+          <MotifSvg m={toranMotif(900, 1)} className="t-wide" />
+        </div>
+      )}
+      {decor.corners && ([[false, false], [true, false], [false, true], [true, true]] as const).filter(([, fy]) => !decor.toran || fy).map(([fx, fy], i) => (
+        <span key={i} aria-hidden className="hero-corner" data-testid="site-corner"
+          style={{ [fx ? "right" : "left"]: "clamp(8px, 1.6vw, 20px)", [fy ? "bottom" : "top"]: "clamp(8px, 1.6vw, 20px)" }}>
+          <MotifSvg m={cornerMotif(wedding.theme as Theme, fx, fy)} />
+        </span>
+      ))}
 
       {/* watermark knot, drifts on scroll via --py from ScrollFx */}
       <span

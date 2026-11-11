@@ -16,7 +16,22 @@ body {
     #f7f7f4;
   color: #272624;
 }
-.portal-shell { margin-inline: auto; max-width: 80rem; padding: 3rem 1.5rem; }
+.portal-shell { margin-inline: auto; max-width: 72rem; padding: 2.5rem 1.5rem 4rem; }
+.portal-nav { position: sticky; top: 0; z-index: 30; border-bottom: 1px solid #e4e1db; background: rgba(250, 249, 246, 0.92); backdrop-filter: blur(8px); }
+.portal-nav-inner { margin-inline: auto; max-width: 72rem; padding: 0.6rem 1.5rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; font-size: 0.875rem; }
+.portal-nav-brand { font-weight: 650; letter-spacing: -0.01em; color: #272624; }
+.portal-nav-links { display: flex; gap: 0.25rem; }
+.portal-nav-links a { border-radius: 0.5rem; padding: 0.4rem 0.7rem; color: #625c54; font-weight: 500; }
+.portal-nav-links a:hover { background: #efece6; color: #272624; }
+.portal-nav-links a[aria-current="page"] { background: #292723; color: #fff; }
+.portal-nav-out { border-radius: 0.5rem; padding: 0.4rem 0.7rem; color: #625c54; cursor: pointer; }
+.portal-nav-out:hover { background: #efece6; color: #272624; }
+.portal-jump { position: sticky; top: 3.1rem; z-index: 20; margin-bottom: 1.5rem; display: flex; gap: 0.25rem; overflow-x: auto; border: 1px solid #e4e1db; border-radius: 0.75rem; background: rgba(255, 255, 255, 0.95); padding: 0.3rem; font-size: 0.8125rem; backdrop-filter: blur(8px); }
+.portal-jump a { white-space: nowrap; border-radius: 0.5rem; padding: 0.4rem 0.75rem; color: #625c54; font-weight: 500; }
+.portal-jump a:hover { background: #efece6; color: #272624; }
+.portal-page section[id], .portal-page div[id] { scroll-margin-top: 7rem; }
+.portal-action { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; padding: 1.25rem; }
+.portal-action p { color: #74706a; font-size: 0.8125rem; line-height: 1.5; flex: 1; }
 .portal-eyebrow {
   color: #8a5c15;
   font-size: 0.6875rem;
@@ -63,11 +78,20 @@ body {
 .portal-table tbody tr:hover { background: #fcfbf9; }
 .portal-input { width: 100%; border: 1px solid #d9d5cd; border-radius: 0.55rem; background: #fff; padding: 0.65rem 0.75rem; color: #2d2924; outline: none; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
 .portal-input:focus { border-color: #9d7a3e; box-shadow: 0 0 0 3px rgba(157, 122, 62, 0.14); }
+.portal-choice { display: flex; align-items: flex-start; gap: 0.6rem; border: 1px solid #dedad2; border-radius: 0.75rem; background: #fff; padding: 0.7rem 0.8rem; cursor: pointer; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+.portal-choice:hover { border-color: #bdb6ac; }
+.portal-choice:has(input:checked) { border-color: #9d7a3e; box-shadow: 0 0 0 3px rgba(157, 122, 62, 0.14); }
 .portal-icon-button { width: 2.4rem; height: 2.4rem; border: 1px solid #dedad2; background: #fff; color: #625c54; }
 .portal-icon-button:hover { border-color: #bdb6ac; background: #faf9f7; }
 
 @media (max-width: 640px) {
-  .portal-shell { padding: 2rem 1rem; }
+  .portal-shell { padding: 1.5rem 1rem 3rem; }
+  .portal-nav-inner { padding: 0.5rem 1rem; }
+  .portal-nav-inner { gap: 0.25rem 0.75rem; }
+  .portal-nav-brand { flex: 1; }
+  .portal-nav-inner form { order: 2; margin-left: 0; }
+  .portal-nav-links { order: 3; width: 100%; margin-inline: -0.4rem; }
+  .portal-jump { top: 5.4rem; }
   .portal-stat { min-height: 8.5rem; }
   .portal-table th, .portal-table td { padding: 0.8rem; }
 }
@@ -1131,3 +1155,71 @@ html.fx .rule-grow.is-in::before { transform: scaleX(1); }
 /* the scroll cue only where there's room under the countdown */
 @media (max-height: 1000px) { .hero .scroll-cue { display: none; } }
 
+
+/* ---- design touches a family can add to its site ---- */
+
+/* what falls: sparkles twinkle, diyas float upward */
+@keyframes sparkle-twinkle { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.6); } }
+.petal-sparkles { animation: petal-fall var(--dur, 14s) linear var(--delay, 0s) infinite, sparkle-twinkle 2.4s ease-in-out infinite; }
+.petal-diyas { animation-direction: reverse; filter: drop-shadow(0 0 6px var(--accent)); }
+
+/* toran across the top of the opening screen, corners in its four corners */
+.hero-toran { position: absolute; top: 0; left: 0; right: 0; pointer-events: none; }
+.hero-toran svg { display: block; width: 100%; height: auto; }
+.hero-toran .t-wide { display: none; }
+@media (min-width: 720px) { .hero-toran .t-wide { display: block; } .hero-toran .t-narrow { display: none; } }
+.hero.has-toran { padding-top: clamp(2.4rem, 7svh, 4.5rem); }
+.hero-corner { position: absolute; width: clamp(34px, 6vw, 64px); pointer-events: none; }
+.hero-corner svg { display: block; width: 100%; height: auto; }
+
+/* a celebration's icon */
+.event-icon { width: clamp(34px, 4vw, 44px); height: auto; display: block; }
+
+/* the opening screen: envelope or doors */
+.reveal-screen {
+  position: fixed; inset: 0; z-index: 90; overflow: hidden;
+  display: grid; place-items: center; text-align: center;
+  background: var(--bg); color: var(--ink);
+  transition: opacity 0.6s ease 0.9s, visibility 0s linear 1.5s;
+}
+.reveal-screen.is-opening { opacity: 0; visibility: hidden; pointer-events: none; }
+.reveal-centre { position: relative; z-index: 2; display: grid; justify-items: center; gap: clamp(0.6rem, 2svh, 1.1rem); padding: 1.5rem; transition: opacity 0.35s ease; }
+.is-opening .reveal-centre { opacity: 0; }
+.reveal-names { font-size: clamp(1.9rem, min(8vw, 6svh), 3.4rem); line-height: 1.1; }
+.reveal-names em { color: var(--accent); }
+.reveal-hint { font-size: 0.85rem; color: var(--ink-soft); }
+.reveal-seal {
+  width: clamp(84px, 14svh, 112px); aspect-ratio: 1; border-radius: 999px; cursor: pointer;
+  display: grid; place-items: center;
+  font-family: var(--font-display); font-size: clamp(1.5rem, 4svh, 2rem); letter-spacing: 0.06em;
+  color: var(--bg); background: radial-gradient(circle at 35% 30%, var(--accent-2), var(--accent) 65%);
+  border: 0; box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--accent), 0 14px 30px -12px rgba(0, 0, 0, 0.55);
+  animation: seal-pulse 2.6s ease-in-out infinite;
+  transition: transform 0.35s ease;
+}
+.reveal-seal:hover { transform: scale(1.05); }
+.reveal-seal:focus-visible { outline: 2px solid var(--ink); outline-offset: 6px; }
+.is-opening .reveal-seal { transform: scale(0.6) rotate(-20deg); animation: none; }
+@keyframes seal-pulse { 0%, 100% { box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--accent), 0 14px 30px -12px rgba(0,0,0,.55); } 50% { box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--accent), 0 0 0 12px color-mix(in srgb, var(--accent) 22%, transparent), 0 14px 30px -12px rgba(0,0,0,.55); } }
+
+/* doors: two panels that slide apart */
+.reveal-door { position: absolute; top: 0; bottom: 0; width: 50%; background: var(--surface); transition: transform 1.1s cubic-bezier(0.7, 0, 0.2, 1) 0.25s; }
+.reveal-door-l { left: 0; border-right: 1px solid var(--accent); }
+.reveal-door-r { right: 0; border-left: 1px solid var(--accent); }
+.reveal-door-panel { position: absolute; inset: clamp(14px, 3vw, 34px); border: 1px solid var(--hairline); outline: 1px solid var(--hairline); outline-offset: -8px; border-radius: 999px 999px 0 0 / 22% 22% 0 0; }
+.is-opening .reveal-door-l { transform: translateX(-101%); }
+.is-opening .reveal-door-r { transform: translateX(101%); }
+
+/* envelope: a flap that lifts, then the whole thing slides away */
+.reveal-env { position: absolute; inset: 0; background: var(--surface); transition: transform 0.9s cubic-bezier(0.7, 0, 0.2, 1) 0.5s; }
+.reveal-env-flap, .reveal-env-fold { position: absolute; left: 0; right: 0; }
+.reveal-env-flap { top: 0; height: 52%; background: color-mix(in srgb, var(--surface) 86%, var(--ink)); clip-path: polygon(0 0, 100% 0, 50% 100%); border-top: 1px solid var(--accent); transform-origin: top; transition: transform 0.6s ease; filter: drop-shadow(0 2px 0 var(--accent)); }
+.reveal-env-fold { bottom: 0; height: 60%; background: linear-gradient(to top right, transparent calc(50% - 1px), var(--hairline) 50%, transparent calc(50% + 1px)), linear-gradient(to top left, transparent calc(50% - 1px), var(--hairline) 50%, transparent calc(50% + 1px)); }
+.is-opening .reveal-env-flap { transform: rotateX(160deg); }
+.is-opening .reveal-env { transform: translateY(101%); }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-screen, .reveal-door, .reveal-env, .reveal-env-flap, .reveal-seal { transition-duration: 0.2s; transition-delay: 0s; animation: none; }
+  .petal-sparkles { animation: none; }
+}
+.reveal-doors .reveal-centre { background: var(--surface); border-radius: 1.25rem; padding: 1.75rem 2rem; }
