@@ -4,8 +4,13 @@ import { fmtWeddingDate } from "@/lib/format";
 export type InvitedGuest = { familyName: string; href: string; answered: boolean };
 
 export function RsvpCta({
-  slug, side, open, deadline, contactPhone, invite,
-}: { slug: string; side?: "bride" | "groom"; open: boolean; deadline: Date | null; contactPhone: string | null; invite?: InvitedGuest | null }) {
+  slug, side, open, deadline, contactPhone, contacts = [], invite,
+}: {
+  slug: string; side?: "bride" | "groom"; open: boolean; deadline: Date | null; contactPhone: string | null;
+  /** the family's RSVP contacts, line by line (as on the printed card) */
+  contacts?: string[];
+  invite?: InvitedGuest | null;
+}) {
   return (
     <>
       {/* gota-style scalloped edge eases the jump into the full-bleed band */}
@@ -69,6 +74,12 @@ export function RsvpCta({
               {contactPhone ? `Message the family on ${contactPhone} and we'll make room.` : "Reach out to the family directly and we'll make room."}
             </p>
           </>
+        )}
+        {contacts.length > 0 && (
+          <div className="reveal mx-auto mt-12 max-w-xl" data-testid="rsvp-contacts">
+            <p className="kicker" style={{ opacity: 0.7 }}>For RSVP</p>
+            {contacts.map((c, i) => <p key={i} className="mt-2 text-base">{c}</p>)}
+          </div>
         )}
       </section>
     </>

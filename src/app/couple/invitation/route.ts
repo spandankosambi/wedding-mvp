@@ -25,17 +25,22 @@ export async function POST(req: Request) {
 
   const parsed = invitationSchema.safeParse(body.options ?? {});
   if (!parsed.success) return Response.json({ error: "invalid options" }, { status: 400 });
-  const o = parsed.data;
 
   const [wedding] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
   if (!wedding) return Response.json({ error: "no wedding" }, { status: 404 });
+  // each family's cards in its own look, with its own wording and reply-by date
+  const look = await getLook(weddingId, parsed.data.version);
+  const o = {
+    ...parsed.data,
+    invocation: look.invocation ?? "", shloka: look.shloka ?? "", note: look.closingLine ?? "",
+    rsvpBride: look.rsvpContacts ?? "", rsvpGroom: look.rsvpContacts ?? "",
+    complimentsBride: look.compliments ?? "", complimentsGroom: look.compliments ?? "",
+  };
   const evs = await db.select().from(events).where(eq(events.weddingId, weddingId));
   if (o.eventIds?.some((id) => !evs.some((e) => e.id === id))) {
     return Response.json({ error: "invalid events" }, { status: 400 });
   }
 
-  // each family's cards in its own look, with its own reply-by date
-  const look = await getLook(weddingId, o.version);
   const inv = buildInvitation(withLook(wedding, look), evs, o, `${await appOrigin()}/w/${wedding.slug}?side=${o.version}`);
   const pdf = await renderInvitationPdf(inv, o, look.theme);
   return new Response(new Uint8Array(pdf), {

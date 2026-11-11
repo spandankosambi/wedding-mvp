@@ -14,7 +14,7 @@ import { GalleryUploader } from "./GalleryUploader";
 import { StaysEditor } from "./StaysEditor";
 import { galleryOf, photoStorageConfigured, MAX_GALLERY_PHOTOS } from "@/lib/gallery";
 import {
-  saveWords, saveTravel, saveEvent, addPresetEvent, toggleEvent, removeEvent, moveEventAction, sortEvents,
+  saveWords, saveWording, saveTravel, saveEvent, addPresetEvent, toggleEvent, removeEvent, moveEventAction, sortEvents,
   saveGallerySettings, removeGalleryPhotoAction, moveGalleryPhotoAction, copyPartAction,
 } from "./actions";
 
@@ -106,6 +106,46 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
           <div id="theme">
             <ThemeSwitcher weddingId={weddingId} current={look.theme} slug={w.slug} coupleNames={coupleNames} family={family} partnerTheme={partner.theme} />
           </div>
+
+          {/* ── Invitation wording: the site's opening and the printed cards ── */}
+          <section id="wording" className="portal-panel p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="portal-eyebrow">Invitation wording</p>
+                <h2 className="mt-1 font-semibold">The words on your website and your printed cards</h2>
+                <p className="mt-1 max-w-2xl text-sm text-neutral-500">
+                  Your site opens the way your card does — the invocation and shloka at the top, then your parents inviting guests to the wedding.
+                  Type in English, or in Hindi, Marathi or Sanskrit (Devanagari). Leave a box blank to leave it out.
+                </p>
+              </div>
+              {same("wording")}
+            </div>
+            <form action={saveWording} className="mt-5 grid gap-4 md:grid-cols-2">
+              {wid}
+              <Field label="Invocation at the top" hint="optional">
+                <input name="invocation" defaultValue={look.invocation ?? ""} maxLength={80} placeholder="|| Shree Ganeshaya Namah ||  or  ॥ श्री गणेशाय नमः ॥" className="portal-input" />
+              </Field>
+              <Field label="Blessing or shloka under the invocation" hint="optional">
+                <textarea name="shloka" defaultValue={look.shloka ?? ""} maxLength={200} rows={2} className="portal-input resize-y"
+                  placeholder={"वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ ।\nनिर्विघ्नं कुरु मे देव सर्वकार्येषु सर्वदा ॥"} />
+              </Field>
+              <Field label="RSVP contacts" hint="one per line — near the RSVP on the site, on the back of the card">
+                <textarea name="rsvpContacts" defaultValue={look.rsvpContacts ?? ""} maxLength={240} rows={2} className="portal-input resize-y"
+                  placeholder={family === "bride" ? "Anil Kulkarni +91 98220 12345" : "Rajesh Kosambi +91 98765 43210"} />
+              </Field>
+              <Field label="“With best compliments from”" hint="optional, one per line">
+                <textarea name="compliments" defaultValue={look.compliments ?? ""} maxLength={240} rows={2} className="portal-input resize-y"
+                  placeholder={family === "bride" ? "Kulkarni family\nand friends" : "Kosambi family\nand friends"} />
+              </Field>
+              <Field label="Closing line" hint="optional" className="md:col-span-2">
+                <input name="closingLine" defaultValue={look.closingLine ?? ""} maxLength={160} placeholder="Your blessings are our gifts" className="portal-input" />
+              </Field>
+              <p className="text-xs text-neutral-500 md:col-span-2">
+                Parents&apos; names are shared by both families — <Link href={`/couple${adminQ ? `?${adminQ.slice(0, -1)}` : ""}#details`} className="underline">change them on the dashboard</Link>.
+              </p>
+              <div className="md:col-span-2"><SaveButton /></div>
+            </form>
+          </section>
 
           {/* ── Words ───────────────────────────────────────────── */}
           <section id="words" className="portal-panel p-6">

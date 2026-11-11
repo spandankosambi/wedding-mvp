@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Instrument_Serif, Cormorant_Garamond, Fraunces, Inter, Marcellus, Rozha_One, Prata } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { BRAND, BRAND_TAGLINE } from "@/lib/brand";
 
@@ -16,6 +17,15 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const marcellus = Marcellus({ weight: "400", subsets: ["latin"], variable: "--font-marcellus" });
 const rozha = Rozha_One({ weight: "400", subsets: ["latin"], variable: "--font-rozha" });
 const prata = Prata({ weight: "400", subsets: ["latin"], variable: "--font-prata" });
+/* Devanagari for invocations and shlokas: the same face the printed cards use */
+const tiro = localFont({
+  src: [
+    { path: "../lib/invitation/fonts/tiro-devanagari-sanskrit-devanagari-400-normal.woff", weight: "400", style: "normal" },
+    { path: "../lib/invitation/fonts/tiro-devanagari-sanskrit-devanagari-400-italic.woff", weight: "400", style: "italic" },
+  ],
+  variable: "--font-tiro",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: { default: BRAND, template: `%s · ${BRAND}` },
@@ -32,7 +42,7 @@ export default function RootLayout({
     // pattern as next-themes; only attribute diffs are suppressed
     <html
       lang="en"
-      className={`${instrument.variable} ${cormorant.variable} ${fraunces.variable} ${inter.variable} ${marcellus.variable} ${rozha.variable} ${prata.variable} h-full antialiased`}
+      className={`${instrument.variable} ${cormorant.variable} ${fraunces.variable} ${inter.variable} ${marcellus.variable} ${rozha.variable} ${prata.variable} ${tiro.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">{children}</body>

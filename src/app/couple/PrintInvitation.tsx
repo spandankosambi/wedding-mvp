@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { adoptCardWordingAction } from "./actions";
 import { eventForSide, type Side } from "@/lib/sides";
 import type { Theme } from "@/themes/catalog";
 import {
@@ -17,17 +19,26 @@ type Props = {
   family: "bride" | "groom";
   /** where the parents' names are edited */
   siteEditorHref: string;
+  /** where this family's wording is edited (Edit your site) */
+  wordingHref: string;
+  /** this family's wording, from its site: printed as is */
+  wording: CardWording;
   theme: Theme;
   brideName: string;
   groomName: string;
   brideParents: string | null;
   groomParents: string | null;
-  contactPhone: string | null;
   hasDeadline: boolean;
   events: PrintEvent[];
 };
 
-type Form = Omit<InvitationOptions, "customWidthMm" | "customHeightMm" | "eventIds" | "photo"> & {
+export type CardWording = { invocation: string | null; shloka: string | null; rsvpContacts: string | null; compliments: string | null; closingLine: string | null };
+
+/** The words come from the site; the PDF route fills them in. */
+type WordingOption = "invocation" | "shloka" | "rsvpBride" | "rsvpGroom" | "complimentsBride" | "complimentsGroom" | "note";
+type SentOptions = Omit<InvitationOptions, WordingOption>;
+
+type Form = Omit<InvitationOptions, "customWidthMm" | "customHeightMm" | "eventIds" | "photo" | WordingOption> & {
   eventIds: string[]; photo: string | null; customW: string; customH: string; unit: "mm" | "in";
 };
 
@@ -35,11 +46,9 @@ const defaultEvents = (events: PrintEvent[], version: Side) =>
   events.filter((e) => e.isPublished && eventForSide(e.side, version)).map((e) => e.id);
 
 function initial(p: Props): Form {
-  const rsvp = p.contactPhone ? `For RSVP ${p.contactPhone}` : "";
   return {
     version: p.family, size: "5x7", orientation: "portrait", eventLayout: "together",
     eventIds: defaultEvents(p.events, p.family), output: "printer", cropMarks: false, colours: "theme",
-    invocation: "", shloka: "", rsvpBride: rsvp, rsvpGroom: rsvp, complimentsBride: "", complimentsGroom: "", note: "",
     qr: true, dressCode: true, replyBy: p.hasDeadline,
     frame: "classic", toran: false, patternBorder: false, monogram: false, monogramText: "", monogramStyle: "circle",
     fill: "classic", nameFont: "serif", photo: null, photoPlace: "front", photoShape: "arch",
@@ -52,25 +61,40 @@ function fromSaved(base: Form, saved: Record<string, unknown>): Form {
   const out: Record<string, unknown> = { ...base };
   for (const k of Object.keys(base)) if (k in saved && saved[k] !== undefined) out[k] = saved[k];
   if (out.version !== "bride" && out.version !== "groom") out.version = base.version;
-  // one RSVP / compliments box became one per family
-  if (typeof saved.rsvp === "string" && !("rsvpBride" in saved)) out.rsvpBride = out.rsvpGroom = saved.rsvp;
-  if (typeof saved.compliments === "string" && !("complimentsBride" in saved)) out.complimentsBride = out.complimentsGroom = saved.compliments;
   return out as Form;
 }
 
+/** Wording typed in this dialog before it moved to Edit your site, if any. */
+function oldWording(saved: Record<string, unknown>, family: "bride" | "groom"): CardWording | null {
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v : null);
+  const w: CardWording = {
+    invocation: str(saved.invocation),
+    shloka: str(saved.shloka),
+    rsvpContacts: str(family === "bride" ? saved.rsvpBride ?? saved.rsvp : saved.rsvpGroom ?? saved.rsvp),
+    compliments: str(family === "bride" ? saved.complimentsBride ?? saved.compliments : saved.complimentsGroom ?? saved.compliments),
+    closingLine: str(saved.note),
+  };
+  return Object.values(w).some(Boolean) ? w : null;
+}
+const WORDING_LABELS: Record<keyof CardWording, string> = {
+  invocation: "Invocation", shloka: "Blessing or shloka", rsvpContacts: "RSVP contacts", compliments: "With best compliments from", closingLine: "Closing line",
+};
+
 const storeKey = (id: string, family: "bride" | "groom") => `print-invitation:${id}:${family}`;
+/** old wording kept aside until it's moved to the site or set aside */
+const oldWordingKey = (id: string, family: "bride" | "groom") => `print-wording:${id}:${family}`;
 const legacyKey = (id: string) => `print-invitation:${id}`;
-/** What "same as your partner's card" copies: the setup, words and design —
-    not whose card it is, its events or its RSVP/compliments. */
+/** What "same as your partner's card" copies: the setup and design — not
+    whose card it is or its events (the wording has its own "Same as" on the site). */
 const SHARED_KEYS = [
-  "size", "orientation", "eventLayout", "output", "cropMarks", "colours", "invocation", "shloka", "note", "qr", "dressCode", "replyBy",
+  "size", "orientation", "eventLayout", "output", "cropMarks", "colours", "qr", "dressCode", "replyBy",
   "frame", "toran", "patternBorder", "monogram", "monogramStyle", "fill", "nameFont", "photo", "photoPlace", "photoShape", "customW", "customH", "unit",
 ] as const;
 const readSaved = (key: string): Record<string, unknown> | null => {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; }
 };
-const STEPS = ["Setup", "Wording", "Design"] as const;
-type Step = 1 | 2 | 3;
+const STEPS = ["Setup", "Design"] as const;
+type Step = 1 | 2;
 const label = "text-xs font-medium uppercase tracking-wide text-neutral-500";
 
 function Choice<T extends string>({ name, value, current, onPick, title, hint }: {
@@ -211,8 +235,18 @@ export function PrintInvitation(props: Props) {
   const [photoError, setPhotoError] = useState<string | null>(null);
 
   // answers are remembered on this device for the next print
+  const router = useRouter();
+  const [moved, setMoved] = useState<CardWording | null>(null);
+  const [moving, setMoving] = useState(false);
   useEffect(() => {
     const saved = readSaved(storeKey(props.weddingId, props.family)) ?? readSaved(legacyKey(props.weddingId));
+    // wording typed here before it moved to the site: offer to move it
+    const kept = readSaved(oldWordingKey(props.weddingId, props.family)) as CardWording | null;
+    const old = kept ?? (saved ? oldWording(saved, props.family) : null);
+    if (old) {
+      try { localStorage.setItem(oldWordingKey(props.weddingId, props.family), JSON.stringify(old)); } catch { /* fine */ }
+      setMoved(old);
+    }
     if (saved) {
       const known = new Set(props.events.map((e) => e.id));
       setForm((f) => {
@@ -248,7 +282,22 @@ export function PrintInvitation(props: Props) {
   const sizeInfo = CARD_SIZES.find((s) => s.id === form.size);
   const square = form.size === "custom" ? customW === customH : sizeInfo ? sizeInfo.mm[0] === sizeInfo.mm[1] : false;
 
-  const options = useMemo((): InvitationOptions => {
+  // only what the site's wording doesn't already say
+  const toMove = moved && (Object.keys(moved) as (keyof CardWording)[]).filter((k) => moved[k] && !props.wording[k]);
+  function forgetOld() {
+    try { localStorage.removeItem(oldWordingKey(props.weddingId, props.family)); } catch { /* fine */ }
+    setMoved(null);
+  }
+  async function moveOld() {
+    if (!moved) return;
+    setMoving(true);
+    const wording = Object.fromEntries(Object.entries(moved).filter(([, v]) => typeof v === "string" && v));
+    const r = await adoptCardWordingAction({ weddingId: props.weddingId, family: props.family, wording }).catch(() => ({ ok: false }));
+    setMoving(false);
+    if (r.ok) { forgetOld(); router.refresh(); } else setError("Couldn't move the wording. Please try again.");
+  }
+
+  const options = useMemo((): SentOptions => {
     const { customW: _w, customH: _h, unit: _u, photo, ...rest } = form;
     void _w; void _h; void _u;
     return {
@@ -257,12 +306,12 @@ export function PrintInvitation(props: Props) {
       ...(form.size === "custom" ? { customWidthMm: customW, customHeightMm: customH } : {}),
     };
   }, [form, customW, customH]);
-  const optionsKey = useMemo(() => JSON.stringify(options), [options]);
+  // a change to the site's wording redraws the preview too
+  const optionsKey = useMemo(() => JSON.stringify({ options, wording: props.wording }), [options, props.wording]);
 
   const chosen = props.events.filter((e) => form.eventIds.includes(e.id));
-  const fromBride = form.version === "bride";
-  const details = form.qr || !!(fromBride ? form.rsvpBride : form.rsvpGroom).trim() || !!(fromBride ? form.complimentsBride : form.complimentsGroom).trim()
-    || !!form.note.trim() || (form.replyBy && props.hasDeadline);
+  const details = form.qr || !!props.wording.rsvpContacts || !!props.wording.compliments
+    || !!props.wording.closingLine || (form.replyBy && props.hasDeadline);
   const separate = form.eventLayout === "separate";
   const backPhoto = !!form.photo && form.photoPlace === "back";
   const pages = 1 + ((!separate && chosen.length) || details || backPhoto ? 1 : 0) + (separate ? chosen.length : 0);
@@ -356,8 +405,6 @@ export function PrintInvitation(props: Props) {
       {names ? <span className="text-neutral-800">{names}</span> : <span className="italic text-neutral-400">not set — “The family of …” prints instead</span>}
     </p>
   );
-  const prints = (side: "bride" | "groom") =>
-    form.version === side ? <span className="ml-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">prints on this card</span> : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/35 p-4 backdrop-blur-sm" role="dialog" aria-modal aria-labelledby="print-title">
@@ -399,6 +446,37 @@ export function PrintInvitation(props: Props) {
                       Same as the {props.family === "bride" ? "groom" : "bride"}&apos;s family&apos;s card
                     </button>
                   )}
+                </div>
+
+                {toMove && toMove.length > 0 && (
+                  <div className="rounded-lg bg-amber-50 px-3 py-2.5 text-xs text-amber-900 ring-1 ring-amber-200" data-testid="move-wording">
+                    <p className="font-medium">The card&apos;s wording now lives in Edit your site, so your website shows it too.</p>
+                    <p className="mt-1">You typed some here earlier — {toMove.map((k) => WORDING_LABELS[k]).join(", ")}. Move it there?</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button type="button" onClick={moveOld} disabled={moving} className="portal-button">{moving ? "Moving…" : "Move it to my site"}</button>
+                      <button type="button" onClick={forgetOld} className="portal-button-secondary">No thanks</button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="rounded-lg bg-white px-3 py-2.5 text-xs ring-1 ring-neutral-200" data-testid="card-wording">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <p className="font-medium text-neutral-700">Wording on the card — the same as on your website</p>
+                    <a href={props.wordingHref} className="underline">Change it in Edit your site</a>
+                  </div>
+                  <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
+                    {(Object.keys(WORDING_LABELS) as (keyof CardWording)[]).map((k) => (
+                      <div key={k} className="contents">
+                        <dt className="text-neutral-500">{WORDING_LABELS[k]}</dt>
+                        <dd className={props.wording[k] ? "whitespace-pre-line text-neutral-800" : "italic text-neutral-400"}>{props.wording[k] ?? "not set"}</dd>
+                      </div>
+                    ))}
+                    <dt className="text-neutral-500">Parents</dt>
+                    <dd className="text-neutral-800">
+                      {[props.brideParents, props.groomParents].filter(Boolean).join(" · ") || <span className="italic text-neutral-400">not set — “The family of …” prints instead</span>}
+                      {" "}<a href={props.siteEditorHref} className="text-neutral-500 underline">on the dashboard</a>
+                    </dd>
+                  </dl>
                 </div>
 
                 <fieldset>
@@ -479,66 +557,6 @@ export function PrintInvitation(props: Props) {
             )}
 
             {step === 2 && (
-              <>
-                <p className="text-xs text-neutral-500">Printed as typed — in English, or in Hindi, Marathi or Sanskrit (Devanagari).</p>
-                <label className="block">
-                  <span className={label}>Invocation at the top (optional)</span>
-                  <input value={form.invocation} onChange={(e) => set("invocation", e.target.value)} maxLength={80} placeholder="|| Shree Ganeshaya Namah ||  or  ॥ श्री गणेशाय नमः ॥" className="portal-input mt-1.5" />
-                </label>
-                <label className="block">
-                  <span className={label}>Blessing or shloka under the invocation (optional)</span>
-                  <textarea value={form.shloka} onChange={(e) => set("shloka", e.target.value)} maxLength={200} rows={2}
-                    placeholder={"वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ ।\nनिर्विघ्नं कुरु मे देव सर्वकार्येषु सर्वदा ॥"} className="portal-input mt-1.5 resize-none" />
-                </label>
-
-                <div className="rounded-lg bg-white px-3 py-2.5 text-xs ring-1 ring-neutral-200">
-                  <p className="mb-1 font-medium text-neutral-700">Parents&apos; names on the card</p>
-                  {parentsLine("Bride's parents", props.brideParents)}
-                  {parentsLine("Groom's parents", props.groomParents)}
-                  <p className="mt-1.5 text-neutral-500">These are shared by both families. <a href={props.siteEditorHref} className="underline">Change them on the dashboard</a>.</p>
-                </div>
-
-                <fieldset>
-                  <legend className={label}>RSVP contacts (one per line)</legend>
-                  <div className="mt-1.5 grid gap-3 sm:grid-cols-2">
-                    <label className="block">
-                      <span className="text-xs text-neutral-600">Bride&apos;s family{prints("bride")}</span>
-                      <textarea aria-label="Bride's family RSVP contacts" value={form.rsvpBride} onChange={(e) => set("rsvpBride", e.target.value)} maxLength={240} rows={2} placeholder={"Anil Kulkarni +91 98220 12345"} className="portal-input mt-1 resize-none" />
-                    </label>
-                    <label className="block">
-                      <span className="text-xs text-neutral-600">Groom&apos;s family{prints("groom")}</span>
-                      <textarea aria-label="Groom's family RSVP contacts" value={form.rsvpGroom} onChange={(e) => set("rsvpGroom", e.target.value)} maxLength={240} rows={2} placeholder={"Rajesh Kosambi +91 98765 43210"} className="portal-input mt-1 resize-none" />
-                    </label>
-                  </div>
-                </fieldset>
-
-                <fieldset>
-                  <legend className={label}>“With best compliments from” (optional)</legend>
-                  <div className="mt-1.5 grid gap-3 sm:grid-cols-2">
-                    <label className="block">
-                      <span className="text-xs text-neutral-600">Bride&apos;s family{prints("bride")}</span>
-                      <textarea aria-label="Bride's family compliments" value={form.complimentsBride} onChange={(e) => set("complimentsBride", e.target.value)} maxLength={240} rows={2} placeholder={"Kulkarni family\nand friends"} className="portal-input mt-1 resize-none" />
-                    </label>
-                    <label className="block">
-                      <span className="text-xs text-neutral-600">Groom&apos;s family{prints("groom")}</span>
-                      <textarea aria-label="Groom's family compliments" value={form.complimentsGroom} onChange={(e) => set("complimentsGroom", e.target.value)} maxLength={240} rows={2} placeholder={"Kosambi family\nand friends"} className="portal-input mt-1 resize-none" />
-                    </label>
-                  </div>
-                </fieldset>
-
-                <label className="block">
-                  <span className={label}>Closing line (optional)</span>
-                  <input value={form.note} onChange={(e) => set("note", e.target.value)} maxLength={160} placeholder="Your blessings are our gifts" className="portal-input mt-1.5" />
-                </label>
-
-                <div className="flex flex-wrap gap-x-5 gap-y-2">
-                  <Check checked={form.dressCode} onChange={(v) => set("dressCode", v)}>Dress codes</Check>
-                  {props.hasDeadline && <Check checked={form.replyBy} onChange={(v) => set("replyBy", v)}>“Kindly reply by” date</Check>}
-                </div>
-              </>
-            )}
-
-            {step === 3 && (
               <>
                 <p className="rounded-lg bg-white px-3 py-2 text-xs text-neutral-600 ring-1 ring-neutral-200">
                   Your theme&apos;s motifs — the ornament, dividers and corners from your website — are on every card.
@@ -629,8 +647,12 @@ export function PrintInvitation(props: Props) {
                 </fieldset>
 
                 <fieldset>
-                  <legend className={label}>QR code</legend>
-                  <div className="mt-2"><Check checked={form.qr} onChange={(v) => set("qr", v)}>QR code to the wedding website <span className="text-xs text-neutral-500">— on the back, for guests to RSVP</span></Check></div>
+                  <legend className={label}>Also on the card</legend>
+                  <div className="mt-2 space-y-2">
+                    <Check checked={form.qr} onChange={(v) => set("qr", v)}>QR code to the wedding website <span className="text-xs text-neutral-500">— on the back, for guests to RSVP</span></Check>
+                    <Check checked={form.dressCode} onChange={(v) => set("dressCode", v)}>Dress codes <span className="text-xs text-neutral-500">— under each celebration</span></Check>
+                    {props.hasDeadline && <Check checked={form.replyBy} onChange={(v) => set("replyBy", v)}>“Kindly reply by” date</Check>}
+                  </div>
                 </fieldset>
               </>
             )}
@@ -656,9 +678,9 @@ export function PrintInvitation(props: Props) {
             {step === 1
               ? <button type="button" onClick={() => setOpen(false)} className="portal-button-secondary">Close</button>
               : <button type="button" onClick={() => go((step - 1) as Step)} className="portal-button-secondary">← Back</button>}
-            {step < 3 ? (
+            {step < 2 ? (
               <button type="button" onClick={() => go((step + 1) as Step)} disabled={!customOk} className="portal-button">
-                Next: {step === 1 ? "wording" : "design"} →
+                Next: design →
               </button>
             ) : (
               <button type="button" onClick={download} disabled={busy || !customOk} className="portal-button">

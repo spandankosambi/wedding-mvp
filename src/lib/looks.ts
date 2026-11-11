@@ -37,14 +37,20 @@ export async function getLook(weddingId: string, side: FamilySide): Promise<Look
   return (await getLooks(weddingId))[side];
 }
 
-/** The wedding as one family presents it: their look and RSVP settings over the shared details. */
+/** The invitation's wording: the same on the family's site and its printed cards. */
+export type Wording = Pick<Look, "invocation" | "shloka" | "rsvpContacts" | "compliments" | "closingLine">;
+export const WORDING_KEYS = ["invocation", "shloka", "rsvpContacts", "compliments", "closingLine"] as const;
+export const wordingOf = (look: Look): Wording =>
+  ({ invocation: look.invocation, shloka: look.shloka, rsvpContacts: look.rsvpContacts, compliments: look.compliments, closingLine: look.closingLine });
+
+/** The wedding as one family presents it: their look, wording and RSVP settings over the shared details. */
 export function withLook<W extends {
   theme: Look["theme"]; heroTagline: string | null; story: string | null; hashtag: string | null; contactPhone: string | null;
   travel: TravelInfo | null; gallery: GalleryInfo | null; rsvpOpen: boolean; rsvpDeadline: Date | null;
-}>(w: W, look: Look): W {
+}>(w: W, look: Look): W & Wording {
   return {
     ...w, theme: look.theme, heroTagline: look.heroTagline, story: look.story, hashtag: look.hashtag, contactPhone: look.contactPhone,
-    travel: look.travel, gallery: look.gallery, rsvpOpen: look.rsvpOpen, rsvpDeadline: look.rsvpDeadline,
+    travel: look.travel, gallery: look.gallery, rsvpOpen: look.rsvpOpen, rsvpDeadline: look.rsvpDeadline, ...wordingOf(look),
   };
 }
 
@@ -66,7 +72,7 @@ export function namesFor(
   };
 }
 
-export type LookPatch = Partial<Pick<Look, "theme" | "heroTagline" | "story" | "hashtag" | "contactPhone" | "travel" | "gallery" | "rsvpOpen" | "rsvpDeadline">>;
+export type LookPatch = Partial<Pick<Look, "theme" | "heroTagline" | "story" | "hashtag" | "contactPhone" | "travel" | "gallery" | "rsvpOpen" | "rsvpDeadline" | (typeof WORDING_KEYS)[number]>>;
 
 export async function updateLook(weddingId: string, side: FamilySide, patch: LookPatch) {
   await getLooks(weddingId); // make sure the row exists
@@ -103,12 +109,13 @@ export async function saveTravelLook(weddingId: string, side: FamilySide, travel
 
 /* ── "Same as your partner": copy one part of the other family's look ── */
 
-export type LookPart = "theme" | "words" | "travel" | "gallery";
+export type LookPart = "theme" | "wording" | "words" | "travel" | "gallery";
 
 /** Whether the other family has filled this part in (so copying it means something). */
 export function hasPart(look: Look, part: LookPart): boolean {
   switch (part) {
     case "theme": return true;
+    case "wording": return WORDING_KEYS.some((k) => !!look[k]);
     case "words": return !!(look.heroTagline || look.story || look.hashtag || look.contactPhone);
     case "travel": return !!(look.travel?.stays?.length || look.travel?.gettingThere);
     case "gallery": return !!look.gallery?.photos?.length;
@@ -119,6 +126,7 @@ export function hasPart(look: Look, part: LookPart): boolean {
 export function samePart(a: Look, b: Look, part: LookPart): boolean {
   switch (part) {
     case "theme": return a.theme === b.theme;
+    case "wording": return WORDING_KEYS.every((k) => (a[k] ?? null) === (b[k] ?? null));
     case "words": return a.heroTagline === b.heroTagline && a.story === b.story && a.hashtag === b.hashtag && a.contactPhone === b.contactPhone;
     case "travel": return JSON.stringify(a.travel ?? null) === JSON.stringify(b.travel ?? null);
     case "gallery": return JSON.stringify(a.gallery?.photos ?? []) === JSON.stringify(b.gallery?.photos ?? []) && (a.gallery?.enabled ?? true) === (b.gallery?.enabled ?? true);
@@ -131,6 +139,7 @@ export async function copyFromPartner(weddingId: string, side: FamilySide, part:
   if (!hasPart(from, part)) return { ok: false, error: "nothing to copy yet" };
   const patch: LookPatch =
     part === "theme" ? { theme: from.theme }
+    : part === "wording" ? wordingOf(from)
     : part === "words" ? { heroTagline: from.heroTagline, story: from.story, hashtag: from.hashtag, contactPhone: from.contactPhone }
     : part === "travel" ? { travel: from.travel } // common stays are already the same on both
     : { gallery: from.gallery }; // the photos themselves are shared, not duplicated

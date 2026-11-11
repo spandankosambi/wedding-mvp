@@ -64,6 +64,15 @@ export const weddingSides = pgTable("wedding_sides", {
   gallery: jsonb("gallery").$type<GalleryInfo>(),
   rsvpOpen: boolean("rsvp_open").notNull().default(true),
   rsvpDeadline: timestamp("rsvp_deadline", { withTimezone: true }),
+  /* the invitation's wording, on the site and the printed cards */
+  invocation: text("invocation"),
+  /** a blessing or shloka, line by line (Devanagari works) */
+  shloka: text("shloka"),
+  /** RSVP contacts, one per line */
+  rsvpContacts: text("rsvp_contacts"),
+  /** "with best compliments from", line by line */
+  compliments: text("compliments"),
+  closingLine: text("closing_line"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [primaryKey({ columns: [t.weddingId, t.side] })]);
 

@@ -12,6 +12,8 @@ import { Story } from "./sections/Story";
 import { EventTimeline } from "./sections/EventTimeline";
 import { TravelStay } from "./sections/TravelStay";
 import { Gallery } from "./sections/Gallery";
+import { Closing } from "./sections/Closing";
+import { wordingLines } from "@/lib/invitation/content";
 import { RsvpCta, type InvitedGuest } from "./sections/RsvpCta";
 import { InviteBar } from "./sections/InviteBar";
 import { getFamilyByToken } from "@/lib/rsvp";
@@ -121,7 +123,8 @@ export default async function WeddingPage({
       <EventTimeline theme={wedding.theme} events={shown} no={eventsNo} />
       {hasTravel && <TravelStay travel={wedding.travel} no={travelNo} />}
       {gallery.enabled && <Gallery theme={wedding.theme} no={galleryNo} photos={gallery.photos} />}
-      <RsvpCta slug={wedding.slug} side={side} open={window.open} deadline={wedding.rsvpDeadline} contactPhone={wedding.contactPhone} invite={invite} />
+      <RsvpCta slug={wedding.slug} side={side} open={window.open} deadline={wedding.rsvpDeadline} contactPhone={wedding.contactPhone} contacts={wordingLines(wedding.rsvpContacts)} invite={invite} />
+      <Closing theme={wedding.theme} closingLine={wedding.closingLine} compliments={wordingLines(wedding.compliments)} />
       {/* room under the footer so the invitation bar never covers it */}
       <footer className="hairline-t px-6 py-10 text-center" style={invite ? { paddingBottom: "7rem" } : undefined}>
         <p className="kicker">

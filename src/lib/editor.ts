@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { expandMapLink } from "@/lib/maplinks";
-import { saveTravelLook, updateLook, type FamilySide } from "@/lib/looks";
+import { getLook, saveTravelLook, updateLook, type FamilySide } from "@/lib/looks";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events, families, eventInvites, rsvps, type TravelInfo } from "@/db/schema";
@@ -30,6 +30,21 @@ export const wordsSchema = z.object({
   hashtag: optional(60).transform((v) => (v ? v.replace(/^#+/, "") : v)),
   contactPhone: optional(40),
   theme: z.enum(THEMES).optional(),
+});
+
+/** several lines: each trimmed, runs of spaces collapsed, blank lines dropped */
+const multiline = (max: number) => z.string().max(max).optional().transform((v) => {
+  const t = (v ?? "").split(/\r?\n/).map((l) => l.replace(/[ \t\u00a0]+/g, " ").trim()).filter(Boolean).join("\n");
+  return t || null;
+});
+
+/** The invitation's wording, on the family's site and its printed cards. */
+export const wordingSchema = z.object({
+  invocation: optional(80),
+  shloka: multiline(200),
+  rsvpContacts: multiline(240),
+  compliments: multiline(240),
+  closingLine: optional(160),
 });
 
 export const rsvpSettingsSchema = z.object({
@@ -90,6 +105,28 @@ export async function updateWords(weddingId: string, side: FamilySide, input: un
   const { theme, ...words } = p.data;
   await updateLook(weddingId, side, { ...words, ...(theme && { theme }) });
   return { ok: true };
+}
+
+export async function updateWording(weddingId: string, side: FamilySide, input: unknown): Promise<Result> {
+  const p = wordingSchema.safeParse(input);
+  if (!p.success) return { ok: false, error: "invalid input" };
+  await updateLook(weddingId, side, p.data);
+  return { ok: true };
+}
+
+/**
+ * Wording typed into the print dialog before it moved to the site editor
+ * (kept on that device): fills only the fields this family hasn't filled.
+ */
+export async function adoptCardWording(weddingId: string, side: FamilySide, input: unknown): Promise<Result & { filled?: number }> {
+  const p = wordingSchema.safeParse(input);
+  if (!p.success) return { ok: false, error: "invalid input" };
+  const look = await getLook(weddingId, side);
+  const patch = Object.fromEntries(
+    Object.entries(p.data).filter(([k, v]) => v && !look[k as keyof typeof p.data]),
+  ) as Partial<typeof p.data>;
+  if (Object.keys(patch).length) await updateLook(weddingId, side, patch);
+  return { ok: true, filled: Object.keys(patch).length };
 }
 
 /** Each family opens, closes and dates its own RSVPs. */

@@ -62,7 +62,8 @@ export const invitationSchema = z.object({
   cropMarks: z.boolean().default(false),
   /** "theme": the website's colours, full bleed. "light": white card, coloured ink. */
   colours: z.enum(["theme", "light"]).default("theme"),
-  /* ── the words. Parents' names come from the site (Edit your site). ── */
+  /* ── the words come from the family's site wording (Edit your site);
+     the PDF route fills these in, so the dialog doesn't send them ── */
   invocation: text(80),
   /** a blessing or shloka under the invocation, in any language (Devanagari prints too) */
   shloka: text(200),

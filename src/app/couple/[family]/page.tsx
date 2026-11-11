@@ -6,7 +6,7 @@ import { weddings, events } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
 import { eventForSide, eventLabel } from "@/lib/sides";
 import { fmtWeddingDate } from "@/lib/format";
-import { asFamilySide, getLooks, namesFor, otherSide, sideName } from "@/lib/looks";
+import { asFamilySide, getLooks, namesFor, otherSide, sideName, wordingOf } from "@/lib/looks";
 import { THEME_META } from "@/themes/catalog";
 import { ShareCard } from "../ShareCard";
 import { PrintInvitation } from "../PrintInvitation";
@@ -82,7 +82,8 @@ export default async function FamilySection({
             groomName={wedding.groomName}
             brideParents={wedding.brideParents}
             groomParents={wedding.groomParents}
-            contactPhone={look.contactPhone}
+            wording={wordingOf(look)}
+            wordingHref={`/couple/site?${admin ? `wedding=${weddingId}&` : ""}family=${family}#wording`}
             hasDeadline={!!look.rsvpDeadline}
             events={evs.filter((e) => eventForSide(e.side, family)).map((e) => ({ id: e.id, label: eventLabel(e), side: e.side, isPublished: e.isPublished }))}
           />

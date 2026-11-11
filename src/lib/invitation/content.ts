@@ -82,20 +82,41 @@ export function eventsFor(all: CardEvent[], o: Pick<InvitationOptions, "version"
   return sorted.filter((e) => e.isPublished && eventForSide(e.side, o.version));
 }
 
-export function buildInvitation(w: CardWedding, all: CardEvent[], o: InvitationOptions, siteUrl: string): Invitation {
+/**
+ * The hosting family's words around the couple's names — the same on the
+ * printed card and at the top of that family's website.
+ */
+export function hostWords(w: { brideName: string; groomName: string; brideParents?: string | null; groomParents?: string | null }, side: Side) {
   const bride = w.brideName, groom = w.groomName;
   const bp = w.brideParents?.trim() || null, gp = w.groomParents?.trim() || null;
-  const fromBride = o.version === "bride";
-  const hosts = fromBride ? (bp ?? `The family of ${bride}`) : (gp ?? `The family of ${groom}`);
-
-  const front: FrontCard = {
-    invocation: o.invocation || null,
-    shloka: lines(o.shloka),
-    lead: [named(hosts), phrase("request the pleasure of your company"), phrase(`at the wedding of their ${fromBride ? "daughter" : "son"}`)],
+  const fromBride = side !== "groom";
+  return {
+    hosts: fromBride ? (bp ?? `The family of ${bride}`) : (gp ?? `The family of ${groom}`),
+    request: ["request the pleasure of your company", `at the wedding of their ${fromBride ? "daughter" : "son"}`],
     first: fromBride ? bride : groom,
     joiner: "with",
     second: fromBride ? groom : bride,
     secondOf: fromBride ? (gp ? `son of ${gp}` : null) : (bp ? `daughter of ${bp}` : null),
+  };
+}
+
+/** A blessing, contacts or compliments, one line per row. */
+export const wordingLines = (s: string | null | undefined) => lines(s ?? "");
+
+export function buildInvitation(w: CardWedding, all: CardEvent[], o: InvitationOptions, siteUrl: string): Invitation {
+  const bride = w.brideName, groom = w.groomName;
+  const fromBride = o.version === "bride";
+  const h = hostWords(w, o.version);
+  const hosts = h.hosts;
+
+  const front: FrontCard = {
+    invocation: o.invocation || null,
+    shloka: lines(o.shloka),
+    lead: [named(hosts), ...h.request.map(phrase)],
+    first: h.first,
+    joiner: h.joiner,
+    second: h.second,
+    secondOf: h.secondOf,
     after: [],
     date: fmtWeddingDate(w.weddingDate),
     place: w.city,

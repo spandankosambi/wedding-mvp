@@ -1091,3 +1091,9 @@ html.fx .rule-grow.is-in::before { transform: scaleX(1); }
   section { break-inside: avoid; }
   a[href]::after { content: none !important; }
 }
+
+/* invocation and shloka: Devanagari in the card's face, Latin in the theme's */
+.indic {
+  font-family: var(--font-tiro), var(--font-display);
+}
+

@@ -119,11 +119,11 @@ test("hotels can be common or one family's own, and you can add as many as neede
 test("each family's site and section put its own child's name first", async ({ page }) => {
   await page.goto("/w/gaurav-weds-karishma?side=groom");
   await expect(page).toHaveTitle(/Gaurav weds Karishma/);
-  await expect(page.locator("h1").first()).toHaveText(/Gaurav\s*weds\s*Karishma/);
+  await expect(page.locator("h1").first()).toHaveText(/Gaurav\s*with\s*Karishma/);
   await expect(page.locator("footer")).toContainText("Gaurav & Karishma");
   await page.goto("/w/gaurav-weds-karishma?side=bride");
   await expect(page).toHaveTitle(/Karishma weds Gaurav/);
-  await expect(page.locator("h1").first()).toHaveText(/Karishma\s*weds\s*Gaurav/);
+  await expect(page.locator("h1").first()).toHaveText(/Karishma\s*with\s*Gaurav/);
   await page.goto("/w/gaurav-weds-karishma/rsvp?side=groom");
   await expect(page.getByRole("link", { name: /Gaurav & Karishma/ })).toBeVisible();
 

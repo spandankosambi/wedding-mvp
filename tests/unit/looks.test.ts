@@ -80,3 +80,20 @@ describe("RSVP settings per family", () => {
     expect(withLook(w, (await getLooks(w.id)).bride).rsvpOpen).toBe(false);
   });
 });
+
+describe("same as your partner: the invitation wording", () => {
+  it("copies all five lines once the other family has any", async () => {
+    const [w] = await db.insert(weddings).values({ slug: `lk-w-${Date.now()}`, brideName: "A", groomName: "B", weddingDate: new Date("2027-01-29T04:30:00Z") }).returning();
+    let looks = await getLooks(w.id);
+    expect(hasPart(looks.groom, "wording")).toBe(false);
+    await updateLook(w.id, "groom", { shloka: "वक्रतुण्ड महाकाय", closingLine: "Your blessings are our gifts" });
+    looks = await getLooks(w.id);
+    expect(hasPart(looks.groom, "wording")).toBe(true);
+    expect(samePart(looks.bride, looks.groom, "wording")).toBe(false);
+    expect((await copyFromPartner(w.id, "bride", "wording")).ok).toBe(true);
+    looks = await getLooks(w.id);
+    expect(looks.bride).toMatchObject({ shloka: "वक्रतुण्ड महाकाय", closingLine: "Your blessings are our gifts", invocation: null });
+    expect(withLook(w, looks.bride).shloka).toBe("वक्रतुण्ड महाकाय");
+  });
+});
+

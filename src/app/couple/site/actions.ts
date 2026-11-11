@@ -63,6 +63,15 @@ export async function saveWords(formData: FormData) {
   done(ctx, "words", r.ok ? undefined : r.error);
 }
 
+export async function saveWording(formData: FormData) {
+  const ctx = await scoped(formData);
+  const r = await editor.updateWording(ctx.weddingId, ctx.family, {
+    invocation: str(formData, "invocation"), shloka: str(formData, "shloka"), rsvpContacts: str(formData, "rsvpContacts"),
+    compliments: str(formData, "compliments"), closingLine: str(formData, "closingLine"),
+  });
+  done(ctx, "wording", r.ok ? undefined : r.error);
+}
+
 export async function saveRsvpSettings(formData: FormData) {
   const ctx = await scoped(formData);
   const r = await editor.updateRsvpSettings(ctx.weddingId, ctx.family, {
@@ -75,7 +84,7 @@ export async function saveRsvpSettings(formData: FormData) {
 export async function copyPartAction(formData: FormData) {
   const ctx = await scoped(formData);
   const part = str(formData, "part");
-  if (!["words", "travel", "gallery", "theme"].includes(part)) return done(ctx, "words", "invalid input");
+  if (!["wording", "words", "travel", "gallery", "theme"].includes(part)) return done(ctx, "words", "invalid input");
   const r = await copyFromPartner(ctx.weddingId, ctx.family, part as LookPart);
   done(ctx, part, r.ok ? undefined : r.error);
 }

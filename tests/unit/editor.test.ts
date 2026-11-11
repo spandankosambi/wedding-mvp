@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db, migrateDb } from "@/db/client";
 import { weddings, events } from "@/db/schema";
 import { getLook } from "@/lib/looks";
-import { updateDetails, updateWords, updateRsvpSettings, updateTravel, upsertEvent, setEventPublished, deleteEvent, moveEvent, istParts, sortEventsByTime } from "@/lib/editor";
+import { adoptCardWording, updateWording, updateDetails, updateWords, updateRsvpSettings, updateTravel, upsertEvent, setEventPublished, deleteEvent, moveEvent, istParts, sortEventsByTime } from "@/lib/editor";
 import { getPublicWedding } from "@/lib/open-rsvp";
 
 let weddingId: string, other: string;
@@ -26,6 +26,23 @@ describe("editor", () => {
     expect((await updateWords(weddingId, "groom", { heroTagline: "Baraat at dawn", hashtag: "#ArjunKiShaadi", theme: "raj-mahal" })).ok).toBe(true);
     expect(await getLook(weddingId, "groom")).toMatchObject({ heroTagline: "Baraat at dawn", hashtag: "ArjunKiShaadi", theme: "raj-mahal" });
     expect((await getLook(weddingId, "bride")).hashtag).not.toBe("ArjunKiShaadi");
+  });
+  it("each family's invitation wording: lines tidied, blanks dropped", async () => {
+    const r = await updateWording(weddingId, "groom", {
+      invocation: "  ॥ श्री गणेशाय नमः ॥ ", shloka: "वक्रतुण्ड  महाकाय\n\n  निर्विघ्नं कुरु मे देव ",
+      rsvpContacts: "Vikram +91 1\r\nKavita +91 2", compliments: "", closingLine: "Your blessings are our gifts",
+    });
+    expect(r.ok).toBe(true);
+    expect(await getLook(weddingId, "groom")).toMatchObject({
+      invocation: "॥ श्री गणेशाय नमः ॥", shloka: "वक्रतुण्ड महाकाय\nनिर्विघ्नं कुरु मे देव",
+      rsvpContacts: "Vikram +91 1\nKavita +91 2", compliments: null, closingLine: "Your blessings are our gifts",
+    });
+    expect((await getLook(weddingId, "bride")).invocation).toBeNull();
+  });
+  it("wording from the old print dialog fills only what's still empty", async () => {
+    const r = await adoptCardWording(weddingId, "groom", { invocation: "|| Shree ||", compliments: "Mehta family", closingLine: "" });
+    expect(r).toMatchObject({ ok: true, filled: 1 });
+    expect(await getLook(weddingId, "groom")).toMatchObject({ invocation: "॥ श्री गणेशाय नमः ॥", compliments: "Mehta family" });
   });
   it("rsvp settings are each family's own: deadline is end of that IST day, blank clears", async () => {
     expect((await updateRsvpSettings(weddingId, "groom", { rsvpOpen: false, rsvpDeadline: "2027-01-15" })).ok).toBe(true);
