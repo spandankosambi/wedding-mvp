@@ -89,10 +89,11 @@ test("RSVPs can be switched off by the couple", async ({ page }) => {
   await expect(page.getByText(/check your inbox/i)).toBeVisible();
   await page.goto(signInUrl(email));
 
-  // the bride's family's contact, on its site…
-  await page.fill("input[name=contactPhone]", "+91 90000 12345");
-  await page.locator("#words button[type=submit]").click();
-  await expect(page).toHaveURL(/saved=words/);
+  // the bride's family's RSVP contact, on its site…
+  await page.getByLabel("Contact 1 name").fill("Riya's dad");
+  await page.getByLabel("Contact 1 number").fill("+91 90000 12345");
+  await page.locator("#wording button[type=submit]").click();
+  await expect(page).toHaveURL(/saved=wording/);
 
   // …and its own RSVP settings, in its section
   await page.goto("/couple/bride");
@@ -102,7 +103,8 @@ test("RSVPs can be switched off by the couple", async ({ page }) => {
 
   await page.goto("/w/riya-weds-veer/rsvp");
   await expect(page.getByRole("heading", { name: /rsvps are closed/i })).toBeVisible();
-  await expect(page.getByText(/\+91 90000 12345/)).toBeVisible();
+  // a tap opens WhatsApp with the family
+  await expect(page.getByRole("link", { name: /WhatsApp Riya's dad on \+91 90000 12345/ })).toHaveAttribute("href", "https://wa.me/919000012345");
   await expect(page.getByRole("button", { name: /send rsvp/i })).toHaveCount(0);
   // the groom's family still takes replies
   await page.goto("/w/riya-weds-veer/rsvp?side=groom");

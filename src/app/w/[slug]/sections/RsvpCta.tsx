@@ -1,14 +1,16 @@
 import { fmtWeddingDate } from "@/lib/format";
+import type { RsvpPerson } from "@/lib/contacts";
+import { ContactList } from "./ContactList";
 
 /** A household that arrived from its personal invitation. */
 export type InvitedGuest = { familyName: string; href: string; answered: boolean };
 
 export function RsvpCta({
-  slug, side, open, deadline, contactPhone, contacts = [], invite,
+  slug, side, open, deadline, contacts = [], invite,
 }: {
-  slug: string; side?: "bride" | "groom"; open: boolean; deadline: Date | null; contactPhone: string | null;
-  /** the family's RSVP contacts, line by line (as on the printed card) */
-  contacts?: string[];
+  slug: string; side?: "bride" | "groom"; open: boolean; deadline: Date | null;
+  /** the family's RSVP contacts (as on the printed card) */
+  contacts?: RsvpPerson[];
   invite?: InvitedGuest | null;
 }) {
   return (
@@ -71,14 +73,14 @@ export function RsvpCta({
               RSVPs are closed — but we&apos;d still love to hear from you.
             </h2>
             <p className="reveal mx-auto mt-8 max-w-xl text-sm leading-relaxed opacity-75">
-              {contactPhone ? `Message the family on ${contactPhone} and we'll make room.` : "Reach out to the family directly and we'll make room."}
+              {contacts.length ? "Message the family below and we'll make room." : "Reach out to the family directly and we'll make room."}
             </p>
           </>
         )}
         {contacts.length > 0 && (
-          <div className="reveal mx-auto mt-12 max-w-xl" data-testid="rsvp-contacts">
+          <div className="reveal mx-auto mt-12 max-w-xl">
             <p className="kicker" style={{ opacity: 0.7 }}>For RSVP</p>
-            {contacts.map((c, i) => <p key={i} className="mt-2 text-base">{c}</p>)}
+            <ContactList contacts={contacts} className="mt-3" />
           </div>
         )}
       </section>

@@ -41,8 +41,12 @@ function Letters({ text, from }: { text: string; from: number }) {
 export function Hero({ wedding, city, side = "bride" }: { wedding: HeroWedding; city?: string; side?: FamilySide }) {
   const h = hostWords(wedding, side);
   const shloka = wordingLines(wedding.shloka);
+  const top = !!(wedding.invocation || shloka.length);
+  /* Sized from the screen's height as well as its width (see .hero in
+     globals.css) so everything from the invocation to the countdown fits one
+     screen, on a laptop and on a phone. */
   return (
-    <section className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-6 py-20 text-center">
+    <section className="hero relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-6 text-center">
       <Petals />
 
       {/* watermark knot, drifts on scroll via --py from ScrollFx */}
@@ -55,75 +59,57 @@ export function Hero({ wedding, city, side = "bride" }: { wedding: HeroWedding; 
       </span>
 
       {wedding.invocation && (
-        <p className="indic rise rise-1 text-sm md:text-base" style={{ color: "var(--accent)" }} data-testid="invocation">
+        <p className="indic hero-invocation rise rise-1" style={{ color: "var(--accent)" }} data-testid="invocation">
           {wedding.invocation}
         </p>
       )}
       {shloka.length > 0 && (
-        <p className="indic rise rise-1 mt-3 max-w-2xl text-lg leading-snug md:text-2xl" style={{ color: "var(--accent)" }} data-testid="shloka">
+        <p className="indic hero-shloka rise rise-1 max-w-2xl" style={{ color: "var(--accent)" }} data-testid="shloka">
           {shloka.map((l, i) => <span key={i} className="block">{l}</span>)}
         </p>
       )}
-      {(wedding.invocation || shloka.length > 0) && (
-        <div className="rise rise-1 mt-6">
-          <Ornament theme={wedding.theme} slot="hero" anim="load" />
-        </div>
-      )}
+      <div className={`hero-orn rise rise-1 ${top ? "" : "order-last"}`}>
+        <Ornament theme={wedding.theme} slot="hero" anim="load" />
+      </div>
 
       {/* the hosting family's invitation, as on the card */}
-      <div className="rise rise-2 mt-6 max-w-2xl" data-testid="hosts">
-        <p className="font-display text-2xl md:text-3xl">{h.hosts}</p>
+      <div className="hero-hosts rise rise-2 max-w-2xl" data-testid="hosts">
+        <p className="font-display hero-host">{h.hosts}</p>
         {h.request.map((l) => (
-          <p key={l} className="font-display mt-1 text-lg italic md:text-xl" style={{ color: "var(--ink-soft)" }}>{l}</p>
+          <p key={l} className="font-display hero-line italic" style={{ color: "var(--ink-soft)" }}>{l}</p>
         ))}
       </div>
 
-      <h1
-        className="font-display mt-6 tracking-tight"
-        style={{ fontSize: "clamp(3.25rem, 12vw, 9rem)", lineHeight: 0.95 }}
-      >
+      <h1 className="font-display hero-names tracking-tight">
         <Letters text={h.first} from={0} />
         <br />
-        <em
-          className="foil ltr weds"
-          style={{ "--i": h.first.length + 1 } as React.CSSProperties}
-        >
+        <em className="foil ltr weds" style={{ "--i": h.first.length + 1 } as React.CSSProperties}>
           {h.joiner}
         </em>
         <br />
         <Letters text={h.second} from={h.first.length + 3} />
       </h1>
       {h.secondOf && (
-        <p className="font-display rise rise-3 mt-4 text-lg italic md:text-xl" style={{ color: "var(--ink-soft)" }}>{h.secondOf}</p>
+        <p className="font-display hero-line hero-of rise rise-3 italic" style={{ color: "var(--ink-soft)" }}>{h.secondOf}</p>
       )}
 
-      {!(wedding.invocation || shloka.length > 0) && (
-        <div className="rise rise-3 mt-10">
-          <Ornament theme={wedding.theme} slot="hero" anim="load" />
-        </div>
-      )}
-
-      <p className="kicker rise rise-4 mt-10">
+      <p className="kicker hero-date rise rise-4">
         {fmtWeddingDate(wedding.weddingDate)}{city ? ` · ${city}` : ""}
       </p>
-
       {wedding.heroTagline && (
-        <p
-          className="rise rise-4 mt-6 max-w-md text-base md:text-lg"
-          style={{ color: "var(--ink-soft)" }}
-        >
+        <p className="hero-tag rise rise-4 max-w-md" style={{ color: "var(--ink-soft)" }}>
           {wedding.heroTagline}
         </p>
       )}
       {wedding.hashtag && (
-        <p className="rise rise-4 mt-3 text-sm" style={{ color: "var(--ink-soft)" }}>#{wedding.hashtag}</p>
+        <p className="hero-hash rise rise-4" style={{ color: "var(--ink-soft)" }}>#{wedding.hashtag}</p>
       )}
 
-      <div className="rise rise-4 mt-8">
+      <div className="hero-count rise rise-4" data-testid="countdown">
         <Countdown date={wedding.weddingDate} />
       </div>
 
-      <span aria-hidden className="scroll-cue absolute bottom-8" />
+      <span aria-hidden className="scroll-cue absolute bottom-6" />
     </section>
   );
 }

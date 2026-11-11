@@ -58,7 +58,7 @@ export async function saveWords(formData: FormData) {
   const ctx = await scoped(formData);
   const r = await editor.updateWords(ctx.weddingId, ctx.family, {
     heroTagline: str(formData, "heroTagline"), story: str(formData, "story"),
-    hashtag: str(formData, "hashtag"), contactPhone: str(formData, "contactPhone"),
+    hashtag: str(formData, "hashtag"),
   });
   done(ctx, "words", r.ok ? undefined : r.error);
 }
@@ -66,7 +66,11 @@ export async function saveWords(formData: FormData) {
 export async function saveWording(formData: FormData) {
   const ctx = await scoped(formData);
   const r = await editor.updateWording(ctx.weddingId, ctx.family, {
-    invocation: str(formData, "invocation"), shloka: str(formData, "shloka"), rsvpContacts: str(formData, "rsvpContacts"),
+    invocation: str(formData, "invocation"), shloka: str(formData, "shloka"),
+    // up to two RSVP contacts; a row without a number is left out
+    contacts: [0, 1].map((i) => ({
+      name: str(formData, `contact${i}name`), phone: str(formData, `contact${i}phone`).trim(), whatsapp: formData.get(`contact${i}whatsapp`) === "on",
+    })).filter((c) => c.phone),
     compliments: str(formData, "compliments"), closingLine: str(formData, "closingLine"),
   });
   done(ctx, "wording", r.ok ? undefined : r.error);

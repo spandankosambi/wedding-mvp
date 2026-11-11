@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getPublicWedding, rsvpWindow } from "@/lib/open-rsvp";
 import { fmtWeddingDate } from "@/lib/format";
 import { Ornament } from "@/themes/ornaments";
+import { ContactList } from "../sections/ContactList";
 import { OpenRsvpForm } from "./OpenRsvpForm";
 import { asFamilySide, getLook, namesFor, withLook, type FamilySide } from "@/lib/looks";
 
@@ -41,10 +42,11 @@ export default async function OpenRsvpPage({ params, searchParams }: { params: P
           <p className="rise rise-3 mt-6 text-base md:text-lg" style={{ color: "var(--ink-soft)" }}>
             {window.open
               ? "Tell us who's coming and to which celebrations. It takes half a minute, and you can change your answer later."
-              : wedding.contactPhone
-                ? `Reach the family on ${wedding.contactPhone} — we'll make room.`
+              : wedding.contacts.length
+                ? "Reach the family below — we'll make room."
                 : "Reach out to the family directly — we'll make room."}
           </p>
+          {!window.open && <ContactList contacts={wedding.contacts} className="rise rise-3 mt-6" />}
           <div className="rise rise-3 mt-8">
             <Ornament theme={wedding.theme} slot="hero" />
           </div>

@@ -123,7 +123,7 @@ export default async function WeddingPage({
       <EventTimeline theme={wedding.theme} events={shown} no={eventsNo} />
       {hasTravel && <TravelStay travel={wedding.travel} no={travelNo} />}
       {gallery.enabled && <Gallery theme={wedding.theme} no={galleryNo} photos={gallery.photos} />}
-      <RsvpCta slug={wedding.slug} side={side} open={window.open} deadline={wedding.rsvpDeadline} contactPhone={wedding.contactPhone} contacts={wordingLines(wedding.rsvpContacts)} invite={invite} />
+      <RsvpCta slug={wedding.slug} side={side} open={window.open} deadline={wedding.rsvpDeadline} contacts={wedding.contacts} invite={invite} />
       <Closing theme={wedding.theme} closingLine={wedding.closingLine} compliments={wordingLines(wedding.compliments)} />
       {/* room under the footer so the invitation bar never covers it */}
       <footer className="hairline-t px-6 py-10 text-center" style={invite ? { paddingBottom: "7rem" } : undefined}>

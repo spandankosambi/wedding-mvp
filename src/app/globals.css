@@ -1104,3 +1104,25 @@ html.fx .rule-grow.is-in::before { transform: scaleX(1); }
   font-family: var(--font-tiro), var(--font-display);
 }
 
+/* ---- the opening screen ----
+   Everything from the invocation to the countdown fits one screen: sizes and
+   gaps follow the screen's height (svh) as well as its width. */
+.hero { padding-block: clamp(1rem, 3.5svh, 3rem); }
+.hero-invocation { font-size: clamp(0.8rem, 1.9svh, 1rem); line-height: 1.5; }
+.hero-shloka { margin-top: clamp(0.2rem, 1svh, 0.75rem); font-size: clamp(0.95rem, min(4.6vw, 2.9svh), 1.6rem); line-height: 1.35; }
+.hero-orn { margin-top: clamp(0.35rem, 1.6svh, 1.25rem); }
+.hero-orn.order-last { margin-top: clamp(0.6rem, 2.4svh, 2rem); }
+.hero-orn svg { max-height: clamp(20px, 5.5svh, 52px); width: auto; }
+.hero-hosts { margin-top: clamp(0.35rem, 1.6svh, 1.25rem); }
+.hero-host { font-size: clamp(1.1rem, min(5.2vw, 3.3svh), 1.9rem); line-height: 1.2; }
+.hero-line { font-size: clamp(0.9rem, min(4.2vw, 2.4svh), 1.3rem); line-height: 1.35; }
+.hero-names { margin-top: clamp(0.2rem, 1.2svh, 1rem); font-size: clamp(2.4rem, min(13vw, 10.5svh), 8rem); line-height: 0.95; }
+.hero-of { margin-top: clamp(0.2rem, 1svh, 0.75rem); }
+.hero-date { margin-top: clamp(0.6rem, 2.2svh, 1.75rem); }
+.hero-tag { margin-top: clamp(0.35rem, 1.2svh, 1rem); font-size: clamp(0.85rem, 2svh, 1.1rem); line-height: 1.4; }
+.hero-hash { margin-top: 0.25rem; font-size: clamp(0.75rem, 1.6svh, 0.9rem); }
+.hero-count { margin-top: clamp(0.6rem, 2.2svh, 1.75rem); }
+.hero-count .font-display { font-size: clamp(1.4rem, 4svh, 2.25rem); }
+/* the scroll cue only where there's room under the countdown */
+@media (max-height: 1000px) { .hero .scroll-cue { display: none; } }
+

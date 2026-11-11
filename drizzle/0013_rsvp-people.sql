@@ -1,0 +1,1 @@
+ALTER TABLE "wedding_sides" ADD COLUMN "rsvp_people" jsonb;

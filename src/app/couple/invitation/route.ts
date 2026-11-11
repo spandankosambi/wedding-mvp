@@ -6,7 +6,7 @@ import { appOrigin } from "@/lib/origin";
 import { invitationSchema } from "@/lib/invitation/options";
 import { buildInvitation, fileName } from "@/lib/invitation/content";
 import { renderInvitationPdf } from "@/lib/invitation/pdf";
-import { getLook, withLook } from "@/lib/looks";
+import { getLook, withLook, wordingOf } from "@/lib/looks";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   const o = {
     ...parsed.data,
     invocation: look.invocation ?? "", shloka: look.shloka ?? "", note: look.closingLine ?? "",
-    rsvpBride: look.rsvpContacts ?? "", rsvpGroom: look.rsvpContacts ?? "",
+    rsvpBride: wordingOf(look).rsvpContacts ?? "", rsvpGroom: wordingOf(look).rsvpContacts ?? "",
     complimentsBride: look.compliments ?? "", complimentsGroom: look.compliments ?? "",
   };
   const evs = await db.select().from(events).where(eq(events.weddingId, weddingId));

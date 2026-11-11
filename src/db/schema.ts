@@ -9,6 +9,9 @@ export const emailTypeEnum = pgEnum("email_type", ["invite", "reminder", "resend
 export const familySourceEnum = pgEnum("family_source", ["committee", "import", "guest"]);
 
 /** Travel & stay copy the couple writes in their editor — prose, not relational data. */
+/** Someone guests can reach about their RSVP. */
+export type RsvpPerson = { name: string; phone: string; whatsapp: boolean };
+
 export type TravelInfo = {
   /** `common`: shown by both families (kept in step on both sides) */
   stays: { name: string; note: string; url?: string; common?: boolean }[];
@@ -68,7 +71,9 @@ export const weddingSides = pgTable("wedding_sides", {
   invocation: text("invocation"),
   /** a blessing or shloka, line by line (Devanagari works) */
   shloka: text("shloka"),
-  /** RSVP contacts, one per line */
+  /** RSVP contacts (up to two): replaces rsvpContacts and contactPhone, which are read only if this is unset */
+  rsvpPeople: jsonb("rsvp_people").$type<RsvpPerson[]>(),
+  /** older: RSVP contacts, one per line */
   rsvpContacts: text("rsvp_contacts"),
   /** "with best compliments from", line by line */
   compliments: text("compliments"),

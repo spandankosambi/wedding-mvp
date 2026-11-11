@@ -13,6 +13,8 @@ import { SaveButton } from "./SaveButton";
 import { GalleryUploader } from "./GalleryUploader";
 import { StaysEditor } from "./StaysEditor";
 import { StoryField } from "./StoryField";
+import { ContactsEditor } from "./ContactsEditor";
+import { contactsOf, MAX_CONTACTS } from "@/lib/contacts";
 import { galleryOf, photoStorageConfigured, MAX_GALLERY_PHOTOS } from "@/lib/gallery";
 import {
   saveWords, saveWording, saveTravel, saveEvent, addPresetEvent, toggleEvent, removeEvent, moveEventAction, sortEvents,
@@ -130,10 +132,10 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                 <textarea name="shloka" defaultValue={look.shloka ?? ""} maxLength={200} rows={2} className="portal-input resize-y"
                   placeholder={"वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ ।\nनिर्विघ्नं कुरु मे देव सर्वकार्येषु सर्वदा ॥"} />
               </Field>
-              <Field label="RSVP contacts" hint="one per line — near the RSVP on the site, on the back of the card">
-                <textarea name="rsvpContacts" defaultValue={look.rsvpContacts ?? ""} maxLength={240} rows={2} className="portal-input resize-y"
-                  placeholder={family === "bride" ? "Anil Kulkarni +91 98220 12345" : "Rajesh Kosambi +91 98765 43210"} />
-              </Field>
+              <div className="md:col-span-2">
+                <p className="text-sm font-medium">RSVP contacts <span className="font-normal text-neutral-400">— up to two; shown in the RSVP section of the site and on the back of the card</span></p>
+                <div className="mt-2"><ContactsEditor initial={contactsOf(look)} max={MAX_CONTACTS} /></div>
+              </div>
               <Field label="“With best compliments from”" hint="optional, one per line">
                 <textarea name="compliments" defaultValue={look.compliments ?? ""} maxLength={240} rows={2} className="portal-input resize-y"
                   placeholder={family === "bride" ? "Kulkarni family\nand friends" : "Kosambi family\nand friends"} />
@@ -153,7 +155,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="portal-eyebrow">Words</p>
-                <h2 className="mt-1 font-semibold">Tagline, story, hashtag, contact</h2>
+                <h2 className="mt-1 font-semibold">Tagline, story, hashtag</h2>
               </div>
               {same("words")}
             </div>
@@ -163,8 +165,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
               <Field label="Your story" hint="how you met, in about 150 words — leave blank to hide the section" className="md:col-span-2">
                 <StoryField initial={look.story ?? ""} max={STORY_MAX} />
               </Field>
-              <Field label="Hashtag" hint="without the #"><input name="hashtag" defaultValue={look.hashtag ?? ""} maxLength={60} placeholder="AnanyaKaArjun" className="portal-input" /></Field>
-              <Field label="Family contact" hint="shown if RSVPs close"><input name="contactPhone" defaultValue={look.contactPhone ?? ""} maxLength={40} placeholder="+91 98765 43210 (Rajesh)" className="portal-input" /></Field>
+              <Field label="Hashtag" hint="without the #" className="md:col-span-2"><input name="hashtag" defaultValue={look.hashtag ?? ""} maxLength={60} placeholder="AnanyaKaArjun" className="portal-input" /></Field>
               <div className="md:col-span-2"><SaveButton /></div>
             </form>
           </section>

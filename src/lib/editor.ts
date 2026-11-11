@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { expandMapLink } from "@/lib/maplinks";
-import { getLook, saveTravelLook, updateLook, type FamilySide } from "@/lib/looks";
+import { getLook, saveTravelLook, updateLook, type FamilySide, type LookPatch } from "@/lib/looks";
+import { contactsOf, MAX_CONTACTS } from "@/lib/contacts";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events, families, eventInvites, rsvps, type TravelInfo } from "@/db/schema";
@@ -31,7 +32,6 @@ export const wordsSchema = z.object({
   heroTagline: optional(160),
   story: optional(STORY_MAX),
   hashtag: optional(60).transform((v) => (v ? v.replace(/^#+/, "") : v)),
-  contactPhone: optional(40),
   theme: z.enum(THEMES).optional(),
 });
 
@@ -41,11 +41,18 @@ const multiline = (max: number) => z.string().max(max).optional().transform((v) 
   return t || null;
 });
 
+/** Someone guests can reach about RSVPs: a name, a number with 7–15 digits, and whether it's on WhatsApp. */
+export const contactSchema = z.object({
+  name: z.string().trim().max(60).transform((v) => v.replace(/\s+/g, " ")),
+  phone: z.string().trim().max(30).refine((v) => /^\+?[\d\s\-().]+$/.test(v) && v.replace(/\D/g, "").length >= 7 && v.replace(/\D/g, "").length <= 15),
+  whatsapp: z.boolean(),
+});
+
 /** The invitation's wording, on the family's site and its printed cards. */
 export const wordingSchema = z.object({
   invocation: optional(80),
   shloka: multiline(200),
-  rsvpContacts: multiline(240),
+  contacts: z.array(contactSchema).max(MAX_CONTACTS).default([]),
   compliments: multiline(240),
   closingLine: optional(160),
 });
@@ -115,8 +122,13 @@ export async function updateWords(weddingId: string, side: FamilySide, input: un
 
 export async function updateWording(weddingId: string, side: FamilySide, input: unknown): Promise<Result> {
   const p = wordingSchema.safeParse(input);
-  if (!p.success) return { ok: false, error: "invalid input" };
-  await updateLook(weddingId, side, p.data);
+  if (!p.success) {
+    const phone = p.error.issues.some((i) => i.path[0] === "contacts" && i.path[2] === "phone");
+    return { ok: false, error: phone ? "please check the RSVP contact number — digits only, with the country code if it isn't Indian" : "invalid input" };
+  }
+  const { contacts, ...words } = p.data;
+  // the contact list replaces the older RSVP and family-contact boxes
+  await updateLook(weddingId, side, { ...words, rsvpPeople: contacts, rsvpContacts: null, contactPhone: null });
   return { ok: true };
 }
 
@@ -124,13 +136,18 @@ export async function updateWording(weddingId: string, side: FamilySide, input: 
  * Wording typed into the print dialog before it moved to the site editor
  * (kept on that device): fills only the fields this family hasn't filled.
  */
+const oldCardWording = z.object({
+  invocation: optional(80), shloka: multiline(200), rsvpContacts: multiline(240), compliments: multiline(240), closingLine: optional(160),
+});
+
 export async function adoptCardWording(weddingId: string, side: FamilySide, input: unknown): Promise<Result & { filled?: number }> {
-  const p = wordingSchema.safeParse(input);
+  const p = oldCardWording.safeParse(input);
   if (!p.success) return { ok: false, error: "invalid input" };
   const look = await getLook(weddingId, side);
-  const patch = Object.fromEntries(
-    Object.entries(p.data).filter(([k, v]) => v && !look[k as keyof typeof p.data]),
-  ) as Partial<typeof p.data>;
+  const { rsvpContacts, ...rest } = p.data;
+  const patch: LookPatch = Object.fromEntries(Object.entries(rest).filter(([k, v]) => v && !look[k as keyof typeof rest]));
+  const people = contactsOf({ rsvpContacts });
+  if (people.length && !contactsOf(look).length) patch.rsvpPeople = people;
   if (Object.keys(patch).length) await updateLook(weddingId, side, patch);
   return { ok: true, filled: Object.keys(patch).length };
 }

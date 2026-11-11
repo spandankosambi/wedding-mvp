@@ -24,7 +24,14 @@ test("the wording is typed once in Edit your site — the website opens with it,
   const wording = page.locator("#wording");
   await wording.getByLabel(/Invocation at the top/).fill("॥ श्री गणेशाय नमः ॥");
   await wording.getByLabel(/Blessing or shloka/).fill("वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ\nनिर्विघ्नं कुरु मे देव सर्वकार्येषु सर्वदा");
-  await wording.getByLabel(/RSVP contacts/).fill("Vikram Mehta +91 98200 11111\nKavita Mehta +91 98200 33333");
+  // two RSVP contacts at most: a WhatsApp number and one to call
+  await wording.getByLabel("Contact 1 name").fill("Vikram Mehta");
+  await wording.getByLabel("Contact 1 number").fill("+91 98200 11111");
+  await wording.getByRole("button", { name: "+ Add another contact" }).click();
+  await expect(wording.getByRole("button", { name: "+ Add another contact" })).toHaveCount(0);
+  await wording.getByLabel("Contact 2 name").fill("Kavita Mehta");
+  await wording.getByLabel("Contact 2 number").fill("98200 33333");
+  await wording.getByLabel("Kavita Mehta's number is on WhatsApp").uncheck();
   await wording.getByLabel(/With best compliments from/).fill("Mehta family\nand friends");
   await wording.getByLabel(/Closing line/).fill("Your blessings are our gifts");
   await wording.getByRole("button", { name: "Save" }).click();
@@ -39,10 +46,22 @@ test("the wording is typed once in Edit your site — the website opens with it,
   await expect(hosts).toContainText("at the wedding of their son");
   await expect(page.locator("h1").first()).toHaveText(/Arjun\s*with\s*Ananya/);
   await expect(page.getByText("daughter of Sunita & Rajesh Sharma")).toBeVisible();
-  await expect(page.getByTestId("rsvp-contacts")).toContainText("Kavita Mehta +91 98200 33333");
+  const contacts = page.getByTestId("rsvp-contacts");
+  await expect(contacts.getByRole("link", { name: "WhatsApp Vikram Mehta on +91 98200 11111" })).toHaveAttribute("href", "https://wa.me/919820011111");
+  await expect(contacts.getByRole("link", { name: "Call Kavita Mehta on 98200 33333" })).toHaveAttribute("href", "tel:+919820033333");
   await expect(page.getByTestId("closing")).toContainText("Your blessings are our gifts");
   await expect(page.getByTestId("closing")).toContainText("With best compliments from");
   if (shots) await page.screenshot({ path: `${shots}/site-wording.png` });
+  // from the invocation to the countdown, all on one screen — laptop and phone
+  for (const [width, height] of [[1366, 657], [390, 664], [375, 553]] as const) {
+    await page.setViewportSize({ width, height });
+    await page.goto("/w/ananya-weds-arjun?side=groom");
+    const top = (await page.getByTestId("invocation").boundingBox())!.y;
+    const count = (await page.getByTestId("countdown").boundingBox())!;
+    expect(top, `${width}×${height}`).toBeGreaterThanOrEqual(0);
+    expect(count.y + count.height, `${width}×${height}`).toBeLessThanOrEqual(height);
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
   // the bride's site has its own wording (none yet)
   await page.goto("/w/ananya-weds-arjun?side=bride");
   await expect(page.getByTestId("invocation")).toHaveCount(0);
@@ -67,7 +86,7 @@ test("setup and design — with the live preview on every page — then download
   await expect(dialog.getByText(/family.s card — hosted by their parents/)).toContainText("groom's family's");
   const words = dialog.getByTestId("card-wording");
   await expect(words).toContainText("॥ श्री गणेशाय नमः ॥");
-  await expect(words).toContainText("Vikram Mehta +91 98200 11111");
+  await expect(words).toContainText("Vikram Mehta  +91 98200 11111");
   await expect(words).toContainText("Kavita & Vikram Mehta");
   await expect(words.getByRole("link", { name: "Change it in Edit your site" })).toHaveAttribute("href", "/couple/site?family=groom#wording");
   await dialog.getByRole("combobox", { name: "Card size" }).selectOption("a5");

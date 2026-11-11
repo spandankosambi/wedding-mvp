@@ -35,18 +35,26 @@ describe("editor", () => {
   it("each family's invitation wording: lines tidied, blanks dropped", async () => {
     const r = await updateWording(weddingId, "groom", {
       invocation: "  ॥ श्री गणेशाय नमः ॥ ", shloka: "वक्रतुण्ड  महाकाय\n\n  निर्विघ्नं कुरु मे देव ",
-      rsvpContacts: "Vikram +91 1\r\nKavita +91 2", compliments: "", closingLine: "Your blessings are our gifts",
+      contacts: [{ name: " Vikram  Mehta ", phone: "+91 98200 11111", whatsapp: true }, { name: "", phone: "022 2345 6789", whatsapp: false }],
+      compliments: "", closingLine: "Your blessings are our gifts",
     });
     expect(r.ok).toBe(true);
     expect(await getLook(weddingId, "groom")).toMatchObject({
       invocation: "॥ श्री गणेशाय नमः ॥", shloka: "वक्रतुण्ड महाकाय\nनिर्विघ्नं कुरु मे देव",
-      rsvpContacts: "Vikram +91 1\nKavita +91 2", compliments: null, closingLine: "Your blessings are our gifts",
+      rsvpPeople: [{ name: "Vikram Mehta", phone: "+91 98200 11111", whatsapp: true }, { name: "", phone: "022 2345 6789", whatsapp: false }],
+      compliments: null, closingLine: "Your blessings are our gifts",
     });
     expect((await getLook(weddingId, "bride")).invocation).toBeNull();
   });
+  it("RSVP contacts: two at most, with a real number", async () => {
+    const three = Array.from({ length: 3 }, (_, i) => ({ name: `P${i}`, phone: "+91 98200 1111" + i, whatsapp: true }));
+    expect((await updateWording(weddingId, "bride", { contacts: three })).ok).toBe(false);
+    expect(await updateWording(weddingId, "bride", { contacts: [{ name: "X", phone: "call me", whatsapp: true }] }))
+      .toEqual({ ok: false, error: expect.stringMatching(/check the RSVP contact number/) });
+  });
   it("wording from the old print dialog fills only what's still empty", async () => {
-    const r = await adoptCardWording(weddingId, "groom", { invocation: "|| Shree ||", compliments: "Mehta family", closingLine: "" });
-    expect(r).toMatchObject({ ok: true, filled: 1 });
+    const r = await adoptCardWording(weddingId, "groom", { invocation: "|| Shree ||", compliments: "Mehta family", closingLine: "", rsvpContacts: "Someone +91 90000 00000" });
+    expect(r).toMatchObject({ ok: true, filled: 1 }); // the invocation and contacts were already there
     expect(await getLook(weddingId, "groom")).toMatchObject({ invocation: "॥ श्री गणेशाय नमः ॥", compliments: "Mehta family" });
   });
   it("rsvp settings are each family's own: deadline is end of that IST day, blank clears", async () => {
