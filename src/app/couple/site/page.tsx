@@ -5,13 +5,14 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
-import { istParts, MAX_STAYS } from "@/lib/editor";
+import { istParts, MAX_STAYS, STORY_MAX } from "@/lib/editor";
 import { EVENT_PRESETS } from "@/lib/presets";
 import { fmtWeddingDate } from "@/lib/format";
 import { ThemeSwitcher } from "../ThemeSwitcher";
 import { SaveButton } from "./SaveButton";
 import { GalleryUploader } from "./GalleryUploader";
 import { StaysEditor } from "./StaysEditor";
+import { StoryField } from "./StoryField";
 import { galleryOf, photoStorageConfigured, MAX_GALLERY_PHOTOS } from "@/lib/gallery";
 import {
   saveWords, saveWording, saveTravel, saveEvent, addPresetEvent, toggleEvent, removeEvent, moveEventAction, sortEvents,
@@ -159,8 +160,8 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
             <form action={saveWords} className="mt-5 grid gap-4 md:grid-cols-2">
               {wid}
               <Field label="Tagline" hint="one line under your names" className="md:col-span-2"><input name="heroTagline" defaultValue={look.heroTagline ?? ""} maxLength={160} placeholder="Two families, five celebrations, one big yes." className="portal-input" /></Field>
-              <Field label="Your story" hint="how they met — leave blank to hide the section" className="md:col-span-2">
-                <textarea name="story" defaultValue={look.story ?? ""} maxLength={2000} rows={4} className="portal-input resize-y" placeholder="They met over a spilled filter coffee at a Bengaluru hackathon…" />
+              <Field label="Your story" hint="how you met, in about 150 words — leave blank to hide the section" className="md:col-span-2">
+                <StoryField initial={look.story ?? ""} max={STORY_MAX} />
               </Field>
               <Field label="Hashtag" hint="without the #"><input name="hashtag" defaultValue={look.hashtag ?? ""} maxLength={60} placeholder="AnanyaKaArjun" className="portal-input" /></Field>
               <Field label="Family contact" hint="shown if RSVPs close"><input name="contactPhone" defaultValue={look.contactPhone ?? ""} maxLength={40} placeholder="+91 98765 43210 (Rajesh)" className="portal-input" /></Field>

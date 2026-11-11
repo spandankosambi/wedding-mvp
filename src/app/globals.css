@@ -378,6 +378,13 @@ html.fx .rule-grow.is-in::before { transform: scaleX(1); }
   letter-spacing: -0.01em;
   text-wrap: pretty;
 }
+.story-text p + p { margin-top: 0.7em; }
+/* longer stories set smaller so the whole story fits one screen */
+.story-text[data-size="m"] { font-size: clamp(1.35rem, 2.4vw, 1.9rem); line-height: 1.4; }
+.story-text[data-size="s"] { font-size: clamp(1.1rem, 1.75vw, 1.4rem); line-height: 1.5; letter-spacing: 0; }
+.story-text[data-size="xs"] { font-size: clamp(1rem, 1.45vw, 1.2rem); line-height: 1.5; letter-spacing: 0; }
+.story-passage:has([data-size="s"]) .story-quote,
+.story-passage:has([data-size="xs"]) .story-quote { font-size: clamp(3.5rem, 6vw, 5rem); top: -0.55em; }
 
 @media (prefers-reduced-motion: reduce) {
   .rise, .reveal, .ltr, .petal, .marquee-track, .foil, .foil.ltr, .scroll-cue,

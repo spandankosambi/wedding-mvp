@@ -27,6 +27,11 @@ describe("editor", () => {
     expect(await getLook(weddingId, "groom")).toMatchObject({ heroTagline: "Baraat at dawn", hashtag: "ArjunKiShaadi", theme: "raj-mahal" });
     expect((await getLook(weddingId, "bride")).hashtag).not.toBe("ArjunKiShaadi");
   });
+  it("a story stays short enough for one screen", async () => {
+    const r = await updateWords(weddingId, "bride", { story: "x".repeat(901) });
+    expect(r).toEqual({ ok: false, error: expect.stringMatching(/story is too long — keep it under 900 characters/) });
+    expect((await updateWords(weddingId, "bride", { story: "x".repeat(900) })).ok).toBe(true);
+  });
   it("each family's invitation wording: lines tidied, blanks dropped", async () => {
     const r = await updateWording(weddingId, "groom", {
       invocation: "  ॥ श्री गणेशाय नमः ॥ ", shloka: "वक्रतुण्ड  महाकाय\n\n  निर्विघ्नं कुरु मे देव ",

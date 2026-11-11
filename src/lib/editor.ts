@@ -24,9 +24,12 @@ export const detailsSchema = z.object({
 });
 
 /** One family's own words on the site. */
+/** about 150 words: fits one screen on the site */
+export const STORY_MAX = 900;
+
 export const wordsSchema = z.object({
   heroTagline: optional(160),
-  story: optional(2000),
+  story: optional(STORY_MAX),
   hashtag: optional(60).transform((v) => (v ? v.replace(/^#+/, "") : v)),
   contactPhone: optional(40),
   theme: z.enum(THEMES).optional(),
@@ -101,7 +104,10 @@ export async function updateDetails(weddingId: string, input: unknown): Promise<
 
 export async function updateWords(weddingId: string, side: FamilySide, input: unknown): Promise<Result> {
   const p = wordsSchema.safeParse(input);
-  if (!p.success) return { ok: false, error: "invalid input" };
+  if (!p.success) {
+    const long = p.error.issues.some((i) => i.path[0] === "story" && i.code === "too_big");
+    return { ok: false, error: long ? `your story is too long — keep it under ${STORY_MAX} characters (about 150 words) so it fits one screen` : "invalid input" };
+  }
   const { theme, ...words } = p.data;
   await updateLook(weddingId, side, { ...words, ...(theme && { theme }) });
   return { ok: true };
