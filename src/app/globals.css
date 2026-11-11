@@ -317,14 +317,19 @@ html.fx .rule-grow.is-in::before { transform: scaleX(1); }
    --mat), so every photo in a row lands at the same height and the row fills
    the width. The ::after soaks up the last row's slack so its photos keep
    their natural size instead of ballooning. */
-.photo-rows { --row-h: 260px; --mat: 20px; display: flex; flex-wrap: wrap; gap: 16px; }
+.photo-rows { --row-h: 260px; --mat: 12px; display: flex; flex-wrap: wrap; gap: 14px; }
 .photo-rows::after { content: ""; flex-grow: 1000000; }
+/* once planned, full rows fill the width exactly; a short last row is centred */
+.photo-rows.is-planned { justify-content: center; }
 .photo-rows.is-planned::after { display: none; }
-@media (max-width: 640px) { .photo-rows { --row-h: 210px; --mat: 10px; gap: 8px; } }
+@media (max-width: 640px) { .photo-rows { --row-h: 170px; --mat: 8px; gap: 8px; } }
+/* a slim frame, and a gentle lift rather than a tilt */
+.photo-tile.plate { padding: calc(var(--mat) / 2); }
+.photo-tile.plate:hover { transform: translateY(-3px); box-shadow: 0 16px 36px -18px rgba(0, 0, 0, 0.45); }
 .photo-tile { display: block; min-width: 0; cursor: zoom-in; font: inherit; color: inherit; }
 .photo-tile img { display: block; width: 100%; height: auto; object-fit: cover; }
 .photo-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-@media (max-width: 640px) { .photo-tile { padding: 5px; } }
+
 
 /* Full-screen viewer — always dark, whatever the theme, so photos read true */
 .lightbox {

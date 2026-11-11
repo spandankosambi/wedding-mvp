@@ -1,53 +1,63 @@
 /**
  * Justified photo rows (the Flickr / Google Photos layout). Photos keep their
  * order and aspect ratio; each row is filled edge to edge at one shared
- * height, chosen as close to `targetHeight` as the photos allow. A row never
- * grows past ~1.25× the target, so one tall photo can't swell to fill a phone
- * screen on its own; the last row stays at the target height and left-aligned.
+ * height. Rows are planned together, not one at a time: the breaks are chosen
+ * so every row lands as close to `targetHeight` as the photos allow (no row
+ * swells past `maxScale` × the target), and the last row is filled too
+ * whenever it can be — so 8 photos come out 3 · 3 · 2, not 4 · 3 · 1 with a
+ * lonely photo at the end. A last row that can't fill the width without
+ * swelling stays at the target height and `filled: false` (the gallery
+ * centres it).
  *
  * `mat` is the frame around each photo (both sides together), `gap` the space
  * between frames. Returned `height` is the photo's own height, frame excluded.
  */
-export type JustifiedRow = { items: number[]; height: number; last: boolean };
+export type JustifiedRow = { items: number[]; height: number; last: boolean; filled: boolean };
 
-export function justify(
-  ratios: number[],
-  width: number,
-  { targetHeight, gap, mat }: { targetHeight: number; gap: number; mat: number },
-): JustifiedRow[] {
-  const rows: JustifiedRow[] = [];
-  // the height at which items [from, to) exactly fill the width
-  const fit = (from: number, to: number) => {
-    let sum = 0;
-    for (let i = from; i < to; i++) sum += ratios[i];
-    const k = to - from;
-    return (width - gap * (k - 1) - mat * k) / sum;
+type Opts = { targetHeight: number; gap: number; mat: number; maxScale?: number };
+
+export function justify(ratios: number[], width: number, { targetHeight, gap, mat, maxScale = 1.3 }: Opts): JustifiedRow[] {
+  const n = ratios.length;
+  if (!n) return [];
+  const maxH = targetHeight * maxScale;
+  const prefix = [0];
+  for (const r of ratios) prefix.push(prefix[prefix.length - 1] + r);
+  // the height at which photos [i, j) exactly fill the width
+  const fit = (i: number, j: number) => (width - gap * (j - i - 1) - mat * (j - i)) / (prefix[j] - prefix[i]);
+
+  // how far a row is from ideal, in pixels² of height
+  const cost = (i: number, j: number) => {
+    const h = fit(i, j);
+    if (j === n && h > maxH) {
+      // a short last row: centred at the target height; the emptier, the worse
+      const used = (prefix[j] - prefix[i]) * targetHeight + mat * (j - i) + gap * (j - i - 1);
+      const empty = Math.max(0, width - used) / width;
+      return (empty * targetHeight) ** 2 * 1.5;
+    }
+    if (h > maxH || h < targetHeight * 0.4) return Infinity; // too tall, or too many squeezed in
+    return (h - targetHeight) ** 2;
   };
 
-  let start = 0;
-  for (let i = 0; i < ratios.length; i++) {
-    const h = fit(start, i + 1);
-    if (h > targetHeight) continue; // row still too tall: take another photo
-    // closing here makes the row a bit short; closing one earlier makes it a
-    // bit tall. Keep whichever is nearer the target, within reason.
-    if (i > start) {
-      const hPrev = fit(start, i);
-      if (hPrev <= targetHeight * 1.25 && hPrev - targetHeight < targetHeight - h) {
-        rows.push({ items: range(start, i), height: hPrev, last: false });
-        start = i;
-        // the photo we didn't take starts the next row — re-check it alone
-        if (fit(start, i + 1) <= targetHeight) {
-          rows.push({ items: [i], height: fit(start, i + 1), last: false });
-          start = i + 1;
-        }
-        continue;
-      }
+  // best[j]: least total cost to lay out photos [0, j); from[j]: where its last row starts
+  const best = new Array<number>(n + 1).fill(Infinity);
+  const from = new Array<number>(n + 1).fill(0);
+  best[0] = 0;
+  for (let j = 1; j <= n; j++) {
+    for (let i = j - 1; i >= 0; i--) {
+      if (fit(i, j) < targetHeight * 0.4) break; // adding more only makes it shorter
+      const c = best[i] + cost(i, j);
+      if (c < best[j]) { best[j] = c; from[j] = i; }
     }
-    rows.push({ items: range(start, i + 1), height: h, last: false });
-    start = i + 1;
+    if (best[j] === Infinity) { best[j] = best[j - 1] + cost(j - 1, j); from[j] = j - 1; } // a lone, very tall photo
   }
-  if (start < ratios.length) {
-    rows.push({ items: range(start, ratios.length), height: Math.min(targetHeight, fit(start, ratios.length)), last: true });
+
+  const rows: JustifiedRow[] = [];
+  for (let j = n; j > 0; j = from[j]) {
+    const i = from[j];
+    const h = fit(i, j);
+    const last = j === n;
+    if (last && h > maxH) rows.unshift({ items: range(i, j), height: targetHeight, last, filled: false });
+    else rows.unshift({ items: range(i, j), height: Math.min(h, maxH), last, filled: h <= maxH });
   }
   return rows;
 }

@@ -27,7 +27,7 @@ export function TravelStay({ travel, no = "03" }: { travel: TravelInfo | null; n
               )}
               {s.url && (
                 <a href={s.url} target="_blank" rel="noreferrer" className="mt-4 inline-block text-sm underline underline-offset-4" style={{ color: "var(--accent-2)" }}>
-                  Book / directions ↗
+                  View map ↗
                 </a>
               )}
             </div>

@@ -24,7 +24,7 @@ test("an invitation opens the wedding site first, then leads to the family's own
   await expect(section.getByRole("heading", { name: "Will The Guptas be joining us?" })).toBeVisible();
   await expect(bar).toHaveAttribute("inert", ""); // steps aside while the section shows
   if (process.env.SHOTS_DIR) await page.screenshot({ path: `${process.env.SHOTS_DIR}/invite-rsvp-section.png` });
-  await section.getByRole("link", { name: "RSVP now" }).click();
+  await section.getByRole("link", { name: "Confirm your attendance" }).click();
   await expect(page).toHaveURL(new RegExp(`/rsvp/${token}$`));
   await expect(page.getByRole("heading", { name: "Dear The Guptas," })).toBeVisible();
 
@@ -53,7 +53,7 @@ test("an old, wrong or other wedding's code just shows the ordinary site", async
   await page.goto("/w/ananya-weds-arjun?invite=not-a-real-invitation-code-at-all");
   await expect(page.getByText(/Ananya/i).first()).toBeVisible();
   await expect(page.getByTestId("invite-bar")).toHaveCount(0);
-  await expect(page.locator("#rsvp").getByRole("link", { name: "RSVP now" })).toHaveAttribute("href", "/w/ananya-weds-arjun/rsvp?side=bride"); // the bride's family's look
+  await expect(page.locator("#rsvp").getByRole("link", { name: "Confirm your attendance" })).toHaveAttribute("href", "/w/ananya-weds-arjun/rsvp?side=bride"); // the bride's family's look
 
   await page.goto(`/w/gaurav-weds-karishma?invite=${tokenOf("The Guptas")}`);
   await expect(page.getByTestId("invite-bar")).toHaveCount(0);

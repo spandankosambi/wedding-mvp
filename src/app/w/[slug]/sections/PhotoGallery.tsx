@@ -5,8 +5,8 @@ import type { GalleryPhoto } from "@/db/schema";
 import { justify } from "@/lib/justify";
 
 // keep in step with .photo-rows in globals.css (the pre-measure fallback)
-const DESKTOP = { targetHeight: 260, gap: 16, mat: 20 };
-const PHONE = { targetHeight: 210, gap: 8, mat: 10 };
+const DESKTOP = { targetHeight: 260, gap: 14, mat: 12 };
+const PHONE = { targetHeight: 170, gap: 8, mat: 8 };
 
 /**
  * The couple's photos, in the order they set, laid out in justified rows:
@@ -75,7 +75,7 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
           and after the rows are planned (ScrollFx's fade-in state survives).
           Planned widths sum to the width, so each row wraps exactly where
           justify() ended it. */}
-      <div ref={box} className={sizes ? "photo-rows is-planned" : "photo-rows"} style={sizes ? { gap: opts.gap } : undefined}>
+      <div ref={box} className={sizes ? "photo-rows is-planned" : "photo-rows"} style={sizes ? { gap: opts.gap } : undefined} data-testid="photo-rows">
         {photos.map((p, i) => {
           const r = p.width / p.height;
           const h = sizes?.[i];

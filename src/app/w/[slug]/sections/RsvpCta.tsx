@@ -43,7 +43,7 @@ export function RsvpCta({
               className="reveal mt-10 inline-block px-10 py-4 text-sm uppercase tracking-[0.2em] transition-opacity hover:opacity-90"
               style={{ background: "var(--band-ink)", color: "var(--band-bg)", "--rd": "0.25s" } as React.CSSProperties}
             >
-              {invite.answered ? "See or change your RSVP" : "RSVP now"}
+              {invite.answered ? "See or change your RSVP" : "Confirm your attendance"} <span aria-hidden>→</span>
             </a>
           </>
         ) : open ? (
@@ -64,7 +64,7 @@ export function RsvpCta({
               className="reveal mt-10 inline-block px-10 py-4 text-sm uppercase tracking-[0.2em] transition-opacity hover:opacity-90"
               style={{ background: "var(--band-ink)", color: "var(--band-bg)", "--rd": "0.25s" } as React.CSSProperties}
             >
-              RSVP now
+              Confirm your attendance <span aria-hidden>→</span>
             </a>
           </>
         ) : (
@@ -78,9 +78,8 @@ export function RsvpCta({
           </>
         )}
         {contacts.length > 0 && (
-          <div className="reveal mx-auto mt-12 max-w-xl">
-            <p className="kicker" style={{ opacity: 0.7 }}>For RSVP</p>
-            <ContactList contacts={contacts} className="mt-3" />
+          <div className="reveal mx-auto mt-10 max-w-xl">
+            <ContactList contacts={contacts} />
           </div>
         )}
       </section>
