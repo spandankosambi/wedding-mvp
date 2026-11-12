@@ -148,6 +148,14 @@ describe("more design: borders, symbols, patterns, icons", () => {
     expect([iconFor("Haldi"), iconFor("Mehendi Night"), iconFor("Garba & Dandiya"), iconFor("Sangeet"), iconFor("Pheras"), iconFor("Reception"), iconFor("Ganesh Puja"), iconFor("Something else")])
       .toEqual(["haldi", "mehendi", "dandiya", "music", "fire", "glass", "diya", "kalash"]);
   });
+  it("a celebration's chosen icon wins over the one its name suggests", async () => {
+    const { iconOf } = await import("@/lib/invitation/decor");
+    expect(iconOf({ name: "Sangeet", icon: "drum" })).toBe("drum");
+    expect(iconOf({ name: "Sangeet", icon: null })).toBe("music");
+    expect(iconOf({ name: "Sangeet", icon: "not-an-icon" })).toBe("music");
+    const inv = buildInvitation(wedding, events.map((e, i) => (i ? e : { ...e, icon: "thali" })), o({}), "https://x.test/w/a");
+    expect(inv.back.events[0].icon).toBe("thali");
+  });
   it("renders every border, symbol and pattern", async () => {
     const { BORDER_STYLES, SYMBOLS, PATTERNS } = await import("@/lib/invitation/decor");
     const n = Math.max(BORDER_STYLES.length, SYMBOLS.length, PATTERNS.length);

@@ -7,7 +7,7 @@ import type { Style } from "@react-pdf/stylesheet";
 import type { Theme } from "@/themes/catalog";
 import type { Invitation, EventCard, InsertCard, Details, Line } from "./content";
 import { BLEED_MM, SAFE_MM, trimSize, type InvitationOptions } from "./options";
-import { backgroundPattern, borderBand, icon, iconFor, symbol, OM } from "./decor";
+import { backgroundPattern, borderBand, icon, symbol, OM } from "./decor";
 import {
   paletteFor, topMotif, dividerMotif, cornerMotif, toranMotif, archPath, crest, scriptRuns, ARCH_CROWN,
   type Motif, type Ink, type Palette,
@@ -327,7 +327,7 @@ function Front({ c: base, inv }: { c: Ctx; inv: Invitation }) {
 function EventBlock({ c, e, width }: { c: Ctx; e: EventCard; width: string }) {
   return (
     <View style={{ width, alignItems: "center", paddingHorizontal: 4 * c.s, marginBottom: 9 * c.s }} wrap={false}>
-      {c.o.icons && <Draw m={icon(iconFor(e.name))} width={15 * c.s} p={c.p} style={{ marginBottom: 2 * c.s }} />}
+      {c.o.icons && <Draw m={icon(e.icon)} width={15 * c.s} p={c.p} style={{ marginBottom: 2 * c.s }} />}
       <Tx style={{ fontWeight: 700, fontSize: 15 * c.s, lineHeight: 1.1 }}>{e.name}</Tx>
       {e.sideLabel && <Kicker c={c} size={5.6}>{e.sideLabel}</Kicker>}
       <Text style={{ fontSize: 9.5 * c.s, marginTop: 2 * c.s }}>{e.date} · {e.time}</Text>
@@ -338,38 +338,69 @@ function EventBlock({ c, e, width }: { c: Ctx; e: EventCard; width: string }) {
   );
 }
 
+/** "Mrs. Manisha Kosambi 9427702237" → the name, and the number on its own line. */
+function splitContact(line: string): { name: string; phone: string } {
+  const m = line.match(/(\+?\d[\d\s\-().]{5,}\d)\s*$/);
+  if (!m) return { name: line, phone: "" };
+  return { name: line.slice(0, m.index).replace(/[\s\-–:,]+$/, ""), phone: m[1] };
+}
+
+/**
+ * The foot of the back: a rule, then R.S.V.P. on the left, the QR in the
+ * middle and the compliments on the right — the same heading style and the
+ * columns centred on one another — and the closing line under a small rule.
+ * Each contact is a name with its number beneath, so nothing breaks mid-line.
+ */
 function DetailsBlock({ c, d, qr }: { c: Ctx; d: Details; qr: string | null }) {
   const hasRsvp = d.rsvp.length > 0 || !!d.replyBy, hasComp = d.compliments.length > 0;
-  const side = c.trim[0] >= 120 && (qr || (hasRsvp && hasComp)); // side by side when there's room
-  // the QR is narrow; the text columns share the rest
-  const textW = side ? (qr ? (hasRsvp && hasComp ? "38%" : "60%") : "50%") : "100%";
-  const col = (width: string) => ({ width, alignItems: "center" as const, paddingHorizontal: 3 * c.s, marginTop: 6 * c.s });
+  const cols = [hasRsvp, !!qr, hasComp].filter(Boolean).length;
+  const side = c.trim[0] >= 120 && cols > 1; // side by side when there's room
+  const qrW = "26%";
+  const textW = !side ? "100%" : qr ? (cols === 3 ? "37%" : "60%") : "50%";
+  const col = (width: string) => ({ width, alignItems: "center" as const, paddingHorizontal: 4 * c.s, marginTop: side ? 0 : 6 * c.s });
+  const head = { fontStyle: "italic" as const, fontSize: 8.6 * c.s, color: c.p.accent, marginBottom: 2.5 * c.s };
+  const contacts = d.rsvp.map(splitContact);
+  // two contacts and no other column: set them side by side
+  const pair = contacts.length === 2 && (!side || (!qr && !hasComp));
+  const person = (p: { name: string; phone: string }, i: number, stacked: boolean) => (
+    <View key={i} style={{ alignItems: "center", marginTop: stacked && i ? 3 * c.s : 0, paddingHorizontal: stacked ? 0 : 7 * c.s }}>
+      {p.name ? <Tx style={{ fontWeight: 600, fontSize: 8.8 * c.s }}>{p.name}</Tx> : null}
+      {p.phone ? <Text style={{ fontSize: 8.8 * c.s, letterSpacing: 0.3 }}>{keepNumbers(p.phone)}</Text> : null}
+    </View>
+  );
+  const body = cols > 0 && (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", alignItems: "center", width: "100%" }}>
+      {hasRsvp && (
+        <View style={col(textW)}>
+          <Text style={head}>R.S.V.P.</Text>
+          {pair
+            ? <View style={{ flexDirection: "row", justifyContent: "center" }}>{contacts.map((p, i) => person(p, i, false))}</View>
+            : contacts.map((p, i) => person(p, i, true))}
+          {d.replyBy && <Text style={{ fontStyle: "italic", fontSize: 8 * c.s, color: c.p.soft, marginTop: 2.5 * c.s }}>{d.replyBy}</Text>}
+        </View>
+      )}
+      {qr && (
+        <View style={col(side ? qrW : "100%")}>
+          <View style={{ backgroundColor: "#ffffff", padding: 2.5 * c.s, borderRadius: 2 }}>
+            <Image src={qr} style={{ width: 46 * c.s, height: 46 * c.s }} />
+          </View>
+          <Text style={{ fontStyle: "italic", fontSize: 7 * c.s, color: c.p.soft, marginTop: 2.5 * c.s }}>Scan to RSVP</Text>
+        </View>
+      )}
+      {hasComp && (
+        <View style={col(textW)}>
+          <Text style={head}>With best compliments from</Text>
+          {d.compliments.map((l, i) => <Tx key={i} style={{ fontWeight: i ? 400 : 600, fontSize: 8.8 * c.s }}>{l}</Tx>)}
+        </View>
+      )}
+    </View>
+  );
   return (
-    <View style={{ alignItems: "center", width: "100%" }}>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", alignItems: "flex-start", width: "100%" }}>
-        {hasRsvp && (
-          <View style={col(textW)}>
-            <Kicker c={c} size={6.6}>R.S.V.P.</Kicker>
-            {d.rsvp.map((l, i) => <Tx key={i} style={{ fontSize: 9 * c.s, marginTop: i ? 1 * c.s : 2 * c.s }}>{keepNumbers(l)}</Tx>)}
-            {d.replyBy && <Text style={{ fontStyle: "italic", fontSize: 8.5 * c.s, color: c.p.soft, marginTop: 2 * c.s }}>{d.replyBy}</Text>}
-          </View>
-        )}
-        {qr && (
-          <View style={col(side ? "24%" : "100%")}>
-            <View style={{ backgroundColor: "#ffffff", padding: 3 * c.s, borderRadius: 2 }}>
-              <Image src={qr} style={{ width: 52 * c.s, height: 52 * c.s }} />
-            </View>
-            <Text style={{ fontStyle: "italic", fontSize: 7.5 * c.s, color: c.p.soft, marginTop: 3 * c.s }}>Scan for the wedding website &amp; RSVP</Text>
-          </View>
-        )}
-        {hasComp && (
-          <View style={col(textW)}>
-            <Text style={{ fontStyle: "italic", fontSize: 9 * c.s, color: c.p.accent }}>With best compliments from</Text>
-            {d.compliments.map((l, i) => <Tx key={i} style={{ fontSize: 9 * c.s, marginTop: i ? 0 : 2 * c.s }}>{l}</Tx>)}
-          </View>
-        )}
-      </View>
-      {d.note && <Tx style={{ fontStyle: "italic", fontSize: 9.5 * c.s, marginTop: 8 * c.s, color: c.p.accent }}>{d.note}</Tx>}
+    <View style={{ alignItems: "center", width: "100%", marginTop: 4 * c.s }}>
+      {cols > 0 && <View style={{ width: "70%", height: 0.6, backgroundColor: c.p.hair, marginBottom: 7 * c.s }} />}
+      {body}
+      {d.note && cols > 0 && <View style={{ width: 24 * c.s, height: 0.6, backgroundColor: c.p.accent, marginTop: 7 * c.s }} />}
+      {d.note && <Tx style={{ fontStyle: "italic", fontSize: 9.5 * c.s, color: c.p.accent, marginTop: 5 * c.s }}>{d.note}</Tx>}
     </View>
   );
 }
@@ -416,7 +447,7 @@ function Insert({ c: base, card }: { c: Ctx; card: InsertCard }) {
       <Tx style={{ fontWeight: 600, fontSize: 11 * c.s }}>{card.hosts}</Tx>
       <Tx style={{ fontStyle: "italic", fontSize: 10.5 * c.s, color: c.p.soft, marginTop: 2 * c.s }}>{card.request}</Tx>
       <Draw m={top} width={66 * c.s} p={c.p} style={{ marginVertical: 5 * c.s }} />
-      {o.icons && <Draw m={icon(iconFor(e.name))} width={24 * c.s} p={c.p} style={{ marginBottom: 4 * c.s }} />}
+      {o.icons && <Draw m={icon(e.icon)} width={24 * c.s} p={c.p} style={{ marginBottom: 4 * c.s }} />}
       <Tx style={o.nameFont === "script"
         ? { fontFamily: "GreatVibes", fontWeight: 400, fontSize: nameSize(e.name, 34) * c.s, lineHeight: 1.15, color: c.p.accent }
         : { fontWeight: 700, fontSize: nameSize(e.name, 28) * c.s, lineHeight: 1.05 }}>{e.name}</Tx>

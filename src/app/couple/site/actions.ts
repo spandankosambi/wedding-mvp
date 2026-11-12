@@ -123,6 +123,7 @@ export async function saveEvent(formData: FormData) {
     isPublished: formData.get("isPublished") === "on",
     // in a family's editor an event is common, or that family's own
     side: str(formData, "side") === "both" ? "both" : ctx.family,
+    icon: str(formData, "icon"),
   });
   done(ctx, id ? `event-${id}` : "events", r.ok ? undefined : r.error);
 }

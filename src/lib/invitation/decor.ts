@@ -106,6 +106,10 @@ const ICON_SHAPES: Record<IconId, Shape[]> = {
   ],
 };
 
+/** The family's pick for a celebration, or the one its name suggests. */
+export const iconOf = (e: { name: string; icon?: string | null }): IconId =>
+  (ICONS as readonly string[]).includes(e.icon ?? "") ? (e.icon as IconId) : iconFor(e.name);
+
 export const icon = (id: IconId): Motif => ({ w: 24, h: 24, shapes: ICON_SHAPES[id] });
 
 /** Which icon suits a celebration, from its name. */

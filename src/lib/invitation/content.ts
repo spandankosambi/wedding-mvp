@@ -1,3 +1,4 @@
+import { iconOf, type IconId } from "./decor";
 import { eventForSide, type Side } from "@/lib/sides";
 import { fmtEventTime, fmtWeddingDate } from "@/lib/format";
 import { defaultMonogram, type InvitationOptions } from "./options";
@@ -13,7 +14,7 @@ import { defaultMonogram, type InvitationOptions } from "./options";
 
 export type CardEvent = {
   id: string; name: string; side: Side; startsAt: Date; venueName: string; address: string;
-  dressCode: string | null; isPublished: boolean; sortOrder: number;
+  dressCode: string | null; isPublished: boolean; sortOrder: number; icon?: string | null;
 };
 export type CardWedding = {
   brideName: string; groomName: string; weddingDate: Date; city: string | null; rsvpDeadline: Date | null;
@@ -44,7 +45,7 @@ export type FrontCard = {
 };
 
 export type EventCard = {
-  id: string; name: string; sideLabel: string | null;
+  id: string; name: string; sideLabel: string | null; icon: IconId;
   date: string; time: string; venue: string; address: string; dressCode: string | null;
 };
 
@@ -125,7 +126,7 @@ export function buildInvitation(w: CardWedding, all: CardEvent[], o: InvitationO
   };
 
   const events: EventCard[] = eventsFor(all, o).map((e) => ({
-    id: e.id, name: e.name,
+    id: e.id, name: e.name, icon: iconOf(e),
     // only an event the couple picked from the other side needs saying whose it is
     sideLabel: e.side === "both" || e.side === o.version ? null : e.side === "bride" ? "Bride's side" : "Groom's side",
     date: fmtCardDate(e.startsAt), time: fmtEventTime(e.startsAt),

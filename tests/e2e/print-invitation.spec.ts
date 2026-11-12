@@ -111,11 +111,12 @@ test("setup and design — with the live preview on every page — then download
     buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64"),
   });
   await expect(dialog.getByRole("img", { name: "Your photo" })).toBeVisible();
-  // more to choose: a border style, a symbol at the top, a background pattern, celebration icons
+  // more to choose: a border style, a symbol at the top, a background pattern
   await dialog.getByRole("radiogroup", { name: "Border" }).getByRole("radio", { name: "Paisley" }).click();
   await dialog.getByRole("radiogroup", { name: "Symbol at the top" }).getByRole("radio", { name: "Shree Ganesh" }).click();
   await dialog.getByRole("radiogroup", { name: "Background pattern" }).getByRole("radio", { name: "Mandala" }).click();
-  await dialog.getByText("Celebration icons").click();
+  // celebration icons follow the one tick under Design touches
+  await expect(dialog.getByText(/Celebration icons are off/)).toBeVisible();
   await expect(dialog.getByRole("radio", { name: "Paisley" })).toHaveAttribute("aria-checked", "true");
   // dress codes sit with the QR code now
   await expect(dialog.getByText("QR code to the wedding website")).toBeVisible();

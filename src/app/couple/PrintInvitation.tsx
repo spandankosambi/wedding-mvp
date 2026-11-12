@@ -26,6 +26,8 @@ type Props = {
   siteEditorHref: string;
   /** where this family's wording is edited (Edit your site) */
   wordingHref: string;
+  /** celebration icons: the family's Design touches tick */
+  icons: boolean;
   /** this family's wording, from its site: printed as is */
   wording: CardWording;
   theme: Theme;
@@ -323,7 +325,7 @@ export function PrintInvitation(props: Props) {
     };
   }, [form, customW, customH]);
   // a change to the site's wording redraws the preview too
-  const optionsKey = useMemo(() => JSON.stringify({ options, wording: props.wording }), [options, props.wording]);
+  const optionsKey = useMemo(() => JSON.stringify({ options, wording: props.wording, icons: props.icons }), [options, props.wording, props.icons]);
 
   const chosen = props.events.filter((e) => form.eventIds.includes(e.id));
   const details = form.qr || !!props.wording.rsvpContacts || !!props.wording.compliments
@@ -705,7 +707,9 @@ export function PrintInvitation(props: Props) {
                   <legend className={label}>Also on the card</legend>
                   <div className="mt-2 space-y-2">
                     <Check checked={form.qr} onChange={(v) => set("qr", v)}>QR code to the wedding website <span className="text-xs text-neutral-500">— on the back, for guests to RSVP</span></Check>
-                    <Check checked={form.icons} onChange={(v) => set("icons", v)}>Celebration icons <span className="text-xs text-neutral-500">— a small drawing beside each event (haldi bowl, mehendi, dhol…)</span></Check>
+                    <p className="text-xs text-neutral-500">
+                      Celebration icons are {props.icons ? "on" : "off"} — <a href={props.wordingHref.replace("#wording", "#decor")} className="underline">change under Design touches</a>, and pick each event&apos;s icon under Celebrations.
+                    </p>
                     <Check checked={form.dressCode} onChange={(v) => set("dressCode", v)}>Dress codes <span className="text-xs text-neutral-500">— under each celebration</span></Check>
                     {props.hasDeadline && <Check checked={form.replyBy} onChange={(v) => set("replyBy", v)}>“Kindly reply by” date</Check>}
                   </div>

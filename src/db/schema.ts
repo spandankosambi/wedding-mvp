@@ -108,6 +108,8 @@ export const events = pgTable("events", {
   /** "both" = common to bride's and groom's families; otherwise this side's
       own version (e.g. the bride's Haldi at her home), invited by side. */
   side: sideEnum("side").notNull().default("both"),
+  /** the celebration's icon (lib/invitation/decor ICONS); unset = picked from its name */
+  icon: text("icon"),
 });
 
 export const families = pgTable("families", {

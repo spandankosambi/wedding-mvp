@@ -1,3 +1,4 @@
+import { decorOf } from "@/lib/site-decor";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
@@ -98,6 +99,7 @@ export default async function FamilySection({
             brideParents={wedding.brideParents}
             groomParents={wedding.groomParents}
             wording={wordingOf(look)}
+            icons={decorOf(look).icons}
             wordingHref={`/couple/site?${admin ? `wedding=${weddingId}&` : ""}family=${family}#wording`}
             hasDeadline={!!look.rsvpDeadline}
             events={evs.filter((e) => eventForSide(e.side, family)).map((e) => ({ id: e.id, label: eventLabel(e), side: e.side, isPublished: e.isPublished }))}

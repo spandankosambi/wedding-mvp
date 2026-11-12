@@ -1,12 +1,13 @@
 import { SectionHeader } from "./SectionHeader";
 import { fmtEventDate, fmtEventTime } from "@/lib/format";
 import { sideLabel, type Side } from "@/lib/sides";
-import { icon, iconFor } from "@/lib/invitation/decor";
+import { icon, iconOf } from "@/lib/invitation/decor";
 import { MotifSvg } from "@/components/MotifSvg";
 
 type EventRow = {
   id: string;
   name: string;
+  icon?: string | null;
   startsAt: Date;
   venueName: string;
   address: string;
@@ -33,7 +34,7 @@ export function EventTimeline({ theme: _theme, events, no = "02", icons = false 
               style={{ color: "var(--ink-soft)", opacity: icons ? 1 : 0.55 }}
             >
               {icons
-                ? <span data-testid="event-icon"><MotifSvg m={icon(iconFor(e.name))} className="event-icon" /></span>
+                ? <span data-testid="event-icon"><MotifSvg m={icon(iconOf(e))} className="event-icon" /></span>
                 : String(i + 1).padStart(2, "0")}
             </span>
             <div className="md:col-span-6">

@@ -3,6 +3,7 @@ import { expandMapLink } from "@/lib/maplinks";
 import { getLook, saveTravelLook, updateLook, type FamilySide, type LookPatch } from "@/lib/looks";
 import { contactsOf, MAX_CONTACTS } from "@/lib/contacts";
 import { decorSchema } from "@/lib/site-decor";
+import { ICONS } from "@/lib/invitation/decor";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events, families, eventInvites, rsvps, type TravelInfo } from "@/db/schema";
@@ -75,6 +76,8 @@ export const eventSchema = z.object({
   description: optional(400),
   isPublished: z.boolean().default(true),
   side: z.enum(["bride", "groom", "both"]).default("both"),
+  /** "" / unset = picked from the name */
+  icon: z.union([z.enum(ICONS), z.literal("")]).optional().transform((v) => v || null),
 });
 
 export const MAX_STAYS = 12;

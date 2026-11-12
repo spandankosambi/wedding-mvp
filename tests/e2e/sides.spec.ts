@@ -157,6 +157,21 @@ test("design touches: an opening screen, what falls, decorations and celebration
   await expect(page.getByTestId("site-corner")).toHaveCount(2); // the toran takes the top two corners
   await expect(page.locator("[data-falling=sparkles]")).toBeAttached();
   await expect(page.getByTestId("event-icon").first()).toBeAttached();
+  // each event's icon can be chosen under Celebrations: the Sangeet gets the dhol
+  await page.goto("/couple/site?family=groom");
+  const sangeet = page.locator("details", { has: page.getByText("Sangeet", { exact: true }) }).first();
+  await sangeet.locator("summary").click();
+  const icons = sangeet.getByRole("radiogroup", { name: "Icon for Sangeet" });
+  await expect(icons.getByRole("radio", { name: "Automatic (Music)" })).toHaveAttribute("aria-checked", "true");
+  await icons.getByRole("radio", { name: "Dhol" }).click();
+  await sangeet.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Saved. Your site is up to date.")).toBeVisible();
+  await expect(sangeet.locator("input[name=icon]")).toHaveValue("drum");
+  // the print dialog says the cards carry them too
+  await page.goto("/couple/groom");
+  await page.getByRole("button", { name: "Print invitation cards" }).click();
+  await page.getByRole("button", { name: "Next: design →" }).click();
+  await expect(page.getByText(/Celebration icons are on/)).toBeVisible();
   // opened once per visit
   await page.reload();
   await expect(page.getByTestId("reveal")).toHaveCount(0);

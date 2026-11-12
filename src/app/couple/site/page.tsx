@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { EventSideField } from "./EventSideField";
+import { EventIconField } from "./EventIconField";
 import { asFamilySide, getLooks, hasPart, namesFor, otherSide, samePart, sideName, type FamilySide, type Look, type LookPart } from "@/lib/looks";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
@@ -159,7 +160,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                 <div className="mt-2 space-y-2 text-sm">
                   <label className="flex items-start gap-2"><input type="checkbox" name="toran" defaultChecked={decor.toran} className="mt-0.5 h-4 w-4" /><span>Toran across the top <span className="text-xs text-neutral-500">— mango leaves and marigolds, as on the card</span></span></label>
                   <label className="flex items-start gap-2"><input type="checkbox" name="corners" defaultChecked={decor.corners} className="mt-0.5 h-4 w-4" /><span>Corner motifs <span className="text-xs text-neutral-500">— your theme&apos;s corners round the opening screen</span></span></label>
-                  <label className="flex items-start gap-2"><input type="checkbox" name="icons" defaultChecked={decor.icons} className="mt-0.5 h-4 w-4" /><span>Celebration icons <span className="text-xs text-neutral-500">— a small drawing beside each event (haldi bowl, mehendi, dhol, sacred fire…)</span></span></label>
+                  <label className="flex items-start gap-2"><input type="checkbox" name="icons" defaultChecked={decor.icons} className="mt-0.5 h-4 w-4" /><span>Celebration icons <span className="text-xs text-neutral-500">— a small drawing beside each event, on your site and your printed cards. Choose each event&apos;s icon under <a href="#events" className="underline">Celebrations</a>.</span></span></label>
                 </div>
               </fieldset>
               <SaveButton />
@@ -278,6 +279,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                         <Field label="Dress code"><input name="dressCode" defaultValue={e.dressCode ?? ""} maxLength={80} placeholder="Yellows / Traditional / Cocktail" className="portal-input" /></Field>
                         <Field label="A line about it" className="md:col-span-2"><input name="description" defaultValue={e.description ?? ""} maxLength={400} className="portal-input" /></Field>
                         <EventSideField initial={e.side} eventName={e.name} family={family} />
+                        <EventIconField initial={e.icon} eventName={e.name} enabled={decor.icons} />
                         <label className="flex items-center gap-2 text-sm md:col-span-2">
                           <input type="checkbox" name="isPublished" defaultChecked={e.isPublished} className="h-4 w-4" />
                           Show this event on the site and RSVP form

@@ -7,6 +7,7 @@ import { invitationSchema } from "@/lib/invitation/options";
 import { buildInvitation, fileName } from "@/lib/invitation/content";
 import { renderInvitationPdf } from "@/lib/invitation/pdf";
 import { getLook, withLook, wordingOf } from "@/lib/looks";
+import { decorOf } from "@/lib/site-decor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,6 +33,7 @@ export async function POST(req: Request) {
   const look = await getLook(weddingId, parsed.data.version);
   const o = {
     ...parsed.data,
+    icons: decorOf(look).icons, // one tick under Design touches, for the site and the cards
     invocation: look.invocation ?? "", shloka: look.shloka ?? "", note: look.closingLine ?? "",
     rsvpBride: wordingOf(look).rsvpContacts ?? "", rsvpGroom: wordingOf(look).rsvpContacts ?? "",
     complimentsBride: look.compliments ?? "", complimentsGroom: look.compliments ?? "",
