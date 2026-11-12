@@ -131,10 +131,11 @@ export default async function WeddingPage({
       <RsvpCta slug={wedding.slug} side={side} open={window.open} deadline={wedding.rsvpDeadline} contacts={wedding.contacts} invite={invite} />
       <Closing theme={wedding.theme} closingLine={wedding.closingLine} compliments={wordingLines(wedding.compliments)} divider={wedding.decor.divider} />
       {/* room under the footer so the invitation bar never covers it */}
-      <footer className="hairline-t px-6 py-10 text-center" style={invite ? { paddingBottom: "7rem" } : undefined}>
+      <footer className="site-foot hairline-t px-6 py-8 text-center md:py-10" style={invite ? { paddingBottom: "6rem" } : undefined}>
         <p className="kicker">
-          {namesFor(wedding, side).couple} · {fmtWeddingDate(wedding.weddingDate)}
-          {wedding.hashtag ? ` · #${wedding.hashtag}` : ""}
+          <span>{namesFor(wedding, side).couple}</span>
+          <span>{fmtWeddingDate(wedding.weddingDate)}</span>
+          {wedding.hashtag && <span>#{wedding.hashtag}</span>}
         </p>
       </footer>
       {invite && <InviteBar familyName={invite.familyName} href={invite.href} answered={invite.answered} />}

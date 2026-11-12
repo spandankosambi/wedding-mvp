@@ -19,18 +19,18 @@ export function RsvpCta({
       <div className="scallop" aria-hidden />
       <section
         id="rsvp"
-        className="px-6 py-24 text-center md:py-32"
+        className="px-5 py-16 text-center md:px-6 md:py-32"
         style={{ background: "var(--band-bg)", color: "var(--band-ink)" }}
       >
         <p className="kicker reveal foil">RSVP</p>
         {invite ? (
           // their personal link works whatever the open-RSVP settings say
           <>
-            <h2 className="font-display reveal mx-auto mt-6 max-w-3xl text-4xl tracking-tight md:text-6xl">
+            <h2 className="font-display reveal mx-auto mt-6 max-w-3xl text-3xl tracking-tight sm:text-4xl md:text-6xl">
               Will {invite.familyName} be joining us?
             </h2>
             <p
-              className="reveal mx-auto mt-8 max-w-xl text-sm leading-relaxed opacity-75"
+              className="reveal mx-auto mt-5 max-w-xl text-sm leading-relaxed opacity-75 md:mt-8"
               style={{ "--rd": "0.15s" } as React.CSSProperties}
             >
               {invite.answered
@@ -40,7 +40,7 @@ export function RsvpCta({
             </p>
             <a
               href={invite.href}
-              className="reveal mt-10 inline-block px-10 py-4 text-sm uppercase tracking-[0.2em] transition-opacity hover:opacity-90"
+              className="rsvp-cta reveal"
               style={{ background: "var(--band-ink)", color: "var(--band-bg)", "--rd": "0.25s" } as React.CSSProperties}
             >
               {invite.answered ? "See or change your RSVP" : "Confirm your attendance"} <span aria-hidden>→</span>
@@ -48,11 +48,11 @@ export function RsvpCta({
           </>
         ) : open ? (
           <>
-            <h2 className="font-display reveal mx-auto mt-6 max-w-3xl text-4xl tracking-tight md:text-6xl">
+            <h2 className="font-display reveal mx-auto mt-6 max-w-3xl text-3xl tracking-tight sm:text-4xl md:text-6xl">
               Will you be joining us?
             </h2>
             <p
-              className="reveal mx-auto mt-8 max-w-xl text-sm leading-relaxed opacity-75"
+              className="reveal mx-auto mt-5 max-w-xl text-sm leading-relaxed opacity-75 md:mt-8"
               style={{ "--rd": "0.15s" } as React.CSSProperties}
             >
               Tell us which celebrations you can make and how many of you are coming.
@@ -61,7 +61,7 @@ export function RsvpCta({
             </p>
             <a
               href={`/w/${slug}/rsvp${side ? `?side=${side}` : ""}`}
-              className="reveal mt-10 inline-block px-10 py-4 text-sm uppercase tracking-[0.2em] transition-opacity hover:opacity-90"
+              className="rsvp-cta reveal"
               style={{ background: "var(--band-ink)", color: "var(--band-bg)", "--rd": "0.25s" } as React.CSSProperties}
             >
               Confirm your attendance <span aria-hidden>→</span>
@@ -69,16 +69,16 @@ export function RsvpCta({
           </>
         ) : (
           <>
-            <h2 className="font-display reveal mx-auto mt-6 max-w-3xl text-4xl tracking-tight md:text-6xl">
+            <h2 className="font-display reveal mx-auto mt-6 max-w-3xl text-3xl tracking-tight sm:text-4xl md:text-6xl">
               RSVPs are closed — but we&apos;d still love to hear from you.
             </h2>
-            <p className="reveal mx-auto mt-8 max-w-xl text-sm leading-relaxed opacity-75">
+            <p className="reveal mx-auto mt-5 max-w-xl text-sm leading-relaxed opacity-75 md:mt-8">
               {contacts.length ? "Message the family below and we'll make room." : "Reach out to the family directly and we'll make room."}
             </p>
           </>
         )}
         {contacts.length > 0 && (
-          <div className="reveal mx-auto mt-10 max-w-xl">
+          <div className="reveal mx-auto mt-8 max-w-xl md:mt-10">
             <ContactList contacts={contacts} />
           </div>
         )}

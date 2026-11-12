@@ -19,9 +19,9 @@ function PhoneIcon() {
 export function ContactList({ contacts, className = "" }: { contacts: RsvpPerson[]; className?: string }) {
   if (!contacts.length) return null;
   return (
-    <ul className={`flex flex-wrap justify-center gap-x-10 gap-y-3 ${className}`} data-testid="rsvp-contacts">
+    <ul className={`flex flex-wrap justify-center gap-x-8 gap-y-4 md:gap-x-10 ${className}`} data-testid="rsvp-contacts">
       {contacts.map((c, i) => (
-        <li key={i} className="text-base">
+        <li key={i} className="whitespace-nowrap text-base">
           {c.name && <span className="block text-sm opacity-75">{c.name}</span>}
           <a
             href={contactHref(c)}

@@ -1223,3 +1223,27 @@ html.fx .rule-grow.is-in::before { transform: scaleX(1); }
   .petal-sparkles { animation: none; }
 }
 .reveal-doors .reveal-centre { background: var(--surface); border-radius: 1.25rem; padding: 1.75rem 2rem; }
+
+/* ---- the RSVP button and the page's last lines, sized for phones ---- */
+.rsvp-cta {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.6em;
+  margin-top: 2rem; padding: 1rem 2.5rem; max-width: 100%;
+  background: var(--band-ink); color: var(--band-bg);
+  font-size: 0.875rem; letter-spacing: 0.2em; text-transform: uppercase; white-space: nowrap;
+  transition: opacity 0.2s ease;
+}
+.rsvp-cta:hover { opacity: 0.9; }
+@media (min-width: 768px) { .rsvp-cta { margin-top: 2.5rem; } }
+@media (max-width: 480px) {
+  /* one line, arrow beside the words, a comfortable thumb target */
+  .rsvp-cta { width: 100%; padding: 1rem 0.75rem; font-size: 0.8125rem; letter-spacing: 0.12em; }
+}
+@media (max-width: 350px) { .rsvp-cta { font-size: 0.75rem; letter-spacing: 0.08em; } }
+
+/* footer: names · date · hashtag on one line; stacked on a phone */
+.site-foot .kicker span + span::before { content: "·"; margin-inline: 0.9em; }
+@media (max-width: 640px) {
+  .site-foot .kicker { letter-spacing: 0.2em; line-height: 2; }
+  .site-foot .kicker span { display: block; overflow-wrap: anywhere; }
+  .site-foot .kicker span + span::before { content: none; }
+}
