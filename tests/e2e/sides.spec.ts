@@ -171,7 +171,12 @@ test("design touches: an opening screen, what falls, decorations and celebration
   await page.goto("/couple/groom");
   await page.getByRole("button", { name: "Print invitation cards" }).click();
   await page.getByRole("button", { name: "Next: design →" }).click();
-  await expect(page.getByText(/Celebration icons are on/)).toBeVisible();
+  // …and its own tick leaves them off the printed cards only
+  const cardIcons = page.getByRole("dialog").getByRole("checkbox", { name: /Celebration icons/ });
+  await expect(cardIcons).toBeChecked();
+  await cardIcons.uncheck();
+  await page.goto("/w/gaurav-weds-karishma?side=groom");
+  await expect(page.getByTestId("event-icon").first()).toBeAttached(); // the website keeps them
   // opened once per visit
   await page.reload();
   await expect(page.getByTestId("reveal")).toHaveCount(0);

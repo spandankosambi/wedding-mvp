@@ -57,7 +57,7 @@ function initial(p: Props): Form {
     version: p.family, size: "5x7", orientation: "portrait", eventLayout: "together",
     eventIds: defaultEvents(p.events, p.family), output: "printer", cropMarks: false, colours: "theme",
     qr: true, dressCode: true, replyBy: p.hasDeadline,
-    frame: "classic", toran: false, patternBorder: false, borderStyle: "diamond", pattern: "none", symbol: "motif", icons: false, monogram: false, monogramText: "", monogramStyle: "circle",
+    frame: "classic", toran: false, patternBorder: false, borderStyle: "diamond", pattern: "none", symbol: "motif", icons: false, cardIcons: true, monogram: false, monogramText: "", monogramStyle: "circle",
     fill: "classic", nameFont: "serif", photo: null, photoPlace: "front", photoShape: "arch",
     customW: "", customH: "", unit: "in",
   };
@@ -95,7 +95,7 @@ const legacyKey = (id: string) => `print-invitation:${id}`;
     whose card it is or its events (the wording has its own "Same as" on the site). */
 const SHARED_KEYS = [
   "size", "orientation", "eventLayout", "output", "cropMarks", "colours", "qr", "dressCode", "replyBy",
-  "frame", "toran", "patternBorder", "borderStyle", "pattern", "symbol", "icons", "monogram", "monogramStyle", "fill", "nameFont", "photo", "photoPlace", "photoShape", "customW", "customH", "unit",
+  "frame", "toran", "patternBorder", "borderStyle", "pattern", "symbol", "icons", "cardIcons", "monogram", "monogramStyle", "fill", "nameFont", "photo", "photoPlace", "photoShape", "customW", "customH", "unit",
 ] as const;
 const readSaved = (key: string): Record<string, unknown> | null => {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; }
@@ -707,9 +707,13 @@ export function PrintInvitation(props: Props) {
                   <legend className={label}>Also on the card</legend>
                   <div className="mt-2 space-y-2">
                     <Check checked={form.qr} onChange={(v) => set("qr", v)}>QR code to the wedding website <span className="text-xs text-neutral-500">— on the back, for guests to RSVP</span></Check>
-                    <p className="text-xs text-neutral-500">
-                      Celebration icons are {props.icons ? "on" : "off"} — <a href={props.wordingHref.replace("#wording", "#decor")} className="underline">change under Design touches</a>, and pick each event&apos;s icon under Celebrations.
-                    </p>
+                    {props.icons ? (
+                      <Check checked={form.cardIcons} onChange={(v) => set("cardIcons", v)}>Celebration icons <span className="text-xs text-neutral-500">— beside each event. Unticking removes them from the printed cards only, not your website.</span></Check>
+                    ) : (
+                      <p className="text-xs text-neutral-500">
+                        Celebration icons are off — <a href={props.wordingHref.replace("#wording", "#decor")} className="underline">turn them on under Design touches</a> to add them to your site and cards.
+                      </p>
+                    )}
                     <Check checked={form.dressCode} onChange={(v) => set("dressCode", v)}>Dress codes <span className="text-xs text-neutral-500">— under each celebration</span></Check>
                     {props.hasDeadline && <Check checked={form.replyBy} onChange={(v) => set("replyBy", v)}>“Kindly reply by” date</Check>}
                   </div>

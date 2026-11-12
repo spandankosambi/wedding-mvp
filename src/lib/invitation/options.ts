@@ -95,6 +95,8 @@ export const invitationSchema = z.object({
   symbol: z.enum(SYMBOLS).default("motif"),
   /** a small line icon beside each celebration */
   icons: z.boolean().default(false),
+  /** the print dialog's own tick: leave icons off the cards while the site keeps them */
+  cardIcons: z.boolean().default(true),
   monogram: z.boolean().default(false),
   /** the crest's letters, e.g. "S | P" */
   monogramText: z.string().trim().max(9).default(""),

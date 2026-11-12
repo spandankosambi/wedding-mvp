@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   const look = await getLook(weddingId, parsed.data.version);
   const o = {
     ...parsed.data,
-    icons: decorOf(look).icons, // one tick under Design touches, for the site and the cards
+    icons: decorOf(look).icons && parsed.data.cardIcons, // on under Design touches, unless left off the cards
     invocation: look.invocation ?? "", shloka: look.shloka ?? "", note: look.closingLine ?? "",
     rsvpBride: wordingOf(look).rsvpContacts ?? "", rsvpGroom: wordingOf(look).rsvpContacts ?? "",
     complimentsBride: look.compliments ?? "", complimentsGroom: look.compliments ?? "",
