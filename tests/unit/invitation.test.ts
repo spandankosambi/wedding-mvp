@@ -156,6 +156,22 @@ describe("more design: borders, symbols, patterns, icons", () => {
     const inv = buildInvitation(wedding, events.map((e, i) => (i ? e : { ...e, icon: "thali" })), o({}), "https://x.test/w/a");
     expect(inv.back.events[0].icon).toBe("thali");
   });
+  it("a family's own icon is drawn on the card", async () => {
+    const { ICON_PX, maskFromPixels, maskCoverage } = await import("@/lib/icon-mask");
+    // a black square on white paper: the paper drops out, the square stays
+    const px = new Uint8ClampedArray(ICON_PX * ICON_PX * 4).fill(255);
+    for (let y = 30; y < 60; y++) for (let x = 30; x < 60; x++) px.set([0, 0, 0, 255], (y * ICON_PX + x) * 4);
+    const m = maskFromPixels(px);
+    expect(m[0]).toBe(0);
+    expect(m[40 * ICON_PX + 40]).toBe(255);
+    expect(maskCoverage(m)).toBeCloseTo(900 / (ICON_PX * ICON_PX), 2);
+    const own = events.map((e, i) => (i ? e : { ...e, icon: "custom", iconImage: Buffer.from(m).toString("base64") }));
+    const opts = o({ icons: true });
+    const inv = buildInvitation(wedding, own, opts, "https://x.test/w/a");
+    expect(inv.back.events[0].iconImage).toBeTruthy();
+    expect(inv.back.events[1].iconImage).toBeNull();
+    expect((await renderInvitationPdf(inv, opts, "raj-mahal")).subarray(0, 4).toString()).toBe("%PDF");
+  }, 60_000);
   it("renders every border, symbol and pattern", async () => {
     const { BORDER_STYLES, SYMBOLS, PATTERNS } = await import("@/lib/invitation/decor");
     const n = Math.max(BORDER_STYLES.length, SYMBOLS.length, PATTERNS.length);

@@ -31,7 +31,7 @@ export default async function FamilySection({
   searchParams,
 }: {
   params: Promise<{ family: string }>;
-  searchParams: Promise<{ wedding?: string; saved?: string; error?: string }>;
+  searchParams: Promise<{ wedding?: string; saved?: string; error?: string; print?: string }>;
 }) {
   const family = asFamilySide((await params).family);
   if (!family) notFound();
@@ -59,14 +59,10 @@ export default async function FamilySection({
 
   return (
     <main className="portal-page">
-      <PortalNav names={coupleNames} current={family} weddingId={weddingId} admin={admin} />
+      <PortalNav names={coupleNames} current={family} page={sp.print ? "print" : "overview"} weddingId={weddingId} admin={admin} />
       <div className="portal-shell">
       <header className="mb-6">
-        <p className="portal-eyebrow">
-          <Link href={`/couple${admin ? `?wedding=${weddingId}` : ""}`} className="hover:text-stone-950">Dashboard</Link>
-          <span className="mx-1 text-stone-300">/</span> {sideName(family)}
-        </p>
-        <h1 className="portal-heading mt-2">{sideName(family)}</h1>
+        <h1 className="portal-heading">{sideName(family)}</h1>
         <p className="portal-subheading mt-3">
           The {who}&apos;s side&apos;s own site, guests and printed cards — in the{" "}
           <span className="font-medium text-neutral-700">{meta.label}</span> look.
@@ -100,6 +96,7 @@ export default async function FamilySection({
             groomParents={wedding.groomParents}
             wording={wordingOf(look)}
             icons={decorOf(look).icons}
+            autoOpen={!!sp.print}
             wordingHref={`/couple/site?${admin ? `wedding=${weddingId}&` : ""}family=${family}#wording`}
             hasDeadline={!!look.rsvpDeadline}
             events={evs.filter((e) => eventForSide(e.side, family)).map((e) => ({ id: e.id, label: eventLabel(e), side: e.side, isPublished: e.isPublished }))}

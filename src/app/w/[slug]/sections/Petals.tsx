@@ -24,7 +24,7 @@ const SHAPES: Record<Exclude<Falling, "none">, React.ReactNode> = {
   marigold: (
     <>
       {[0, 1, 2, 3, 4, 5, 6, 7].map((k) => (
-        <circle key={k} cx={10 + Math.cos((k / 8) * Math.PI * 2) * 5.2} cy={10 + Math.sin((k / 8) * Math.PI * 2) * 5.2} r="3.6" />
+        <circle key={k} cx={(10 + Math.cos((k / 8) * Math.PI * 2) * 5.2).toFixed(2)} cy={(10 + Math.sin((k / 8) * Math.PI * 2) * 5.2).toFixed(2)} r="3.6" />
       ))}
       <circle cx="10" cy="10" r="3.4" opacity="0.6" />
     </>

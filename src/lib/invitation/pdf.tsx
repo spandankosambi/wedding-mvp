@@ -1,3 +1,4 @@
+import { iconPng } from "@/lib/icon-png";
 import path from "node:path";
 import QRCode from "qrcode";
 import {
@@ -7,7 +8,7 @@ import type { Style } from "@react-pdf/stylesheet";
 import type { Theme } from "@/themes/catalog";
 import type { Invitation, EventCard, InsertCard, Details, Line } from "./content";
 import { BLEED_MM, SAFE_MM, trimSize, type InvitationOptions } from "./options";
-import { backgroundPattern, borderBand, icon, symbol, OM } from "./decor";
+import { backgroundPattern, borderBand, icon, symbol, isGlyph, SYMBOL_GLYPHS } from "./decor";
 import {
   paletteFor, topMotif, dividerMotif, cornerMotif, toranMotif, archPath, crest, scriptRuns, ARCH_CROWN,
   type Motif, type Ink, type Palette,
@@ -37,6 +38,9 @@ function registerFonts() {
       { src: f("cinzel-latin-600-normal.woff"), fontWeight: 600 },
     ],
   });
+  // single-glyph symbols: Bismillah (Arabic) and Ik Onkar (Gurmukhi)
+  Font.register({ family: "Amiri", src: f("amiri-arabic-400-normal.woff") });
+  Font.register({ family: "Gurmukhi", src: f("noto-serif-gurmukhi-gurmukhi-500-normal.woff") });
   // Devanagari (Hindi, Marathi, Sanskrit): one face, answering every weight
   const deva = f("tiro-devanagari-sanskrit-devanagari-400-normal.woff");
   const devaIt = f("tiro-devanagari-sanskrit-devanagari-400-italic.woff");
@@ -298,8 +302,9 @@ function Front({ c: base, inv }: { c: Ctx; inv: Invitation }) {
 
   return (
     <Card c={base}>
-      {o.symbol === "om" && <Text style={{ fontFamily: "Tiro", fontSize: 26 * c.s, color: c.p.accent, lineHeight: 1.1, marginBottom: 2 * c.s }}>{OM}</Text>}
-      {o.symbol !== "motif" && o.symbol !== "om" && <Draw m={symbol(o.symbol)} width={30 * c.s} p={c.p} style={{ marginBottom: 4 * c.s }} />}
+      {o.symbol !== "motif" && (isGlyph(o.symbol)
+        ? <Text style={{ fontFamily: SYMBOL_GLYPHS[o.symbol].font, fontSize: (o.symbol === "bismillah" ? 15 : 26) * c.s, color: c.p.accent, lineHeight: o.symbol === "bismillah" ? 1.5 : 1.1, marginBottom: 2 * c.s }}>{SYMBOL_GLYPHS[o.symbol].text}</Text>
+        : <Draw m={symbol(o.symbol)} width={30 * c.s} p={c.p} style={{ marginBottom: 4 * c.s }} />)}
       {crestTop && <Crest c={c} text={f.monogram!} size={38 * c.s} />}
       {photoFront && <Photo c={c} src={o.photo!} width={photoW * k} />}
       {f.invocation && <Kicker c={c}>{f.invocation}</Kicker>}
@@ -327,7 +332,7 @@ function Front({ c: base, inv }: { c: Ctx; inv: Invitation }) {
 function EventBlock({ c, e, width }: { c: Ctx; e: EventCard; width: string }) {
   return (
     <View style={{ width, alignItems: "center", paddingHorizontal: 4 * c.s, marginBottom: 9 * c.s }} wrap={false}>
-      {c.o.icons && <Draw m={icon(e.icon)} width={15 * c.s} p={c.p} style={{ marginBottom: 2 * c.s }} />}
+      {c.o.icons && <EventIcon c={c} e={e} size={15} gap={2} />}
       <Tx style={{ fontWeight: 700, fontSize: 15 * c.s, lineHeight: 1.1 }}>{e.name}</Tx>
       {e.sideLabel && <Kicker c={c} size={5.6}>{e.sideLabel}</Kicker>}
       <Text style={{ fontSize: 9.5 * c.s, marginTop: 2 * c.s }}>{e.date} · {e.time}</Text>
@@ -336,6 +341,13 @@ function EventBlock({ c, e, width }: { c: Ctx; e: EventCard; width: string }) {
       {e.dressCode && <Tx style={{ fontStyle: "italic", fontSize: 8.5 * c.s, color: c.p.soft, marginTop: 1 * c.s }}>{`Dress: ${e.dressCode}`}</Tx>}
     </View>
   );
+}
+
+/** A celebration's icon: the family's own upload in the card's accent colour, or the drawn one. */
+function EventIcon({ c, e, size, gap }: { c: Ctx; e: { icon: Parameters<typeof icon>[0]; iconImage: string | null }; size: number; gap: number }) {
+  const own = iconPng(e.iconImage, c.p.accent);
+  if (own) return <Image src={own} style={{ width: size * c.s, height: size * c.s, marginBottom: gap * c.s }} />;
+  return <Draw m={icon(e.icon)} width={size * c.s} p={c.p} style={{ marginBottom: gap * c.s }} />;
 }
 
 /** "Mrs. Manisha Kosambi 9427702237" → the name, and the number on its own line. */
@@ -447,7 +459,7 @@ function Insert({ c: base, card }: { c: Ctx; card: InsertCard }) {
       <Tx style={{ fontWeight: 600, fontSize: 11 * c.s }}>{card.hosts}</Tx>
       <Tx style={{ fontStyle: "italic", fontSize: 10.5 * c.s, color: c.p.soft, marginTop: 2 * c.s }}>{card.request}</Tx>
       <Draw m={top} width={66 * c.s} p={c.p} style={{ marginVertical: 5 * c.s }} />
-      {o.icons && <Draw m={icon(e.icon)} width={24 * c.s} p={c.p} style={{ marginBottom: 4 * c.s }} />}
+      {o.icons && <EventIcon c={c} e={e} size={24} gap={4} />}
       <Tx style={o.nameFont === "script"
         ? { fontFamily: "GreatVibes", fontWeight: 400, fontSize: nameSize(e.name, 34) * c.s, lineHeight: 1.15, color: c.p.accent }
         : { fontWeight: 700, fontSize: nameSize(e.name, 28) * c.s, lineHeight: 1.05 }}>{e.name}</Tx>

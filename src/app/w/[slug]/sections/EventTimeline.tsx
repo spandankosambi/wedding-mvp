@@ -3,11 +3,21 @@ import { fmtEventDate, fmtEventTime } from "@/lib/format";
 import { sideLabel, type Side } from "@/lib/sides";
 import { icon, iconOf } from "@/lib/invitation/decor";
 import { MotifSvg } from "@/components/MotifSvg";
+import { iconPng } from "@/lib/icon-png";
+
+/** The family's uploaded icon, drawn in the theme's accent colour. */
+function ownIcon(e: { icon?: string | null; iconImage?: string | null }) {
+  const png = e.icon === "custom" ? iconPng(e.iconImage) : null;
+  if (!png) return null;
+  const mask = `url(${png}) center / contain no-repeat`;
+  return <span className="event-icon event-icon-own" data-own-icon style={{ WebkitMask: mask, mask }} />;
+}
 
 type EventRow = {
   id: string;
   name: string;
   icon?: string | null;
+  iconImage?: string | null;
   startsAt: Date;
   venueName: string;
   address: string;
@@ -34,7 +44,7 @@ export function EventTimeline({ theme: _theme, events, no = "02", icons = false 
               style={{ color: "var(--ink-soft)", opacity: icons ? 1 : 0.55 }}
             >
               {icons
-                ? <span data-testid="event-icon"><MotifSvg m={icon(iconOf(e))} className="event-icon" /></span>
+                ? <span data-testid="event-icon">{ownIcon(e) ?? <MotifSvg m={icon(iconOf(e))} className="event-icon" />}</span>
                 : String(i + 1).padStart(2, "0")}
             </span>
             <div className="md:col-span-6">

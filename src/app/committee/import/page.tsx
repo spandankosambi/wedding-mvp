@@ -36,15 +36,11 @@ export default async function ImportPage({
 
   return (
     <main className="portal-page">
-      <PortalNav names={namesFor(wedding, family).couple} current={family} weddingId={weddingId} admin={staff.role === "admin"} committee={staff.role === "committee"} />
+      <PortalNav names={namesFor(wedding, family).couple} current={family} page="guests" weddingId={weddingId} admin={staff.role === "admin"} committee={staff.role === "committee"} />
       <div className="portal-shell">
         <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3">
           <div className="max-w-2xl">
-            <p className="portal-eyebrow">
-              <Link href={backHref} className="hover:text-stone-950">{sideName(family)}&apos;s guest list</Link>
-              <span className="mx-1 text-stone-300">/</span> import
-            </p>
-            <h1 className="portal-heading mt-2">Import the {family}&apos;s family&apos;s guest list</h1>
+            <h1 className="portal-heading">Import the {family}&apos;s family&apos;s guest list</h1>
             <p className="portal-subheading mt-3">
               Bring the guest list in whatever shape it arrives: a spreadsheet, a photo of a handwritten list, a document, a pasted message, or typed straight in. You review every line before anything is saved, and households already on the list are merged rather than duplicated.
             </p>

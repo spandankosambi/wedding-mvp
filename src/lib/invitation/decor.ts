@@ -31,7 +31,7 @@ const ICON_SHAPES: Record<IconId, Shape[]> = {
     S("M4 12 H20 C 20 17 16.5 20 12 20 C 7.5 20 4 17 4 12 Z"),
     S("M9 21.5 H15"),
     S("M7 12 C 8 9.5 10 9.5 12 11 C 14 9.5 16 9.5 17 12", 1.1),
-    ...[0, 1, 2, 3, 4, 5].map((i) => dot(12 + Math.cos((i / 6) * Math.PI * 2) * 2.2, 5 + Math.sin((i / 6) * Math.PI * 2) * 2.2, 1.2)),
+    ...[0, 1, 2, 3, 4, 5].map((i) => dot(f(12 + Math.cos((i / 6) * Math.PI * 2) * 2.2), f(5 + Math.sin((i / 6) * Math.PI * 2) * 2.2), 1.2)),
     dot(12, 5, 1, "accent"),
   ],
   // a mehendi paisley (mango) with a curl and dots
@@ -132,18 +132,122 @@ export function iconFor(eventName: string): IconId {
 
 /* ── the symbol at the top of a card: 60×60 ───────────────────── */
 
-export const SYMBOLS = ["motif", "ganesh", "om", "swastik", "kalash", "diya"] as const;
+export const SYMBOLS = [
+  "motif", "ganesh", "om", "swastik", "kalash", "diya",
+  "bismillah", "crescent", "ikonkar", "khanda", "cross", "doves",
+  "jain", "dharma", "atash", "rings", "hearts", "lotus",
+] as const;
 export type SymbolId = (typeof SYMBOLS)[number];
 export const SYMBOL_LABELS: Record<SymbolId, string> = {
   motif: "None", ganesh: "Shree Ganesh", om: "Om", swastik: "Swastik", kalash: "Kalash", diya: "Diya",
+  bismillah: "Bismillah", crescent: "Crescent & star", ikonkar: "Ik Onkar", khanda: "Khanda", cross: "Cross", doves: "Doves",
+  jain: "Jain hand", dharma: "Dharma wheel", atash: "Sacred flame", rings: "Rings", hearts: "Hearts", lotus: "Lotus",
 };
 
-/** `om` is set in type (ॐ), not drawn — see OM below. */
+/** Symbols set in type (one glyph each), not drawn: the PDF font and the site's CSS class. */
+export const SYMBOL_GLYPHS = {
+  om: { text: "ॐ", font: "Tiro", css: "indic" },
+  bismillah: { text: "﷽", font: "Amiri", css: "glyph-arabic" },
+  ikonkar: { text: "ੴ", font: "Gurmukhi", css: "glyph-gurmukhi" },
+} as const;
+export type GlyphSymbol = keyof typeof SYMBOL_GLYPHS;
+export const isGlyph = (id: SymbolId): id is GlyphSymbol => id in SYMBOL_GLYPHS;
+export type DrawnSymbol = Exclude<SymbolId, "motif" | GlyphSymbol>;
+
+/** `om` is set in type (ॐ), not drawn. */
 export const OM = "ॐ";
 
-export function symbol(id: Exclude<SymbolId, "motif" | "om">): Motif {
+export function symbol(id: DrawnSymbol): Motif {
   const A = (d: string, sw = 1.8): Shape => ({ k: "path", d, stroke: "accent", sw });
+  const C = (cx: number, cy: number, r: number, sw = 1.8): Shape => ({ k: "circle", cx, cy, r, stroke: "accent", sw });
+  const D = (cx: number, cy: number, r: number, fill: Ink = "accent2"): Shape => ({ k: "circle", cx, cy, r, fill });
+  const box = (shapes: Shape[]): Motif => ({ w: 60, h: 60, shapes });
   switch (id) {
+    case "crescent": {
+      const star = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => {
+        const r = i % 2 ? 3 : 7.5, a = (i / 10) * Math.PI * 2 - Math.PI / 2;
+        return `${i ? "L" : "M"} ${f(43 + Math.cos(a) * r)} ${f(25 + Math.sin(a) * r)}`;
+      }).join(" ") + " Z";
+      return box([
+        { k: "path", d: "M 37 8 A 23 23 0 1 0 50 46 A 19 19 0 1 1 37 8 Z", fill: "accent" },
+        { k: "path", d: star, fill: "accent2" },
+      ]);
+    }
+    case "khanda":
+      return box([
+        C(30, 25, 11, 3),
+        { k: "path", d: "M30 2 L34 13 L32.4 41 H27.6 L26 13 Z", fill: "accent" },
+        A("M23.5 43 H36.5", 2.6), A("M30 43 V54", 2.6), D(30, 55.5, 2.4, "accent"),
+        A("M27 51 C 11 47 4 30 11 11 C 10 26 17 39 27 46", 2.4),
+        A("M33 51 C 49 47 56 30 49 11 C 50 26 43 39 33 46", 2.4),
+      ]);
+    case "cross":
+      return box([
+        { k: "path", d: "M27 6 H33 V20 H46 V26 H33 V54 H27 V26 H14 V20 H27 Z", fill: "accent" },
+        D(30, 4.5, 2.2), D(48, 23, 2.2), D(12, 23, 2.2), D(30, 55.5, 2.2),
+        C(30, 23, 9, 1),
+      ]);
+    case "doves": {
+      const bird = (m: (x: number) => number): Shape[] => [
+        A(`M ${m(6)} 33 C ${m(11)} 25 ${m(21)} 26 ${m(24)} 33 C ${m(21)} 40 ${m(11)} 40 ${m(6)} 33 Z`),
+        A(`M ${m(12)} 31 C ${m(12)} 20 ${m(19)} 15 ${m(26)} 13 C ${m(25)} 22 ${m(21)} 29 ${m(16)} 33`, 1.5),
+        C(m(25.5), 28.5, 3, 1.6),
+        A(`M ${m(28.3)} 28 L ${m(31)} 29 L ${m(28.2)} 30`, 1.3),
+        A(`M ${m(6)} 33 L ${m(1.5)} 30 M ${m(6)} 33 L ${m(1.5)} 36`, 1.4),
+      ];
+      return box([
+        ...bird((x) => x), ...bird((x) => 60 - x),
+        { k: "path", d: "M30 46 C 26 43 25.5 40 27.6 38.6 C 28.8 37.9 29.8 38.6 30 39.6 C 30.2 38.6 31.2 37.9 32.4 38.6 C 34.5 40 34 43 30 46 Z", fill: "accent2" },
+        A("M16 48 C 24 53 36 53 44 48", 1.2),
+      ]);
+    }
+    case "jain":
+      return box([
+        A("M19 55 V28 C 19 24 24 24 24 28 V14 C 24 10 29 10 29 14 V11 C 29 7 34 7 34 11 V15 C 34 11 39 11 39 15 V31 C 42 26 47.5 28.5 45.5 33 L 40 45 V55 Z"),
+        C(29.5, 39, 6.5, 1.4),
+        A("M29.5 32.5 V45.5 M23 39 H36 M24.9 34.4 L34.1 43.6 M34.1 34.4 L24.9 43.6", 0.9),
+        D(29.5, 39, 1.6),
+      ]);
+    case "dharma": {
+      const spokes: Shape[] = [];
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+        spokes.push(A(`M ${f(30 + c * 5)} ${f(30 + s * 5)} L ${f(30 + c * 18)} ${f(30 + s * 18)}`, 1.8));
+        spokes.push(D(f(30 + c * 25.5), f(30 + s * 25.5), 2.2));
+      }
+      return box([C(30, 30, 22, 2.2), C(30, 30, 18, 1), ...spokes, C(30, 30, 5, 1.8), D(30, 30, 1.8)]);
+    }
+    case "atash":
+      return box([
+        A("M30 4 C 38 13 40 19 34.5 26 C 34.5 21 32.5 18.5 30 16.5 C 27.5 18.5 25.5 21 25.5 26 C 20 19 22 13 30 4 Z"),
+        A("M22 16 C 18 21 18.5 25 22.5 28", 1.4), A("M38 16 C 42 21 41.5 25 37.5 28", 1.4),
+        A("M16 30 H44 L39 40 H21 Z"),
+        A("M26 40 C 27.5 44 27.5 47 25 51 M34 40 C 32.5 44 32.5 47 35 51", 1.6),
+        A("M19 52 H41 L43 56 H17 Z", 1.6),
+        D(30, 35, 2),
+      ]);
+    case "rings":
+      return box([
+        C(22.5, 35, 14, 2.4), C(37.5, 35, 14, 2.4),
+        { k: "path", d: diamond(22.5, 15, 5.5), fill: "accent2" },
+        A("M19 15 H26 M22.5 11.5 V18.5", 0.6),
+      ]);
+    case "hearts": {
+      const heart = (cx: number, cy: number, s: number) =>
+        `M ${f(cx)} ${f(cy + 9 * s)} C ${f(cx - 12 * s)} ${f(cy + 1 * s)} ${f(cx - 11 * s)} ${f(cy - 9 * s)} ${f(cx - 4.5 * s)} ${f(cy - 8 * s)} C ${f(cx - 1.8 * s)} ${f(cy - 7.6 * s)} ${f(cx)} ${f(cy - 5 * s)} ${f(cx)} ${f(cy - 3.6 * s)} C ${f(cx)} ${f(cy - 5 * s)} ${f(cx + 1.8 * s)} ${f(cy - 7.6 * s)} ${f(cx + 4.5 * s)} ${f(cy - 8 * s)} C ${f(cx + 11 * s)} ${f(cy - 9 * s)} ${f(cx + 12 * s)} ${f(cy + 1 * s)} ${f(cx)} ${f(cy + 9 * s)} Z`;
+      return box([A(heart(23, 30, 1.9), 2), { k: "path", d: heart(39, 33, 1.5), fill: "accent2", op: 0.9 }]);
+    }
+    case "lotus":
+      return box([
+        { k: "path", d: leaf(30, 46, 34, 180, 0.3), stroke: "accent", sw: 1.8 },
+        { k: "path", d: leaf(30, 46, 30, 152, 0.32), stroke: "accent", sw: 1.7 },
+        { k: "path", d: leaf(30, 46, 30, 208, 0.32), stroke: "accent", sw: 1.7 },
+        { k: "path", d: leaf(30, 46, 26, 122, 0.34), stroke: "accent", sw: 1.6 },
+        { k: "path", d: leaf(30, 46, 26, 238, 0.34), stroke: "accent", sw: 1.6 },
+        { k: "path", d: leaf(30, 47, 22, 96, 0.3), fill: "accent2", op: 0.85 },
+        { k: "path", d: leaf(30, 47, 22, 264, 0.3), fill: "accent2", op: 0.85 },
+        A("M12 52 C 22 56 38 56 48 52", 1.3),
+      ]);
     case "swastik":
       return { w: 60, h: 60, shapes: [
         A("M30 10 V50 M10 30 H50", 3),

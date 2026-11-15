@@ -79,17 +79,12 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
 
   return (
     <main className="portal-page">
-      <PortalNav names={coupleNames} current={family} weddingId={weddingId} admin={!!adminQ} />
+      <PortalNav names={coupleNames} current={family} page="site" weddingId={weddingId} admin={!!adminQ}
+        jump={[["theme", "Look"], ["decor", "Design touches"], ["wording", "Invitation wording"], ["words", "Tagline & story"], ["events", "Celebrations"], ["travel", "Travel & stay"], ["gallery", "Photos"]]} />
       <div className="portal-shell">
         <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div className="max-w-2xl">
-            <p className="portal-eyebrow">
-              <Link href={`/couple${adminQ ? `?${adminQ.slice(0, -1)}` : ""}`} className="hover:text-stone-950">Dashboard</Link>
-              <span className="mx-1 text-stone-300">/</span>
-              <Link href={`/couple/${family}${adminQ ? `?${adminQ.slice(0, -1)}` : ""}`} className="hover:text-stone-950">{sideName(family)}</Link>
-              <span className="mx-1 text-stone-300">/</span> site
-            </p>
-            <h1 className="portal-heading mt-2">Edit the {family === "bride" ? "bride" : "groom"}&apos;s family&apos;s site</h1>
+            <h1 className="portal-heading">Edit the {family === "bride" ? "bride" : "groom"}&apos;s family&apos;s site</h1>
             <p className="portal-subheading mt-3">
               What the {family}&apos;s guests see: your look, words, celebrations, travel and photos. The names, date
               and city are shared — change them on the <Link href={`/couple${adminQ ? `?${adminQ.slice(0, -1)}` : ""}`} className="underline">dashboard</Link>.
@@ -111,11 +106,6 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
 
         <div className="space-y-8">
           {/* ── Theme ───────────────────────────────────────────── */}
-          <nav className="portal-jump !mb-0" aria-label="Jump to">
-            {[["theme", "Look"], ["decor", "Design touches"], ["wording", "Invitation wording"], ["words", "Tagline & story"], ["events", "Celebrations"], ["travel", "Travel & stay"], ["gallery", "Photos"]].map(([id, label]) => (
-              <a key={id} href={`#${id}`}>{label}</a>
-            ))}
-          </nav>
           <div id="theme">
             <ThemeSwitcher weddingId={weddingId} current={look.theme} slug={w.slug} coupleNames={coupleNames} family={family} partnerTheme={partner.theme} />
           </div>
@@ -279,7 +269,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                         <Field label="Dress code"><input name="dressCode" defaultValue={e.dressCode ?? ""} maxLength={80} placeholder="Yellows / Traditional / Cocktail" className="portal-input" /></Field>
                         <Field label="A line about it" className="md:col-span-2"><input name="description" defaultValue={e.description ?? ""} maxLength={400} className="portal-input" /></Field>
                         <EventSideField initial={e.side} eventName={e.name} family={family} />
-                        <EventIconField initial={e.icon} eventName={e.name} enabled={decor.icons} />
+                        <EventIconField initial={e.icon} initialImage={e.iconImage} eventName={e.name} enabled={decor.icons} />
                         <label className="flex items-center gap-2 text-sm md:col-span-2">
                           <input type="checkbox" name="isPublished" defaultChecked={e.isPublished} className="h-4 w-4" />
                           Show this event on the site and RSVP form

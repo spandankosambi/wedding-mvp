@@ -14,7 +14,7 @@ import { defaultMonogram, type InvitationOptions } from "./options";
 
 export type CardEvent = {
   id: string; name: string; side: Side; startsAt: Date; venueName: string; address: string;
-  dressCode: string | null; isPublished: boolean; sortOrder: number; icon?: string | null;
+  dressCode: string | null; isPublished: boolean; sortOrder: number; icon?: string | null; iconImage?: string | null;
 };
 export type CardWedding = {
   brideName: string; groomName: string; weddingDate: Date; city: string | null; rsvpDeadline: Date | null;
@@ -46,6 +46,8 @@ export type FrontCard = {
 
 export type EventCard = {
   id: string; name: string; sideLabel: string | null; icon: IconId;
+  /** the family's own icon (a mask, lib/icon-mask), when they chose it */
+  iconImage: string | null;
   date: string; time: string; venue: string; address: string; dressCode: string | null;
 };
 
@@ -126,7 +128,7 @@ export function buildInvitation(w: CardWedding, all: CardEvent[], o: InvitationO
   };
 
   const events: EventCard[] = eventsFor(all, o).map((e) => ({
-    id: e.id, name: e.name, icon: iconOf(e),
+    id: e.id, name: e.name, icon: iconOf(e), iconImage: e.icon === "custom" ? e.iconImage ?? null : null,
     // only an event the couple picked from the other side needs saying whose it is
     sideLabel: e.side === "both" || e.side === o.version ? null : e.side === "bride" ? "Bride's side" : "Groom's side",
     date: fmtCardDate(e.startsAt), time: fmtEventTime(e.startsAt),

@@ -123,7 +123,9 @@ test("the couple can switch the gallery off and back on", async ({ page }) => {
 test("the couple can get from the guest list back to their dashboard", async ({ page }) => {
   await signIn(page, "couple@example.com");
   await page.goto("/committee?family=groom");
-  await page.getByRole("link", { name: "← Back to groom's family" }).click();
+  // no separate "back" line: the bar's page tabs lead back to the family's overview
+  await expect(page.getByRole("link", { name: /Back to groom/ })).toHaveCount(0);
+  await page.getByRole("navigation", { name: "Groom's side pages" }).getByRole("link", { name: "Overview" }).click();
   await expect(page).toHaveURL(/\/couple\/groom$/);
   // the bar across the top is the same on every screen, in this family's name order
   const bar = page.getByRole("navigation", { name: "Sections" });
@@ -134,6 +136,18 @@ test("the couple can get from the guest list back to their dashboard", async ({ 
   await expect(page.getByRole("heading", { name: "Your wedding at a glance" })).toBeVisible();
   await bar.getByRole("link", { name: "Bride's side" }).click();
   await expect(page).toHaveURL(/\/couple\/bride$/);
+  // inside a family the same bar carries its pages — no second breadcrumb line
+  const pages = page.getByRole("navigation", { name: "Bride's side pages" });
+  await expect(pages.getByRole("link", { name: "Overview" })).toHaveAttribute("aria-current", "page");
+  await pages.getByRole("link", { name: "Guest list" }).click();
+  await expect(page).toHaveURL(/\/committee\?family=bride$/);
+  await expect(pages.getByRole("link", { name: "Guest list" })).toHaveAttribute("aria-current", "page");
+  await pages.getByRole("link", { name: "Edit your site" }).click();
+  await expect(page.getByRole("navigation", { name: "Jump to" }).getByRole("link", { name: "Celebrations" })).toBeVisible();
+  await expect(page.locator(".portal-nav")).toHaveCount(1);
+  await pages.getByRole("link", { name: "Print cards" }).click();
+  await expect(page.getByRole("dialog", { name: "Download invitation PDF to print" })).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "Close", exact: true }).first().click();
   // …and it signs you out
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/signin/);

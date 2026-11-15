@@ -4,6 +4,7 @@ import { getLook, saveTravelLook, updateLook, type FamilySide, type LookPatch } 
 import { contactsOf, MAX_CONTACTS } from "@/lib/contacts";
 import { decorSchema } from "@/lib/site-decor";
 import { ICONS } from "@/lib/invitation/decor";
+import { isIconMask } from "@/lib/icon-mask";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events, families, eventInvites, rsvps, type TravelInfo } from "@/db/schema";
@@ -77,8 +78,10 @@ export const eventSchema = z.object({
   isPublished: z.boolean().default(true),
   side: z.enum(["bride", "groom", "both"]).default("both"),
   /** "" / unset = picked from the name */
-  icon: z.union([z.enum(ICONS), z.literal("")]).optional().transform((v) => v || null),
-});
+  icon: z.union([z.enum(ICONS), z.literal("custom"), z.literal("")]).optional().transform((v) => v || null),
+  /** the family's own icon, as a mask (lib/icon-mask) */
+  iconImage: z.string().optional().transform((v) => v || null).refine((v) => v === null || isIconMask(v)),
+}).transform((e) => (e.icon === "custom" && !e.iconImage ? { ...e, icon: null } : e));
 
 export const MAX_STAYS = 12;
 

@@ -58,8 +58,7 @@ export default async function CouplePage({
       <PortalNav names={coupleNames} current="dashboard" weddingId={weddingId} admin={staff.role === "admin"} />
       <div className="portal-shell">
       <header className="mb-8">
-        <p className="portal-eyebrow">Dashboard</p>
-        <h1 className="portal-heading mt-2">Your wedding at a glance</h1>
+        <h1 className="portal-heading">Your wedding at a glance</h1>
         <p className="portal-subheading mt-3 max-w-2xl">
           Both families together. Each family designs its own site, guest list and printed cards in its section below.
         </p>

@@ -119,4 +119,22 @@ describe("editor", () => {
     expect((await deleteEvent(weddingId, a.id!)).ok).toBe(true);
     expect((await db.select().from(events).where(eq(events.weddingId, weddingId))).length).toBe(1);
   });
+  it("an event's icon: one of the set, the family's own mask, or automatic", async () => {
+    const { ICON_PX } = await import("@/lib/icon-mask");
+    const { iconPng } = await import("@/lib/icon-png");
+    const mask = Buffer.alloc(ICON_PX * ICON_PX, 200).toString("base64");
+    const base = { name: "Mameru", date: "2027-01-30", time: "10:00", venueName: "Home", address: "Pune" };
+    const a = await upsertEvent(weddingId, { ...base, icon: "custom", iconImage: mask });
+    expect(a.ok).toBe(true);
+    let [row] = await db.select().from(events).where(eq(events.id, a.ok ? a.id! : ""));
+    expect(row).toMatchObject({ icon: "custom", iconImage: mask });
+    expect(iconPng(row.iconImage, "#d4a439")).toMatch(/^data:image\/png;base64,iVBOR/);
+    // "custom" with nothing uploaded falls back to automatic; junk is refused
+    expect((await upsertEvent(weddingId, { ...base, id: row.id, icon: "custom", iconImage: "" })).ok).toBe(true);
+    [row] = await db.select().from(events).where(eq(events.id, row.id));
+    expect(row.icon).toBeNull();
+    expect((await upsertEvent(weddingId, { ...base, id: row.id, icon: "custom", iconImage: "<svg onload=alert(1)>" })).ok).toBe(false);
+    expect((await upsertEvent(weddingId, { ...base, id: row.id, icon: "thali" })).ok).toBe(true);
+    expect(iconPng("nope")).toBeNull();
+  });
 });

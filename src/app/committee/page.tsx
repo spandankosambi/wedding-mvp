@@ -36,8 +36,6 @@ export default async function CommitteePage({
   }
 
   const [wedding] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
-  const coupleHref = staff.role === "admin" ? `/couple?wedding=${weddingId}` : "/couple";
-  const sectionHref = staff.role === "admin" ? `/couple/${family}?wedding=${weddingId}` : `/couple/${family}`;
   // this family's events (common + its own) and its households
   const evs = (await db.select().from(events).where(eq(events.weddingId, weddingId)).orderBy(events.sortOrder))
     .filter((e) => eventForSide(e.side, family));
@@ -86,34 +84,16 @@ export default async function CommitteePage({
 
   return (
     <main className="portal-page">
-      <PortalNav names={namesFor(wedding, family).couple} current={family} weddingId={weddingId} admin={staff.role === "admin"} committee={staff.role === "committee"} />
+      <PortalNav names={namesFor(wedding, family).couple} current={family} page="guests" weddingId={weddingId} admin={staff.role === "admin"} committee={staff.role === "committee"} />
       <div className="portal-shell">
       <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3">
         <div className="max-w-2xl">
-          {/* couples and admins arrive here from their dashboard; give them the way back.
-              Committee members live here — /couple isn't theirs, so no link. */}
-          {staff.role === "committee" ? (
-            <p className="portal-eyebrow">Guest operations</p>
-          ) : (
-            <p className="portal-eyebrow">
-              {staff.role === "admin" && (
-                <><Link href="/admin" className="hover:text-stone-950">All weddings</Link><span className="mx-1 text-stone-300">/</span></>
-              )}
-              <Link href={coupleHref} className="hover:text-stone-950">Dashboard</Link>
-              <span className="mx-1 text-stone-300">/</span>
-              <Link href={sectionHref} className="hover:text-stone-950">{sideName(family)}</Link>
-              <span className="mx-1 text-stone-300">/</span> guest list
-            </p>
-          )}
-          <h1 className="portal-heading mt-2">{sideName(family)}&apos;s guest list</h1>
+          <h1 className="portal-heading">{sideName(family)}&apos;s guest list</h1>
           <p className="portal-subheading mt-3">
             The {family === "bride" ? "bride" : "groom"}&apos;s households, their invitations and event headcounts. Their invitations open the {family === "bride" ? "bride" : "groom"}&apos;s family&apos;s site.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {staff.role !== "committee" && (
-            <Link href={sectionHref} className="portal-button-secondary">← Back to {sideName(family).toLowerCase()}</Link>
-          )}
           <a href={`/w/${wedding.slug}?side=${family}`} className="portal-button-secondary" target="_blank" rel="noreferrer">
             View wedding site ↗
           </a>

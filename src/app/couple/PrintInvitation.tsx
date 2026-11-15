@@ -11,7 +11,7 @@ import {
 } from "@/lib/invitation/options";
 import { crest, paletteFor, type Motif, type Palette } from "@/lib/invitation/motifs";
 import {
-  BORDER_STYLES, BORDER_LABELS, PATTERNS, PATTERN_LABELS, SYMBOLS, SYMBOL_LABELS, OM,
+  BORDER_STYLES, BORDER_LABELS, PATTERNS, PATTERN_LABELS, SYMBOLS, SYMBOL_LABELS, SYMBOL_GLYPHS, isGlyph,
   backgroundPattern, borderBand, symbol as symbolMotif,
 } from "@/lib/invitation/decor";
 import { MotifSvg as Art } from "@/components/MotifSvg";
@@ -26,6 +26,8 @@ type Props = {
   siteEditorHref: string;
   /** where this family's wording is edited (Edit your site) */
   wordingHref: string;
+  /** open straight away (arriving from the Print cards tab) */
+  autoOpen?: boolean;
   /** celebration icons: the family's Design touches tick */
   icons: boolean;
   /** this family's wording, from its site: printed as is */
@@ -242,7 +244,9 @@ function PdfPages({ pdf }: { pdf: Blob | null }) {
 
 /** "Print invitation cards": the questions, the design, a live preview, the PDF. */
 export function PrintInvitation(props: Props) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(!!props.autoOpen);
+  // arriving from the Print cards tab opens it
+  useEffect(() => { if (props.autoOpen) setOpen(true); }, [props.autoOpen]);
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<Form>(() => initial(props));
   const [busy, setBusy] = useState(false);
@@ -616,7 +620,7 @@ export function PrintInvitation(props: Props) {
                     {SYMBOLS.map((sy) => (
                       <Thumb key={sy} label={SYMBOL_LABELS[sy]} on={form.symbol === sy} bg={palette.bg} onPick={() => set("symbol", sy)}>
                         {sy === "motif" ? <span className="grid h-[44px] w-[44px] place-items-center text-lg" style={{ color: palette.hair }}>—</span>
-                          : sy === "om" ? <span className="indic grid h-[44px] w-[44px] place-items-center text-3xl leading-none" style={{ color: palette.accent }}>{OM}</span>
+                          : isGlyph(sy) ? <span className={`${SYMBOL_GLYPHS[sy].css} grid h-[44px] w-[44px] place-items-center leading-none ${sy === "bismillah" ? "text-xl" : "text-3xl"}`} style={{ color: palette.accent }}>{SYMBOL_GLYPHS[sy].text}</span>
                           : <Art m={symbolMotif(sy)} colours={palette} width={44} />}
                       </Thumb>
                     ))}

@@ -110,6 +110,8 @@ export const events = pgTable("events", {
   side: sideEnum("side").notNull().default("both"),
   /** the celebration's icon (lib/invitation/decor ICONS); unset = picked from its name */
   icon: text("icon"),
+  /** an uploaded icon ("custom"): a 96×96 alpha mask, base64 — drawn in the theme's colour */
+  iconImage: text("icon_image"),
 });
 
 export const families = pgTable("families", {

@@ -167,6 +167,20 @@ test("design touches: an opening screen, what falls, decorations and celebration
   await sangeet.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("Saved. Your site is up to date.")).toBeVisible();
   await expect(sangeet.locator("input[name=icon]")).toHaveValue("drum");
+  // PRO: the family's own icon, uploaded as an SVG and redrawn in the theme's colour
+  await sangeet.evaluate((d) => { (d as HTMLDetailsElement).open = true; });
+  await expect(sangeet.getByText("PRO", { exact: true })).toBeVisible();
+  await sangeet.getByLabel("Upload your own icon for Sangeet").setInputFiles({
+    name: "star.svg", mimeType: "image/svg+xml",
+    buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><script>window.bad=1</script><path fill="#f00" d="M12 2l3 7h7l-5.5 4.5 2 7.5-6.5-4.5L5.5 21l2-7.5L2 9h7z"/></svg>'),
+  });
+  await expect(icons.getByRole("radio", { name: "Your own icon" })).toHaveAttribute("aria-checked", "true");
+  await sangeet.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Saved. Your site is up to date.")).toBeVisible();
+  await expect(sangeet.locator("input[name=icon]")).toHaveValue("custom");
+  await page.goto("/w/gaurav-weds-karishma?side=groom");
+  await expect(page.locator("[data-own-icon]")).toHaveCount(1); // only its shape is kept: no SVG markup reaches the site
+  expect(await page.evaluate(() => (window as unknown as { bad?: number }).bad)).toBeUndefined();
   // the print dialog says the cards carry them too
   await page.goto("/couple/groom");
   await page.getByRole("button", { name: "Print invitation cards" }).click();
