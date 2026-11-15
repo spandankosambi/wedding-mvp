@@ -9,6 +9,7 @@ import { FamilyForm, draftFromFamily, type FamilyDraft } from "./FamilyForm";
 import { RsvpEditor, type RsvpTarget } from "./RsvpEditor";
 import { BulkRsvpDialog } from "./BulkRsvpDialog";
 import { openWhatsAppInvite } from "./whatsapp";
+import { useBarHeight, useIsPhone } from "./layout-hooks";
 
 export type Row = {
   id: string;
@@ -49,6 +50,10 @@ export function FamilyTable({
   const [pending, startTransition] = useTransition();
   const [flash, setFlash] = useState<string | null>(null);
   const travel = useTravelToggle(weddingId, rows, setFlash);
+  const [query, setQuery] = useState("");
+  const [waitingOnly, setWaitingOnly] = useState(false);
+  const bar = useBarHeight<HTMLDivElement>();
+  const phone = useIsPhone();
 
   function toggle(id: string) {
     setSelected((s) => {
@@ -73,10 +78,154 @@ export function FamilyTable({
 
   const ids = [...selected];
 
+  // find a family by its name, relation, anyone in it, or a phone or email
+  const waiting = rows.filter((r) => Object.keys(r.rsvpByEvent).length === 0);
+  const q = query.trim().toLowerCase();
+  const digits = q.replace(/\s/g, "");
+  const shown = rows.filter((r) => {
+    if (waitingOnly && Object.keys(r.rsvpByEvent).length > 0) return false;
+    if (!q) return true;
+    return r.name.toLowerCase().includes(q) || (r.relation ?? "").toLowerCase().includes(q)
+      || r.email.toLowerCase().includes(q) || (r.phone ?? "").replace(/\s/g, "").includes(digits)
+      || r.members.some((m) => m.fullName.toLowerCase().includes(q) || (m.email ?? "").toLowerCase().includes(q)
+        || (m.phone ?? "").replace(/\s/g, "").includes(digits));
+  });
+  const allShown = shown.length > 0 && shown.every((r) => selected.has(r.id));
+
+  const tags = (r: Row) => (
+    <p className="mt-1 text-xs text-neutral-500">
+      {r.relation}
+      {r.source === "guest" && <span className="ml-1 rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 font-medium text-violet-700">via link</span>}
+      {r.diet && <span className="ml-1 rounded border border-neutral-200 px-1.5 py-0.5">{r.diet}</span>}
+    </p>
+  );
+  const contact = (r: Row) => {
+    const p = r.members.find((m) => m.isPrimary);
+    return (
+      <>
+        {p && <p className="text-xs font-medium text-neutral-800">{p.fullName}</p>}
+        {r.email && <p className="text-xs">{r.email}</p>}
+        {r.phone && <p className="text-xs tabular-nums">{r.phone}</p>}
+        {!r.email && !r.phone && (
+          <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-700">no contact</span>
+        )}
+      </>
+    );
+  };
+  const chips = (r: Row) => (
+    <div className="flex flex-wrap gap-1.5">
+      {events.map((e) => {
+        const rsvp = r.rsvpByEvent[e.id];
+        if (!r.eventIds.includes(e.id)) return null;
+        return (
+          <span
+            key={e.id}
+            title={`${e.name}: ${rsvp ? (rsvp.status === "attending" ? `${rsvp.headcount} attending` : "declined") : "no answer yet"}${rsvp?.note ? ` — “${rsvp.note}”` : ""}`}
+            className={`rounded-full border px-2 py-1 text-xs font-medium ${
+              rsvp
+                ? rsvp.status === "attending"
+                  ? "border-green-200 bg-green-50 text-green-700"
+                  : "border-neutral-300 bg-neutral-100 text-neutral-500"
+                : "border-neutral-200 text-neutral-400"
+            }`}
+          >
+            {e.name} {rsvp ? (rsvp.status === "attending" ? `✓${rsvp.headcount}` : "✗") : "—"}
+          </span>
+        );
+      })}
+    </div>
+  );
+  const travelBox = (r: Row) => (
+    <input
+      type="checkbox"
+      aria-label={`Show Travel & Stay to ${r.name}`}
+      title="Show the Travel & Stay section on their wedding site"
+      checked={travel.shows(r)}
+      onChange={(e) => travel.set(r, e.target.checked)}
+      className="h-4 w-4"
+    />
+  );
+  const lastSent = (r: Row) =>
+    r.lastEmail ? (
+      r.lastEmail.status === "whatsapp" ? (
+        <span className="portal-badge">invite · WhatsApp</span>
+      ) : r.lastEmail.status === "sent" ? (
+        <span className="portal-badge">{r.lastEmail.type} · sent</span>
+      ) : (
+        <span className="text-xs font-medium text-red-600">
+          failed
+          <button disabled={pending} onClick={() => send("resend", [r.id])} className="ml-2 rounded border border-red-200 px-1.5 py-0.5 text-xs hover:bg-red-50">
+            retry
+          </button>
+        </span>
+      )
+    ) : (
+      <span className="text-xs text-neutral-400">never</span>
+    );
+  const actions = (r: Row) => (
+    <>
+      <button
+        onClick={async () => {
+          setFlash(null);
+          const res = await openWhatsAppInvite(weddingId, r.id);
+          setFlash(res.ok
+            ? res.to ? `WhatsApp opened for ${r.name}` : `WhatsApp opened for ${r.name} — no phone saved, pick the contact`
+            : `Couldn't prepare the WhatsApp message: ${res.error}`);
+          if (res.ok) router.refresh();
+        }}
+        className="portal-link mr-4"
+        style={{ color: "#128c7e" }}
+        aria-label={`Share invitation with ${r.name} on WhatsApp`}
+      >
+        WhatsApp
+      </button>
+      <button
+        onClick={() =>
+          setRsvpFor({
+            familyId: r.id,
+            name: r.name,
+            members: r.members,
+            events: events.filter((e) => r.eventIds.includes(e.id)),
+            current: r.rsvpByEvent,
+          })
+        }
+        className="portal-link mr-4"
+        aria-label={`Record RSVP for ${r.name}`}
+      >
+        RSVP
+      </button>
+      <button onClick={() => setEditing(draftFromFamily({ ...r, showTravel: travel.shows(r) }))} className="portal-link" aria-label={`Edit ${r.name}`}>
+        edit
+      </button>
+    </>
+  );
+  const empty = rows.length === 0
+    ? <>No families yet — add the first one, or <a href={importHref} className="portal-link">import a spreadsheet</a>.</>
+    : waitingOnly && !q ? <>Everyone has answered. 🎉</> : <>No family matches that search.</>;
+
   return (
     <section>
-      <div className="portal-panel mb-4 flex flex-wrap items-center justify-between gap-3 p-3">
+      <div ref={bar} className="portal-panel guest-bar mb-4 flex flex-wrap items-center justify-between gap-3 p-3">
         <div className="flex flex-wrap items-center gap-2">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Find a family, guest or phone…"
+          aria-label="Find a family"
+          className="portal-input"
+          style={{ width: "15rem", maxWidth: "100%" }}
+        />
+        <button
+          type="button"
+          aria-pressed={waitingOnly}
+          onClick={() => setWaitingOnly((v) => !v)}
+          title="Families who haven't answered for any event yet"
+          className={waitingOnly ? "portal-button" : "portal-button-secondary"}
+        >
+          Still waiting · {waiting.length}
+        </button>
+        <div className="mx-1 hidden h-6 w-px bg-neutral-200 sm:block" />
         <button
           onClick={() => setEditing("new")}
           className="portal-button"
@@ -117,22 +266,59 @@ export function FamilyTable({
         </button>
         </div>
         <p className="text-xs font-medium text-neutral-500" aria-live="polite">
-          {pending ? "Sending…" : flash ?? (ids.length ? `${ids.length} household${ids.length === 1 ? "" : "s"} selected` : "Select households to email")}
+          {pending ? "Sending…" : flash ?? (ids.length
+            ? `${ids.length} household${ids.length === 1 ? "" : "s"} selected`
+            : q || waitingOnly ? `${shown.length} of ${rows.length} families` : "Select households to email")}
         </p>
       </div>
 
-      <div className="portal-panel overflow-x-auto">
-        <table className="portal-table w-full min-w-[66rem] text-left text-sm">
+      {phone ? (
+        /* on a phone each family is a card: nothing to scroll sideways */
+        <div data-testid="family-cards">
+          {shown.length > 0 && (
+            <label className="mb-3 flex items-center gap-2 px-1 text-xs font-medium text-neutral-600">
+              <input
+                type="checkbox"
+                checked={allShown}
+                onChange={(e) => setSelected(e.target.checked ? new Set(shown.map((r) => r.id)) : new Set())}
+              />
+              Select all {shown.length} shown
+            </label>
+          )}
+          {shown.map((r) => (
+            <article key={r.id} className="portal-panel guest-card" aria-label={r.name}>
+              <div className="flex items-start gap-3">
+                <input type="checkbox" aria-label={`Select ${r.name}`} checked={selected.has(r.id)} onChange={() => toggle(r.id)} className="mt-1" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="font-medium">{r.name}</p>
+                    <p className="whitespace-nowrap text-xs text-neutral-500">{r.members.length} {r.members.length === 1 ? "guest" : "guests"}</p>
+                  </div>
+                  {tags(r)}
+                  <div className="mt-2 text-neutral-600">{contact(r)}</div>
+                  <div className="mt-3">{chips(r)}</div>
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-600">
+                    <label className="flex items-center gap-2">{travelBox(r)} Travel &amp; Stay</label>
+                    <span className="flex items-center gap-1.5">Last sent: {lastSent(r)}</span>
+                  </div>
+                  <div className="mt-3 border-t border-neutral-100 pt-3 text-sm">{actions(r)}</div>
+                </div>
+              </div>
+            </article>
+          ))}
+          {shown.length === 0 && <p className="portal-panel p-8 text-center text-sm text-neutral-400">{empty}</p>}
+        </div>
+      ) : (
+      <div className="portal-panel guest-table" data-freeze="true">
+        <table className="portal-table w-full min-w-[60rem] text-left text-sm">
           <thead>
             <tr>
               <th className="p-3">
                 <input
                   type="checkbox"
                   aria-label="Select all families"
-                  checked={selected.size === rows.length && rows.length > 0}
-                  onChange={(e) =>
-                    setSelected(e.target.checked ? new Set(rows.map((r) => r.id)) : new Set())
-                  }
+                  checked={allShown}
+                  onChange={(e) => setSelected(e.target.checked ? new Set(shown.map((r) => r.id)) : new Set())}
                 />
               </th>
               <th className="p-3">Family</th>
@@ -145,149 +331,32 @@ export function FamilyTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {shown.map((r) => (
               <tr key={r.id}>
                 <td>
-                  <input
-                    type="checkbox"
-                    aria-label={`Select ${r.name}`}
-                    checked={selected.has(r.id)}
-                    onChange={() => toggle(r.id)}
-                  />
+                  <input type="checkbox" aria-label={`Select ${r.name}`} checked={selected.has(r.id)} onChange={() => toggle(r.id)} />
                 </td>
                 <td>
                   <p className="font-medium">{r.name}</p>
-                  <p className="mt-1 text-xs text-neutral-500">
-                    {r.relation}
-                    {r.source === "guest" && <span className="ml-1 rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 font-medium text-violet-700">via link</span>}
-                    {r.diet && <span className="ml-1 rounded border border-neutral-200 px-1.5 py-0.5">{r.diet}</span>}
-                  </p>
+                  {tags(r)}
                 </td>
-                <td className="text-neutral-600">
-                  {(() => {
-                    const p = r.members.find((m) => m.isPrimary);
-                    return (
-                      <>
-                        {p && <p className="text-xs font-medium text-neutral-800">{p.fullName}</p>}
-                        {r.email && <p className="text-xs">{r.email}</p>}
-                        {r.phone && <p className="text-xs tabular-nums">{r.phone}</p>}
-                        {!r.email && !r.phone && (
-                          <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-700">no contact</span>
-                        )}
-                      </>
-                    );
-                  })()}
-                </td>
+                <td className="text-neutral-600">{contact(r)}</td>
                 <td className="tabular-nums">{r.members.length}</td>
-                <td>
-                  <div className="flex flex-wrap gap-1.5">
-                    {events.map((e) => {
-                      const invited = r.eventIds.includes(e.id);
-                      const rsvp = r.rsvpByEvent[e.id];
-                      if (!invited) return null;
-                      return (
-                        <span
-                          key={e.id}
-                          title={`${e.name}: ${rsvp ? (rsvp.status === "attending" ? `${rsvp.headcount} attending` : "declined") : "no answer yet"}${rsvp?.note ? ` — “${rsvp.note}”` : ""}`}
-                          className={`rounded-full border px-2 py-1 text-xs font-medium ${
-                            rsvp
-                              ? rsvp.status === "attending"
-                                ? "border-green-200 bg-green-50 text-green-700"
-                                : "border-neutral-300 bg-neutral-100 text-neutral-500"
-                              : "border-neutral-200 text-neutral-400"
-                          }`}
-                        >
-                          {e.name} {rsvp ? (rsvp.status === "attending" ? `✓${rsvp.headcount}` : "✗") : "—"}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </td>
-                <td className="text-center">
-                  <input
-                    type="checkbox"
-                    aria-label={`Show Travel & Stay to ${r.name}`}
-                    title="Show the Travel & Stay section on their wedding site"
-                    checked={travel.shows(r)}
-                    onChange={(e) => travel.set(r, e.target.checked)}
-                    className="h-4 w-4"
-                  />
-                </td>
-                <td>
-                  {r.lastEmail ? (
-                    r.lastEmail.status === "whatsapp" ? (
-                      <span className="portal-badge">invite · WhatsApp</span>
-                    ) : r.lastEmail.status === "sent" ? (
-                      <span className="portal-badge">
-                        {r.lastEmail.type} · sent
-                      </span>
-                    ) : (
-                      <span className="text-xs font-medium text-red-600">
-                        failed
-                        <button
-                          disabled={pending}
-                          onClick={() => send("resend", [r.id])}
-                          className="ml-2 rounded border border-red-200 px-1.5 py-0.5 text-xs hover:bg-red-50"
-                        >
-                          retry
-                        </button>
-                      </span>
-                    )
-                  ) : (
-                    <span className="text-xs text-neutral-400">never</span>
-                  )}
-                </td>
-                <td className="whitespace-nowrap text-right">
-                  <button
-                    onClick={async () => {
-                      setFlash(null);
-                      const res = await openWhatsAppInvite(weddingId, r.id);
-                      setFlash(res.ok
-                        ? res.to ? `WhatsApp opened for ${r.name}` : `WhatsApp opened for ${r.name} — no phone saved, pick the contact`
-                        : `Couldn't prepare the WhatsApp message: ${res.error}`);
-                      if (res.ok) router.refresh();
-                    }}
-                    className="portal-link mr-4"
-                    style={{ color: "#128c7e" }}
-                    aria-label={`Share invitation with ${r.name} on WhatsApp`}
-                  >
-                    WhatsApp
-                  </button>
-                  <button
-                    onClick={() =>
-                      setRsvpFor({
-                        familyId: r.id,
-                        name: r.name,
-                        members: r.members,
-                        events: events.filter((e) => r.eventIds.includes(e.id)),
-                        current: r.rsvpByEvent,
-                      })
-                    }
-                    className="portal-link mr-4"
-                    aria-label={`Record RSVP for ${r.name}`}
-                  >
-                    RSVP
-                  </button>
-                  <button
-                    onClick={() => setEditing(draftFromFamily({ ...r, showTravel: travel.shows(r) }))}
-                    className="portal-link"
-                  >
-                    edit
-                  </button>
-                </td>
+                <td>{chips(r)}</td>
+                <td className="text-center">{travelBox(r)}</td>
+                <td>{lastSent(r)}</td>
+                <td className="whitespace-nowrap text-right">{actions(r)}</td>
               </tr>
             ))}
-            {rows.length === 0 && (
+            {shown.length === 0 && (
               <tr>
-                <td colSpan={8} className="p-10 text-center text-sm text-neutral-400">
-                  No families yet — add the first one, or{" "}
-                  <a href={importHref} className="portal-link">import a spreadsheet</a>.
-                </td>
+                <td colSpan={8} className="p-10 text-center text-sm text-neutral-400">{empty}</td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
+      )}
 
       {bulk && (
         <BulkRsvpDialog

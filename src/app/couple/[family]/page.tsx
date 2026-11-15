@@ -2,13 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { weddings, events } from "@/db/schema";
+import { weddings } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
 import { fmtWeddingDate } from "@/lib/format";
 import { asFamilySide, getLooks, namesFor, otherSide, sideName } from "@/lib/looks";
 import { THEME_META } from "@/themes/catalog";
 import { ShareCard } from "../ShareCard";
-import { NonResponders } from "../NonResponders";
 import { SummaryCards } from "../SummaryCards";
 import { Stat, weddingStats } from "../stats";
 import { SaveButton } from "../site/SaveButton";
@@ -42,11 +41,7 @@ export default async function FamilySection({
   if (!weddingId) return <main className="p-10 text-sm text-neutral-500">No wedding assigned to this account.</main>;
 
   const [wedding] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
-  const [st, looks, evs] = await Promise.all([
-    weddingStats(weddingId, family),
-    getLooks(weddingId),
-    db.select().from(events).where(eq(events.weddingId, weddingId)).orderBy(events.sortOrder),
-  ]);
+  const [st, looks] = await Promise.all([weddingStats(weddingId, family), getLooks(weddingId)]);
   const look = looks[family];
   const coupleNames = namesFor(wedding, family).couple; // this family's name order
   const admin = staff.role === "admin";
@@ -61,30 +56,10 @@ export default async function FamilySection({
       <header className="mb-6">
         <h1 className="portal-heading">{sideName(family)}</h1>
         <p className="portal-subheading mt-3">
-          The {who}&apos;s side&apos;s own site, guests and printed cards — in the{" "}
-          <span className="font-medium text-neutral-700">{meta.label}</span> look.
+          The link to share, replies so far and RSVP settings for the {who}&apos;s side — in the{" "}
+          <span className="font-medium text-neutral-700">{meta.label}</span> look. Use the bar above to edit the site, work the guest list or print cards.
         </p>
       </header>
-
-      {/* the three things a family does here */}
-      <div className="mb-6 grid gap-3 md:grid-cols-3">
-        <div className="portal-panel portal-action">
-          <p className="portal-eyebrow">1 · Design</p>
-          <p>The look, design touches, invitation wording, celebrations, travel and photos guests see.</p>
-          <Link href={`/couple/site${q(`family=${family}`)}`} className="portal-button">Edit your site</Link>
-        </div>
-        <div className="portal-panel portal-action">
-          <p className="portal-eyebrow">2 · Invite</p>
-          <p>Add or import households, choose their events, send invitations and track replies.</p>
-          <Link href={`/committee${q(`family=${family}`)}`} className="portal-button">Guest list &amp; invites</Link>
-        </div>
-        <div className="portal-panel portal-action">
-          <p className="portal-eyebrow">3 · Print</p>
-          <p>The traditional card as a print-ready PDF, in this family&apos;s look and wording.</p>
-          <Link href={`/couple/${family}/print${admin ? `?wedding=${weddingId}` : ""}`} className="portal-button">Print invitation cards</Link>
-        </div>
-      </div>
-
 
       {sp.saved && (
         <p className="mb-6 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-900" role="status">Saved.</p>
@@ -110,33 +85,7 @@ export default async function FamilySection({
         <SummaryCards summary={st.summary} />
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <NonResponders families={st.nonResponders.map((f) => ({ id: f.id, name: f.name, relation: f.relation, side: f.side }))} />
-
-        <section className="rounded-xl border border-neutral-200 bg-white p-6">
-          <h2 className="font-semibold">The {who}&apos;s guest list</h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            Add families, import a spreadsheet or send invites in the{" "}
-            <Link href={`/committee${q(`family=${family}`)}`} className="underline">guest list</Link>.
-          </p>
-          {st.families.length === 0 ? (
-            <p className="mt-4 text-sm text-neutral-400">No families yet.</p>
-          ) : (
-            <ul className="mt-4 space-y-1.5">
-              {st.families.map((f) => (
-                <li key={f.id} className="text-sm">
-                  <span className="font-medium">{f.name}</span>
-                  <span className="text-neutral-500">
-                    {" "}— {st.guests.filter((g) => g.familyId === f.id).map((g) => g.fullName.split(" ")[0]).join(", ")}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
-
-      <section id="rsvp" className="portal-panel mt-6 p-6">
+      <section id="rsvp" className="portal-panel p-6">
         <p className="portal-eyebrow">RSVP</p>
         <h2 className="mt-1 font-semibold">Who can reply to the {who}&apos;s side, and until when</h2>
         <form action={saveRsvpSettings} className="mt-5 space-y-4">

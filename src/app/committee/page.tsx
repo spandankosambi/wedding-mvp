@@ -104,14 +104,14 @@ export default async function CommitteePage({
       <div className="mb-8"><SummaryCards summary={summary} /></div>
 
       {/* whose list: the bride's family or the groom's */}
-      <nav className="mb-4 mr-3 inline-flex rounded-lg border border-neutral-200 bg-white p-1 text-sm" aria-label="Family">
+      {staff.role === "committee" && <nav className="mb-4 mr-3 inline-flex rounded-lg border border-neutral-200 bg-white p-1 text-sm" aria-label="Family">
         {(["bride", "groom"] as const).map((f) => (
           <Link key={f} href={link({ family: f })} aria-current={family === f ? "page" : undefined}
             className={`rounded-md px-4 py-1.5 font-medium ${family === f ? "bg-stone-800 text-white" : "text-neutral-600 hover:text-neutral-900"}`}>
             {sideName(f)}
           </Link>
         ))}
-      </nav>
+      </nav>}
 
       {/* Families ⇄ Guests: same data, two ways to work through it */}
       <nav className="mb-4 inline-flex rounded-lg border border-neutral-200 bg-white p-1 text-sm" aria-label="View">

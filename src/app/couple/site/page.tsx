@@ -15,6 +15,7 @@ import { GalleryUploader } from "./GalleryUploader";
 import { StaysEditor } from "./StaysEditor";
 import { StoryField } from "./StoryField";
 import { PortalNav } from "../PortalNav";
+import { JumpNav } from "./JumpNav";
 import { ContactsEditor } from "./ContactsEditor";
 import { contactsOf, MAX_CONTACTS } from "@/lib/contacts";
 import { decorOf, REVEALS, REVEAL_LABELS, FALLING, FALLING_LABELS, DIVIDERS, DIVIDER_LABELS } from "@/lib/site-decor";
@@ -79,9 +80,10 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
 
   return (
     <main className="portal-page">
-      <PortalNav names={coupleNames} current={family} page="site" weddingId={weddingId} admin={!!adminQ}
-        jump={[["theme", "Look"], ["decor", "Design touches"], ["wording", "Invitation wording"], ["words", "Tagline & story"], ["events", "Celebrations"], ["travel", "Travel & stay"], ["gallery", "Photos"]]} />
-      <div className="portal-shell">
+      <PortalNav names={coupleNames} current={family} page="site" weddingId={weddingId} admin={!!adminQ} />
+      <div className="portal-shell portal-editor">
+        <JumpNav items={[["theme", "Look"], ["decor", "Design touches"], ["wording", "Invitation wording"], ["words", "Tagline & story"], ["events", "Celebrations"], ["travel", "Travel & stay"], ["gallery", "Photos"]]} />
+        <div className="portal-editor-main">
         <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div className="max-w-2xl">
             <h1 className="portal-heading">Edit the {family === "bride" ? "bride" : "groom"}&apos;s family&apos;s site</h1>
@@ -383,6 +385,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
           <p className="text-center text-xs text-neutral-400">
             This family&apos;s guest list and invites live in its <Link href={`/committee?${adminQ}family=${family}`} className="underline">guest list</Link>.
           </p>
+        </div>
         </div>
       </div>
     </main>

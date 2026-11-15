@@ -9,6 +9,7 @@ import { BulkRsvpDialog } from "./BulkRsvpDialog";
 import { FamilyForm, draftFromFamily, type FamilyDraft } from "./FamilyForm";
 import { openWhatsAppInvite } from "./whatsapp";
 import { useTravelToggle } from "./travel";
+import { useBarHeight } from "./layout-hooks";
 import type { Side } from "@/lib/sides";
 import type { Row } from "./FamilyTable";
 
@@ -50,6 +51,7 @@ export function GuestTable({
   const [editing, setEditing] = useState<{ draft: FamilyDraft; guestId: string; name: string } | null>(null);
   const [pending, startTransition] = useTransition();
   const travel = useTravelToggle(weddingId, rows, setFlash);
+  const bar = useBarHeight<HTMLDivElement>();
 
   const guests = useMemo(() => rows.flatMap((f) => f.members.map((m) => ({ ...m, family: f }))), [rows]);
   const q = query.trim().toLowerCase();
@@ -85,7 +87,7 @@ export function GuestTable({
 
   return (
     <section>
-      <div className="portal-panel mb-4 flex flex-wrap items-center justify-between gap-3 p-3">
+      <div ref={bar} className="portal-panel guest-bar mb-4 flex flex-wrap items-center justify-between gap-3 p-3">
         <div className="flex flex-wrap items-center gap-2">
           <input
             type="search"
@@ -129,7 +131,8 @@ export function GuestTable({
         </p>
       </div>
 
-      <div className="portal-panel overflow-x-auto">
+      {/* with several extra columns the table scrolls sideways instead of freezing its titles */}
+      <div className="portal-panel guest-table" data-freeze={columns.length <= 2}>
         <table className="portal-table w-full text-left text-sm" style={{ minWidth: `${48 + columns.length * 10}rem` }}>
           <thead>
             <tr>

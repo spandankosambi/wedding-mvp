@@ -72,7 +72,7 @@ test("setup and design — with the live preview on every page — then download
   await signIn(page, "couple@example.com");
   // each family prints its own cards, from its section
   await page.goto("/couple/groom");
-  await page.getByRole("link", { name: "Print invitation cards" }).click();
+  await page.getByRole("navigation", { name: "Groom's side pages" }).getByRole("link", { name: "Print cards" }).click();
   // printing is a page of its own, under the family's "Print cards" tab
   await expect(page).toHaveURL(/\/couple\/groom\/print$/);
   await expect(page.getByRole("navigation", { name: "Groom's side pages" }).getByRole("link", { name: "Print cards" })).toHaveAttribute("aria-current", "page");

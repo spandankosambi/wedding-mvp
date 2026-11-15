@@ -68,7 +68,7 @@ test("a couple signs up, edits their site, and a guest RSVPs from the shared lin
   await page.goto("/couple");
   await expect(page.getByRole("region", { name: "Bride's family" })).toContainText("Families1");
   await page.getByRole("link", { name: "Open bride's section →" }).click();
-  await expect(page.getByText("The Kapoors")).toBeVisible();
+  await expect(page.getByText(/of 1 families/)).toBeVisible(); // the household is counted here; its name is in the guest list
 
   // the link the bride's family is told to share must point at the host they are on —
   // an APP_URL left pointing elsewhere would hand 300 guests a dead link

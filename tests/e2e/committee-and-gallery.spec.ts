@@ -131,7 +131,9 @@ test("the couple can get from the guest list back to their dashboard", async ({ 
   const bar = page.getByRole("navigation", { name: "Sections" });
   await expect(page.locator(".portal-nav-brand")).toHaveText("Arjun & Ananya");
   await expect(bar.getByRole("link", { name: "Groom's side" })).toHaveAttribute("aria-current", "page");
-  await bar.getByRole("link", { name: "Dashboard" }).click();
+  // everything sits on one line; the couple's names lead to the dashboard
+  expect((await page.locator(".portal-nav").boundingBox())!.height).toBeLessThan(64);
+  await page.locator("a.portal-nav-brand").click();
   await expect(page).toHaveURL(/\/couple$/);
   await expect(page.getByRole("heading", { name: "Your wedding at a glance" })).toBeVisible();
   await bar.getByRole("link", { name: "Bride's side" }).click();
@@ -272,4 +274,59 @@ test("Travel & Stay is one tick per household, from either view, and follows the
   await page.getByRole("button", { name: "Save family" }).click();
   await expect(dialog).toHaveCount(0);
   await expect(box).toBeChecked();
+});
+
+test("the guest list: find a family, see who is still waiting, frozen titles, and cards on a phone", async ({ page }) => {
+  await signIn(page, "couple@example.com");
+  // the overview no longer repeats the navigation or the list of families
+  await page.goto("/couple/groom");
+  await expect(page.getByRole("link", { name: "Print invitation cards" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Still waiting on" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: /Who can reply to the groom's side/ })).toBeVisible();
+  // switching family from the bar keeps you on the same kind of page
+  await page.goto("/committee?family=groom");
+  await expect(page.getByRole("navigation", { name: "Sections" }).getByRole("link", { name: "Bride's side" })).toHaveAttribute("href", "/committee?family=bride");
+
+  const rows = page.locator("tbody tr");
+  const all = await rows.count();
+  expect(all).toBeGreaterThan(1);
+  const first = (await rows.first().locator("td").nth(1).locator("p").first().innerText()).trim();
+  await page.getByRole("searchbox", { name: "Find a family" }).fill(first);
+  await expect(rows).toHaveCount(1);
+  await page.getByRole("searchbox", { name: "Find a family" }).fill("zzzz-nobody");
+  await expect(page.getByText("No family matches that search.")).toBeVisible();
+  await page.getByRole("searchbox", { name: "Find a family" }).fill("");
+  // "Still waiting" narrows the list to families with no answer yet
+  const waiting = page.getByRole("button", { name: /Still waiting · \d+/ });
+  const n = Number((await waiting.innerText()).match(/\d+/)![0]);
+  await waiting.click();
+  await expect(waiting).toHaveAttribute("aria-pressed", "true");
+  if (n) await expect(rows).toHaveCount(n); else await expect(page.getByText("Everyone has answered.")).toBeVisible();
+  await waiting.click();
+
+  // the buttons and the column titles stay in view while the rows scroll
+  await page.setViewportSize({ width: 1440, height: 420 });
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  const th = page.getByRole("columnheader", { name: "Primary contact" });
+  const lastRow = await rows.last().boundingBox();
+  if (lastRow && lastRow.y > 300) { // only when the list is long enough to scroll past its head
+    await expect(page.getByRole("button", { name: "Add family" })).toBeInViewport();
+    await expect(th).toBeInViewport();
+  }
+  // the page uses the width of the screen
+  expect((await page.locator(".guest-table").boundingBox())!.width).toBeGreaterThan(1250);
+
+  // on a phone each family is a card with everything reachable, and nothing scrolls sideways
+  await page.setViewportSize({ width: 390, height: 800 });
+  const cards = page.getByTestId("family-cards").getByRole("article");
+  await expect(cards).toHaveCount(all);
+  await expect(page.locator("table")).toHaveCount(0);
+  await expect(cards.first().getByRole("button", { name: /Record RSVP/ })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  if (shots) await page.screenshot({ path: `${shots}/guests-phone.png` });
+  // the site editor's parts become a "Jump to" menu
+  await page.goto("/couple/site?family=groom");
+  await page.getByText("Jump to a section").click();
+  await page.getByRole("navigation", { name: "Jump to" }).getByRole("link", { name: "Travel & stay" }).click();
+  await expect(page).toHaveURL(/#travel$/);
 });

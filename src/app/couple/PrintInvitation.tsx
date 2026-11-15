@@ -355,7 +355,7 @@ export function PrintInvitation(props: Props) {
 
   // redraw the preview a moment after the last change, on every page
   useEffect(() => {
-    if (!open || !customOk || preview?.key === optionsKey) return;
+    if (!customOk || preview?.key === optionsKey) return;
     let stale = false;
     const t = setTimeout(async () => {
       setPreviewing(true); setError(null);
@@ -370,7 +370,7 @@ export function PrintInvitation(props: Props) {
     }, 650);
     return () => { stale = true; clearTimeout(t); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, optionsKey, customOk]);
+  }, [optionsKey, customOk]);
 
   function remember() {
     try {
@@ -439,7 +439,7 @@ export function PrintInvitation(props: Props) {
           })}
         </ol>
 
-        <div className="mt-6 grid gap-8 text-sm lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="mt-6 grid gap-8 text-sm lg:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_460px]">
           <div className="space-y-7">
             {step === 1 && (
               <>
@@ -736,7 +736,7 @@ export function PrintInvitation(props: Props) {
             )}
           </div>
 
-          <aside className="lg:sticky lg:top-28 lg:self-start" aria-label="Preview">
+          <aside className="lg:sticky lg:top-20 lg:self-start" aria-label="Preview">
             <div className="flex items-center justify-between">
               <p className={label}>Preview</p>
               <span className="text-xs text-neutral-500" role="status" data-testid="preview-status">
