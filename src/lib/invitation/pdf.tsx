@@ -8,7 +8,7 @@ import type { Style } from "@react-pdf/stylesheet";
 import type { Theme } from "@/themes/catalog";
 import type { Invitation, EventCard, InsertCard, Details, Line } from "./content";
 import { BLEED_MM, SAFE_MM, trimSize, type InvitationOptions } from "./options";
-import { backgroundPattern, borderBand, icon, symbol, isGlyph, SYMBOL_GLYPHS } from "./decor";
+import { backgroundPattern, borderBand, icon, symbol, isGlyph, SYMBOL_GLYPHS, type DrawnSymbol } from "./decor";
 import {
   paletteFor, topMotif, dividerMotif, cornerMotif, toranMotif, archPath, crest, scriptRuns, ARCH_CROWN,
   type Motif, type Ink, type Palette,
@@ -38,8 +38,7 @@ function registerFonts() {
       { src: f("cinzel-latin-600-normal.woff"), fontWeight: 600 },
     ],
   });
-  // single-glyph symbols: Bismillah (Arabic) and Ik Onkar (Gurmukhi)
-  Font.register({ family: "Amiri", src: f("amiri-arabic-400-normal.woff") });
+  // a single-glyph symbol: Ik Onkar (Gurmukhi)
   Font.register({ family: "Gurmukhi", src: f("noto-serif-gurmukhi-gurmukhi-500-normal.woff") });
   // Devanagari (Hindi, Marathi, Sanskrit): one face, answering every weight
   const deva = f("tiro-devanagari-sanskrit-devanagari-400-normal.woff");
@@ -277,6 +276,8 @@ function Photo({ c, src, width }: { c: Ctx; src: string; width: number }) {
 function Front({ c: base, inv }: { c: Ctx; inv: Invitation }) {
   const f = inv.front;
   const o = base.o;
+  // an own symbol needs its upload; without one there's nothing to draw
+  const hasSymbol = o.symbol !== "motif" && (o.symbol !== "custom" || !!iconPng(o.symbolImage));
   const photoFront = o.photo && o.photoPlace === "front";
   const crestTop = f.monogram && !photoFront;
   const crestSeal = f.monogram && photoFront;
@@ -287,7 +288,7 @@ function Front({ c: base, inv }: { c: Ctx; inv: Invitation }) {
   // how tall the stack is at scale 1 (pt), to grow or shrink the type to fit
   const top = topMotif(base.theme), div = dividerMotif(base.theme);
   const need =
-    (o.symbol !== "motif" ? 34 : 0) + (crestTop ? 42 : 0) + (photoFront ? (photoW / base.s) * (o.photoShape === "arch" ? 1.25 : 1) + 10 : 0) +
+    (hasSymbol ? 34 : 0) + (crestTop ? 42 : 0) + (photoFront ? (photoW / base.s) * (o.photoShape === "arch" ? 1.25 : 1) + 10 : 0) +
     (f.invocation ? 12 : 0) + f.shloka.length * 13 + (78 * top.h) / top.w + 10 +
     f.lead.reduce((n, l) => n + (l.name ? 16 : 14), 0) + 10 +
     nameSize(f.first, nameBase) * 1.15 + 18 + nameSize(f.second, nameBase) * 1.15 +
@@ -302,9 +303,11 @@ function Front({ c: base, inv }: { c: Ctx; inv: Invitation }) {
 
   return (
     <Card c={base}>
-      {o.symbol !== "motif" && (isGlyph(o.symbol)
-        ? <Text style={{ fontFamily: SYMBOL_GLYPHS[o.symbol].font, fontSize: (o.symbol === "bismillah" ? 15 : 26) * c.s, color: c.p.accent, lineHeight: o.symbol === "bismillah" ? 1.5 : 1.1, marginBottom: 2 * c.s }}>{SYMBOL_GLYPHS[o.symbol].text}</Text>
-        : <Draw m={symbol(o.symbol)} width={30 * c.s} p={c.p} style={{ marginBottom: 4 * c.s }} />)}
+      {hasSymbol && (o.symbol === "custom"
+        ? <Image src={iconPng(o.symbolImage, c.p.accent)!} style={{ width: 30 * c.s, height: 30 * c.s, marginBottom: 4 * c.s }} />
+        : isGlyph(o.symbol)
+          ? <Text style={{ fontFamily: SYMBOL_GLYPHS[o.symbol].font, fontSize: 26 * c.s, color: c.p.accent, lineHeight: 1.1, marginBottom: 2 * c.s }}>{SYMBOL_GLYPHS[o.symbol].text}</Text>
+          : <Draw m={symbol(o.symbol as DrawnSymbol)} width={30 * c.s} p={c.p} style={{ marginBottom: 4 * c.s }} />)}
       {crestTop && <Crest c={c} text={f.monogram!} size={38 * c.s} />}
       {photoFront && <Photo c={c} src={o.photo!} width={photoW * k} />}
       {f.invocation && <Kicker c={c}>{f.invocation}</Kicker>}

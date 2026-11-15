@@ -29,7 +29,7 @@ export function PortalNav({ names, current, page, jump, weddingId, admin = false
     { id: "overview", href: `/couple/${family}${q()}`, label: "Overview" },
     { id: "site", href: `/couple/site${q(`family=${family}`)}`, label: "Edit your site" },
     { id: "guests", href: `/committee${q(`family=${family}`)}`, label: "Guest list" },
-    { id: "print", href: `/couple/${family}${q("print=1")}`, label: "Print cards" },
+    { id: "print", href: `/couple/${family}/print${q()}`, label: "Print cards" },
   ] : [];
   return (
     <div className="portal-nav">

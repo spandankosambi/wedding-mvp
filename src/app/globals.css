@@ -1256,6 +1256,5 @@ html.fx .rule-grow.is-in::before { transform: scaleX(1); }
   .site-foot .kicker span + span::before { content: none; }
 }
 
-.glyph-arabic { font-family: var(--font-amiri), serif; }
 .glyph-gurmukhi { font-family: var(--font-gurmukhi), serif; }
 .event-icon-own { aspect-ratio: 1; background: var(--accent); }

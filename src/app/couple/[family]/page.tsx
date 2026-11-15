@@ -1,16 +1,13 @@
-import { decorOf } from "@/lib/site-decor";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
-import { eventForSide, eventLabel } from "@/lib/sides";
 import { fmtWeddingDate } from "@/lib/format";
-import { asFamilySide, getLooks, namesFor, otherSide, sideName, wordingOf } from "@/lib/looks";
+import { asFamilySide, getLooks, namesFor, otherSide, sideName } from "@/lib/looks";
 import { THEME_META } from "@/themes/catalog";
 import { ShareCard } from "../ShareCard";
-import { PrintInvitation } from "../PrintInvitation";
 import { NonResponders } from "../NonResponders";
 import { SummaryCards } from "../SummaryCards";
 import { Stat, weddingStats } from "../stats";
@@ -31,7 +28,7 @@ export default async function FamilySection({
   searchParams,
 }: {
   params: Promise<{ family: string }>;
-  searchParams: Promise<{ wedding?: string; saved?: string; error?: string; print?: string }>;
+  searchParams: Promise<{ wedding?: string; saved?: string; error?: string }>;
 }) {
   const family = asFamilySide((await params).family);
   if (!family) notFound();
@@ -59,7 +56,7 @@ export default async function FamilySection({
 
   return (
     <main className="portal-page">
-      <PortalNav names={coupleNames} current={family} page={sp.print ? "print" : "overview"} weddingId={weddingId} admin={admin} />
+      <PortalNav names={coupleNames} current={family} page="overview" weddingId={weddingId} admin={admin} />
       <div className="portal-shell">
       <header className="mb-6">
         <h1 className="portal-heading">{sideName(family)}</h1>
@@ -84,23 +81,7 @@ export default async function FamilySection({
         <div className="portal-panel portal-action">
           <p className="portal-eyebrow">3 · Print</p>
           <p>The traditional card as a print-ready PDF, in this family&apos;s look and wording.</p>
-          <PrintInvitation
-            weddingId={weddingId}
-            admin={admin}
-            family={family}
-            siteEditorHref={`/couple${admin ? `?wedding=${weddingId}` : ""}#details`}
-            theme={look.theme}
-            brideName={wedding.brideName}
-            groomName={wedding.groomName}
-            brideParents={wedding.brideParents}
-            groomParents={wedding.groomParents}
-            wording={wordingOf(look)}
-            icons={decorOf(look).icons}
-            autoOpen={!!sp.print}
-            wordingHref={`/couple/site?${admin ? `wedding=${weddingId}&` : ""}family=${family}#wording`}
-            hasDeadline={!!look.rsvpDeadline}
-            events={evs.filter((e) => eventForSide(e.side, family)).map((e) => ({ id: e.id, label: eventLabel(e), side: e.side, isPublished: e.isPublished }))}
-          />
+          <Link href={`/couple/${family}/print${admin ? `?wedding=${weddingId}` : ""}`} className="portal-button">Print invitation cards</Link>
         </div>
       </div>
 

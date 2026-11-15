@@ -12,9 +12,10 @@ import {
 import { crest, paletteFor, type Motif, type Palette } from "@/lib/invitation/motifs";
 import {
   BORDER_STYLES, BORDER_LABELS, PATTERNS, PATTERN_LABELS, SYMBOLS, SYMBOL_LABELS, SYMBOL_GLYPHS, isGlyph,
-  backgroundPattern, borderBand, symbol as symbolMotif,
+  backgroundPattern, borderBand, symbol as symbolMotif, type DrawnSymbol,
 } from "@/lib/invitation/decor";
 import { MotifSvg as Art } from "@/components/MotifSvg";
+import { MaskCanvas, maskFromFile } from "@/components/MaskUpload";
 
 type PrintEvent = { id: string; label: string; side: Side; isPublished: boolean };
 type Props = {
@@ -26,8 +27,6 @@ type Props = {
   siteEditorHref: string;
   /** where this family's wording is edited (Edit your site) */
   wordingHref: string;
-  /** open straight away (arriving from the Print cards tab) */
-  autoOpen?: boolean;
   /** celebration icons: the family's Design touches tick */
   icons: boolean;
   /** this family's wording, from its site: printed as is */
@@ -59,7 +58,7 @@ function initial(p: Props): Form {
     version: p.family, size: "5x7", orientation: "portrait", eventLayout: "together",
     eventIds: defaultEvents(p.events, p.family), output: "printer", cropMarks: false, colours: "theme",
     qr: true, dressCode: true, replyBy: p.hasDeadline,
-    frame: "classic", toran: false, patternBorder: false, borderStyle: "diamond", pattern: "none", symbol: "motif", icons: false, cardIcons: true, monogram: false, monogramText: "", monogramStyle: "circle",
+    frame: "classic", toran: false, patternBorder: false, borderStyle: "diamond", pattern: "none", symbol: "motif", symbolImage: "", icons: false, cardIcons: true, monogram: false, monogramText: "", monogramStyle: "circle",
     fill: "classic", nameFont: "serif", photo: null, photoPlace: "front", photoShape: "arch",
     customW: "", customH: "", unit: "in",
   };
@@ -70,6 +69,8 @@ function fromSaved(base: Form, saved: Record<string, unknown>): Form {
   const out: Record<string, unknown> = { ...base };
   for (const k of Object.keys(base)) if (k in saved && saved[k] !== undefined) out[k] = saved[k];
   if (out.version !== "bride" && out.version !== "groom") out.version = base.version;
+  // a symbol that's no longer offered, or "your own" with nothing uploaded
+  if (!(SYMBOLS as readonly string[]).includes(out.symbol as string) || (out.symbol === "custom" && !out.symbolImage)) out.symbol = "motif";
   return out as Form;
 }
 
@@ -97,7 +98,7 @@ const legacyKey = (id: string) => `print-invitation:${id}`;
     whose card it is or its events (the wording has its own "Same as" on the site). */
 const SHARED_KEYS = [
   "size", "orientation", "eventLayout", "output", "cropMarks", "colours", "qr", "dressCode", "replyBy",
-  "frame", "toran", "patternBorder", "borderStyle", "pattern", "symbol", "icons", "cardIcons", "monogram", "monogramStyle", "fill", "nameFont", "photo", "photoPlace", "photoShape", "customW", "customH", "unit",
+  "frame", "toran", "patternBorder", "borderStyle", "pattern", "symbol", "symbolImage", "icons", "cardIcons", "monogram", "monogramStyle", "fill", "nameFont", "photo", "photoPlace", "photoShape", "customW", "customH", "unit",
 ] as const;
 const readSaved = (key: string): Record<string, unknown> | null => {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; }
@@ -242,12 +243,10 @@ function PdfPages({ pdf }: { pdf: Blob | null }) {
   return <div ref={holder} data-testid="pdf-preview" data-pages={pages} className="space-y-0" />;
 }
 
-/** "Print invitation cards": the questions, the design, a live preview, the PDF. */
+/** The print page: the questions, the design, a live preview, the PDF. */
 export function PrintInvitation(props: Props) {
-  const [open, setOpen] = useState(!!props.autoOpen);
-  // arriving from the Print cards tab opens it
-  useEffect(() => { if (props.autoOpen) setOpen(true); }, [props.autoOpen]);
   const [step, setStep] = useState<Step>(1);
+  const [symbolError, setSymbolError] = useState<string | null>(null);
   const [form, setForm] = useState<Form>(() => initial(props));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -408,14 +407,6 @@ export function PrintInvitation(props: Props) {
     }
   }
 
-  if (!open) {
-    return (
-      <button type="button" onClick={() => { setOpen(true); setStep(1); }} className="portal-button-secondary">
-        Print invitation cards
-      </button>
-    );
-  }
-
   const summary = customOk
     ? `${pages} ${pages === 1 ? "page" : "pages"} · card ${tw} × ${th} mm${form.output === "printer" ? ` (${tw + 2 * BLEED_MM} × ${th + 2 * BLEED_MM} mm with bleed)` : " on A4"}${chosen.length === 0 ? " · no events selected" : ""}`
     : "Enter a custom size";
@@ -429,18 +420,11 @@ export function PrintInvitation(props: Props) {
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/35 p-4 backdrop-blur-sm" role="dialog" aria-modal aria-labelledby="print-title">
-      <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-[#fcfbf9] p-6 shadow-2xl md:p-8">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="portal-eyebrow">Printed cards</p>
-            <h2 id="print-title" className="mt-1 text-xl font-semibold tracking-tight">Download invitation PDF to print</h2>
-          </div>
-          <button type="button" onClick={() => setOpen(false)} className="portal-icon-button" aria-label="Close">×</button>
-        </div>
+    <section data-testid="print-page" aria-label="Print invitation cards">
+      <div className="portal-panel !overflow-visible p-5 md:p-7">
 
         {/* the three pages, also clickable */}
-        <ol className="mt-5 flex flex-wrap gap-2 text-xs" aria-label="Steps">
+        <ol className="flex flex-wrap gap-2 text-xs" aria-label="Steps">
           {STEPS.map((st, i) => {
             const n = (i + 1) as Step;
             const on = step === n;
@@ -455,7 +439,7 @@ export function PrintInvitation(props: Props) {
           })}
         </ol>
 
-        <div className="mt-6 grid gap-8 text-sm md:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="mt-6 grid gap-8 text-sm lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-7">
             {step === 1 && (
               <>
@@ -617,14 +601,40 @@ export function PrintInvitation(props: Props) {
                 <fieldset>
                   <legend className={label}>Symbol at the top</legend>
                   <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label="Symbol at the top">
-                    {SYMBOLS.map((sy) => (
+                    {SYMBOLS.filter((sy) => sy !== "custom").map((sy) => (
                       <Thumb key={sy} label={SYMBOL_LABELS[sy]} on={form.symbol === sy} bg={palette.bg} onPick={() => set("symbol", sy)}>
                         {sy === "motif" ? <span className="grid h-[44px] w-[44px] place-items-center text-lg" style={{ color: palette.hair }}>—</span>
-                          : isGlyph(sy) ? <span className={`${SYMBOL_GLYPHS[sy].css} grid h-[44px] w-[44px] place-items-center leading-none ${sy === "bismillah" ? "text-xl" : "text-3xl"}`} style={{ color: palette.accent }}>{SYMBOL_GLYPHS[sy].text}</span>
-                          : <Art m={symbolMotif(sy)} colours={palette} width={44} />}
+                          : isGlyph(sy) ? <span className={`${SYMBOL_GLYPHS[sy].css} grid h-[44px] w-[44px] place-items-center text-3xl leading-none`} style={{ color: palette.accent }}>{SYMBOL_GLYPHS[sy].text}</span>
+                          : <Art m={symbolMotif(sy as DrawnSymbol)} colours={palette} width={44} />}
                       </Thumb>
                     ))}
+                    {form.symbolImage && (
+                      <Thumb label="Your own" on={form.symbol === "custom"} bg={palette.bg} onPick={() => set("symbol", "custom")}>
+                        <MaskCanvas mask={form.symbolImage} colour={palette.accent} size={44} />
+                      </Thumb>
+                    )}
                   </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                    <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-amber-800">PRO</span>
+                    <label className="cursor-pointer font-medium text-stone-800 underline underline-offset-2">
+                      {form.symbolImage ? "Replace your own symbol" : "Upload your own symbol"}
+                      <input type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp" className="sr-only" aria-label="Upload your own symbol"
+                        onChange={async (e) => {
+                          const input = e.currentTarget, r = await maskFromFile(input.files?.[0]);
+                          input.value = "";
+                          setSymbolError(r.error ?? null);
+                          if (r.mask) setForm((f) => ({ ...f, symbol: "custom", symbolImage: r.mask! }));
+                        }} />
+                    </label>
+                    {form.symbolImage && (
+                      <button type="button" className="text-neutral-500 underline underline-offset-2 hover:text-red-700"
+                        onClick={() => setForm((f) => ({ ...f, symbolImage: "", symbol: f.symbol === "custom" ? "motif" : f.symbol }))}>
+                        Remove it
+                      </button>
+                    )}
+                    <span className="text-neutral-500">Any symbol or emblem as an SVG or PNG, one colour on a plain or transparent background. It prints in the card&apos;s colour.</span>
+                  </div>
+                  {symbolError && <p className="mt-1 text-xs text-red-700" role="alert">{symbolError}</p>}
                 </fieldset>
 
                 <fieldset>
@@ -726,7 +736,7 @@ export function PrintInvitation(props: Props) {
             )}
           </div>
 
-          <aside className="md:sticky md:top-0 md:self-start" aria-label="Preview">
+          <aside className="lg:sticky lg:top-28 lg:self-start" aria-label="Preview">
             <div className="flex items-center justify-between">
               <p className={label}>Preview</p>
               <span className="text-xs text-neutral-500" role="status" data-testid="preview-status">
@@ -743,9 +753,7 @@ export function PrintInvitation(props: Props) {
         <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200 pt-5">
           <p className="text-xs text-neutral-500" data-testid="print-summary">{summary}</p>
           <div className="flex gap-2">
-            {step === 1
-              ? <button type="button" onClick={() => setOpen(false)} className="portal-button-secondary">Close</button>
-              : <button type="button" onClick={() => go((step - 1) as Step)} className="portal-button-secondary">← Back</button>}
+            {step > 1 && <button type="button" onClick={() => go((step - 1) as Step)} className="portal-button-secondary">← Back</button>}
             {step < 2 ? (
               <button type="button" onClick={() => go((step + 1) as Step)} disabled={!customOk} className="portal-button">
                 Next: design →
@@ -760,6 +768,6 @@ export function PrintInvitation(props: Props) {
         {done && <p className="mt-3 text-right text-xs text-emerald-700" role="status">Downloaded {done}. Change anything to make another version.</p>}
         {error && <p className="mt-3 text-right text-xs text-red-700" role="alert">{error}</p>}
       </div>
-    </div>
+    </section>
   );
 }

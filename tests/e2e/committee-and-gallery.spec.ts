@@ -146,8 +146,8 @@ test("the couple can get from the guest list back to their dashboard", async ({ 
   await expect(page.getByRole("navigation", { name: "Jump to" }).getByRole("link", { name: "Celebrations" })).toBeVisible();
   await expect(page.locator(".portal-nav")).toHaveCount(1);
   await pages.getByRole("link", { name: "Print cards" }).click();
-  await expect(page.getByRole("dialog", { name: "Download invitation PDF to print" })).toBeVisible();
-  await page.getByRole("dialog").getByRole("button", { name: "Close", exact: true }).first().click();
+  await expect(page).toHaveURL(/\/couple\/bride\/print$/);
+  await expect(page.getByTestId("print-page")).toBeVisible();
   // …and it signs you out
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/signin/);

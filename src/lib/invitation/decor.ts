@@ -134,25 +134,25 @@ export function iconFor(eventName: string): IconId {
 
 export const SYMBOLS = [
   "motif", "ganesh", "om", "swastik", "kalash", "diya",
-  "bismillah", "crescent", "ikonkar", "khanda", "cross", "doves",
+  "crescent", "ikonkar", "khanda", "cross", "doves",
   "jain", "dharma", "atash", "rings", "hearts", "lotus",
+  "custom", // the family's own upload (a mask, lib/icon-mask)
 ] as const;
 export type SymbolId = (typeof SYMBOLS)[number];
 export const SYMBOL_LABELS: Record<SymbolId, string> = {
   motif: "None", ganesh: "Shree Ganesh", om: "Om", swastik: "Swastik", kalash: "Kalash", diya: "Diya",
-  bismillah: "Bismillah", crescent: "Crescent & star", ikonkar: "Ik Onkar", khanda: "Khanda", cross: "Cross", doves: "Doves",
-  jain: "Jain hand", dharma: "Dharma wheel", atash: "Sacred flame", rings: "Rings", hearts: "Hearts", lotus: "Lotus",
+  crescent: "Crescent & star", ikonkar: "Ik Onkar", khanda: "Khanda", cross: "Cross", doves: "Doves",
+  jain: "Jain hand", dharma: "Dharma wheel", atash: "Sacred flame", rings: "Rings", hearts: "Hearts", lotus: "Lotus", custom: "Your own",
 };
 
 /** Symbols set in type (one glyph each), not drawn: the PDF font and the site's CSS class. */
 export const SYMBOL_GLYPHS = {
   om: { text: "ॐ", font: "Tiro", css: "indic" },
-  bismillah: { text: "﷽", font: "Amiri", css: "glyph-arabic" },
   ikonkar: { text: "ੴ", font: "Gurmukhi", css: "glyph-gurmukhi" },
 } as const;
 export type GlyphSymbol = keyof typeof SYMBOL_GLYPHS;
 export const isGlyph = (id: SymbolId): id is GlyphSymbol => id in SYMBOL_GLYPHS;
-export type DrawnSymbol = Exclude<SymbolId, "motif" | GlyphSymbol>;
+export type DrawnSymbol = Exclude<SymbolId, "motif" | "custom" | GlyphSymbol>;
 
 /** `om` is set in type (ॐ), not drawn. */
 export const OM = "ॐ";

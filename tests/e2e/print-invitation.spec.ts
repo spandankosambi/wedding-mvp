@@ -72,8 +72,12 @@ test("setup and design — with the live preview on every page — then download
   await signIn(page, "couple@example.com");
   // each family prints its own cards, from its section
   await page.goto("/couple/groom");
-  await page.getByRole("button", { name: "Print invitation cards" }).click();
-  const dialog = page.getByRole("dialog", { name: "Download invitation PDF to print" });
+  await page.getByRole("link", { name: "Print invitation cards" }).click();
+  // printing is a page of its own, under the family's "Print cards" tab
+  await expect(page).toHaveURL(/\/couple\/groom\/print$/);
+  await expect(page.getByRole("navigation", { name: "Groom's side pages" }).getByRole("link", { name: "Print cards" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const dialog = page.getByTestId("print-page");
   await expect(dialog).toBeVisible();
   const status = dialog.getByTestId("preview-status");
   const preview = dialog.getByTestId("pdf-preview");
@@ -113,7 +117,15 @@ test("setup and design — with the live preview on every page — then download
   await expect(dialog.getByRole("img", { name: "Your photo" })).toBeVisible();
   // more to choose: a border style, a symbol at the top, a background pattern
   await dialog.getByRole("radiogroup", { name: "Border" }).getByRole("radio", { name: "Paisley" }).click();
-  await dialog.getByRole("radiogroup", { name: "Symbol at the top" }).getByRole("radio", { name: "Shree Ganesh" }).click();
+  const symbols = dialog.getByRole("radiogroup", { name: "Symbol at the top" });
+  await expect(symbols.getByRole("radio", { name: "Bismillah" })).toHaveCount(0);
+  await expect(symbols.getByRole("radio", { name: "Ik Onkar" })).toBeVisible();
+  // PRO: the family's own symbol, redrawn in the card's colour
+  await dialog.getByLabel("Upload your own symbol").setInputFiles({
+    name: "emblem.svg", mimeType: "image/svg+xml",
+    buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#000" stroke-width="3"/></svg>'),
+  });
+  await expect(symbols.getByRole("radio", { name: "Your own" })).toHaveAttribute("aria-checked", "true");
   await dialog.getByRole("radiogroup", { name: "Background pattern" }).getByRole("radio", { name: "Mandala" }).click();
   // celebration icons follow the one tick under Design touches
   await expect(dialog.getByText(/Celebration icons are off/)).toBeVisible();
@@ -148,7 +160,6 @@ test("setup and design — with the live preview on every page — then download
 
   // the answers are remembered next time
   await page.reload();
-  await page.getByRole("button", { name: "Print invitation cards" }).click();
   await expect(page.getByRole("combobox", { name: "Card size" })).toHaveValue("a5");
 
   // a custom size, in inches
@@ -162,8 +173,7 @@ test("setup and design — with the live preview on every page — then download
 
 test("wording typed in the print dialog before is offered to move to the site", async ({ page }) => {
   await signIn(page, "couple2@example.com");
-  await page.goto("/couple/bride");
-  await page.getByRole("button", { name: "Print invitation cards" }).click();
+  await page.goto("/couple/bride/print");
   await page.getByRole("button", { name: "Next: design →" }).click(); // saves this family's answers
   // what an earlier version of the dialog left on this device
   await page.evaluate(() => {
@@ -172,7 +182,6 @@ test("wording typed in the print dialog before is offered to move to the site", 
     localStorage.setItem(key, JSON.stringify({ ...saved, invocation: "|| Shree Ganeshaya Namah ||", rsvpBride: "Anil Malhotra +91 98220 12345", rsvpGroom: "not ours" }));
   });
   await page.reload();
-  await page.getByRole("button", { name: "Print invitation cards" }).click();
   const banner = page.getByTestId("move-wording");
   await expect(banner).toContainText("Invocation, RSVP contacts");
   await banner.getByRole("button", { name: "Move it to my site" }).click();

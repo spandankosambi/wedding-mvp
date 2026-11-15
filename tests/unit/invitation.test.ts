@@ -172,6 +172,16 @@ describe("more design: borders, symbols, patterns, icons", () => {
     expect(inv.back.events[1].iconImage).toBeNull();
     expect((await renderInvitationPdf(inv, opts, "raj-mahal")).subarray(0, 4).toString()).toBe("%PDF");
   }, 60_000);
+  it("a family's own symbol prints; without an upload it is simply left out", async () => {
+    const { ICON_PX } = await import("@/lib/icon-mask");
+    const mask = Buffer.alloc(ICON_PX * ICON_PX, 180).toString("base64");
+    for (const extra of [{ symbol: "custom", symbolImage: mask }, { symbol: "custom" }]) {
+      const opts = o(extra);
+      expect((await renderInvitationPdf(buildInvitation(wedding, events, opts, "https://x.test/w/a"), opts, "raj-mahal")).subarray(0, 4).toString()).toBe("%PDF");
+    }
+    expect(invitationSchema.safeParse({ symbol: "custom", symbolImage: "<svg>" }).success).toBe(false);
+    expect(invitationSchema.safeParse({ symbol: "bismillah" }).success).toBe(false);
+  }, 60_000);
   it("renders every border, symbol and pattern", async () => {
     const { BORDER_STYLES, SYMBOLS, PATTERNS } = await import("@/lib/invitation/decor");
     const n = Math.max(BORDER_STYLES.length, SYMBOLS.length, PATTERNS.length);

@@ -18,8 +18,7 @@ const marcellus = Marcellus({ weight: "400", subsets: ["latin"], variable: "--fo
 const rozha = Rozha_One({ weight: "400", subsets: ["latin"], variable: "--font-rozha" });
 const prata = Prata({ weight: "400", subsets: ["latin"], variable: "--font-prata" });
 /* Devanagari for invocations and shlokas: the same face the printed cards use */
-/* single-glyph symbols for the card's symbol picker: loaded only when shown */
-const amiri = localFont({ src: "../lib/invitation/fonts/amiri-arabic-400-normal.woff", variable: "--font-amiri", display: "swap", preload: false });
+/* Ik Onkar for the card's symbol picker: loaded only when shown */
 const gurmukhi = localFont({ src: "../lib/invitation/fonts/noto-serif-gurmukhi-gurmukhi-500-normal.woff", variable: "--font-gurmukhi", display: "swap", preload: false });
 const tiro = localFont({
   src: [
@@ -45,7 +44,7 @@ export default function RootLayout({
     // pattern as next-themes; only attribute diffs are suppressed
     <html
       lang="en"
-      className={`${instrument.variable} ${cormorant.variable} ${fraunces.variable} ${inter.variable} ${marcellus.variable} ${rozha.variable} ${prata.variable} ${tiro.variable} ${amiri.variable} ${gurmukhi.variable} h-full antialiased`}
+      className={`${instrument.variable} ${cormorant.variable} ${fraunces.variable} ${inter.variable} ${marcellus.variable} ${rozha.variable} ${prata.variable} ${tiro.variable} ${gurmukhi.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">{children}</body>

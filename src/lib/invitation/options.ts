@@ -1,3 +1,4 @@
+import { isIconMask } from "@/lib/icon-mask";
 import { z } from "zod";
 import { BORDER_STYLES, PATTERNS, SYMBOLS } from "./decor";
 
@@ -93,6 +94,8 @@ export const invitationSchema = z.object({
   pattern: z.enum(PATTERNS).default("none"),
   /** an auspicious symbol at the very top of the front */
   symbol: z.enum(SYMBOLS).default("motif"),
+  /** the family's own symbol, when `symbol` is "custom": a mask (lib/icon-mask) */
+  symbolImage: z.string().optional().refine((v) => !v || isIconMask(v)),
   /** a small line icon beside each celebration */
   icons: z.boolean().default(false),
   /** the print dialog's own tick: leave icons off the cards while the site keeps them */

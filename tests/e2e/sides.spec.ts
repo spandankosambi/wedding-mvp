@@ -182,11 +182,10 @@ test("design touches: an opening screen, what falls, decorations and celebration
   await expect(page.locator("[data-own-icon]")).toHaveCount(1); // only its shape is kept: no SVG markup reaches the site
   expect(await page.evaluate(() => (window as unknown as { bad?: number }).bad)).toBeUndefined();
   // the print dialog says the cards carry them too
-  await page.goto("/couple/groom");
-  await page.getByRole("button", { name: "Print invitation cards" }).click();
+  await page.goto("/couple/groom/print");
   await page.getByRole("button", { name: "Next: design →" }).click();
   // …and its own tick leaves them off the printed cards only
-  const cardIcons = page.getByRole("dialog").getByRole("checkbox", { name: /Celebration icons/ });
+  const cardIcons = page.getByTestId("print-page").getByRole("checkbox", { name: /Celebration icons/ });
   await expect(cardIcons).toBeChecked();
   await cardIcons.uncheck();
   await page.goto("/w/gaurav-weds-karishma?side=groom");
