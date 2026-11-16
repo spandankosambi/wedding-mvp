@@ -20,7 +20,7 @@ async function signIn(page: Page, email: string) {
 }
 const shots = process.env.SHOTS_DIR;
 
-test("motion, a scene, the curtain, medallions and things to know reach the guest site", async ({ page }) => {
+test("motion, a scene, the curtain and things to know reach the guest site", async ({ page }) => {
   test.setTimeout(150_000);
   await page.setViewportSize({ width: 1366, height: 800 });
   await signIn(page, "couple2@example.com");
@@ -29,8 +29,6 @@ test("motion, a scene, the curtain, medallions and things to know reach the gues
   await decor.getByText("Lively", { exact: true }).click();
   await decor.getByText("Night sky", { exact: true }).click();
   await decor.getByText("Paper-cut curtain", { exact: true }).click();
-  await decor.getByText("Medallions", { exact: true }).click();
-  await decor.getByLabel("Photo frames in the gallery").selectOption("arch");
   await decor.getByRole("button", { name: "Save" }).click();
   await expect(page).toHaveURL(/saved=decor/);
 
@@ -45,7 +43,7 @@ test("motion, a scene, the curtain, medallions and things to know reach the gues
   await page.locator("#know").getByLabel("What guests should know about Weather").fill("Cool evenings; bring a shawl.");
   await page.locator("#know").getByRole("button", { name: "Save" }).click();
   await expect(page).toHaveURL(/saved=know/);
-  // music and event photos need file storage, which this test site doesn't have
+  // music needs file storage, which this test site doesn't have
   await expect(page.locator("#music")).toContainText("up to 4 MB");
 
   // ── the guest site ──
@@ -59,11 +57,6 @@ test("motion, a scene, the curtain, medallions and things to know reach the gues
   await expect(page.getByTestId("scene")).toHaveAttribute("data-scene", "night");
   await page.waitForTimeout(1200);
   if (shots) await page.screenshot({ path: `${shots}/scene-night.png` });
-  const medallions = page.getByTestId("medallions");
-  await medallions.scrollIntoViewIfNeeded();
-  await expect(medallions.getByRole("heading", { name: "Sangeet", level: 3 })).toBeVisible();
-  await page.waitForTimeout(1300);
-  if (shots) await page.screenshot({ path: `${shots}/medallions.png` });
   const notes = page.getByTestId("things-to-know");
   await notes.scrollIntoViewIfNeeded();
   await expect(notes.getByRole("heading", { name: "Parking" })).toBeVisible();
@@ -93,7 +86,6 @@ test("motion, a scene, the curtain, medallions and things to know reach the gues
   await page.goto("/couple/site?family=bride");
   await page.locator("#decor").getByText("Still", { exact: true }).click();
   await page.locator("#decor").getByText("No scene", { exact: true }).click();
-  await page.locator("#decor").getByText("List", { exact: true }).click();
   await page.locator("#decor").getByRole("button", { name: "Save" }).click();
   await expect(page).toHaveURL(/saved=decor/);
   await page.goto("/w/gaurav-weds-karishma?side=bride");

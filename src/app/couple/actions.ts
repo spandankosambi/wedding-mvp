@@ -8,7 +8,7 @@ import { weddings } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
 import { allows, seesSide } from "@/lib/access";
 import { THEMES } from "@/themes/catalog";
-import { copyFromPartner, otherSide, updateLook } from "@/lib/looks";
+import { asFamilySide, copyFromPartner, otherSide, updateLook } from "@/lib/looks";
 import { adoptCardWording } from "@/lib/editor";
 
 const schema = z.object({
@@ -73,4 +73,19 @@ export async function adoptCardWordingAction(input: unknown): Promise<{ ok: bool
   revalidatePath(`/w/${wedding.slug}`);
   revalidatePath("/couple", "layout");
   return r;
+}
+
+/** The print page's "Save configuration": this family's card choices, kept with the wedding
+    so they are there next time on any device. The photo stays on the device (it is large). */
+export async function savePrintConfigAction(input: { weddingId?: string; family: string; config: unknown }): Promise<{ ok: boolean; error?: string }> {
+  const family = asFamilySide(input?.family);
+  const staff = await requireRole(["committee", "couple", "admin"]);
+  const weddingId = staff.role === "admin" ? input?.weddingId : staff.weddingId;
+  if (!family || !weddingId || !z.string().uuid().safeParse(weddingId).success || !allows(staff.access, "print", family, "full")) return { ok: false, error: "forbidden" };
+  if (!input.config || typeof input.config !== "object" || Array.isArray(input.config)) return { ok: false, error: "invalid input" };
+  const { photo: _photo, ...config } = input.config as Record<string, unknown>;
+  void _photo;
+  if (JSON.stringify(config).length > 30_000) return { ok: false, error: "invalid input" };
+  await updateLook(weddingId, family, { printConfig: { ...config, version: family } });
+  return { ok: true };
 }

@@ -35,19 +35,25 @@ export async function POST(req: Request) {
   if (!wedding) return Response.json({ error: "no wedding" }, { status: 404 });
   // each family's cards in its own look, with its own wording and reply-by date
   const look = await getLook(weddingId, parsed.data.version);
+  // wording unticked on the print page stays off this card
+  const off = new Set(parsed.data.omit);
+  const keep = (k: (typeof parsed.data.omit)[number], v: string | null | undefined) => (off.has(k) ? "" : v ?? "");
+  const contacts = keep("rsvpContacts", wordingOf(look).rsvpContacts);
   const o = {
     ...parsed.data,
     icons: decorOf(look).icons && parsed.data.cardIcons, // on under Design touches, unless left off the cards
-    invocation: look.invocation ?? "", shloka: look.shloka ?? "", note: look.closingLine ?? "",
-    rsvpBride: wordingOf(look).rsvpContacts ?? "", rsvpGroom: wordingOf(look).rsvpContacts ?? "",
-    complimentsBride: look.compliments ?? "", complimentsGroom: look.compliments ?? "",
+    invocation: keep("invocation", look.invocation), shloka: keep("shloka", look.shloka), note: keep("closingLine", look.closingLine),
+    rsvpBride: contacts, rsvpGroom: contacts,
+    complimentsBride: keep("compliments", look.compliments), complimentsGroom: keep("compliments", look.compliments),
   };
+  // without the parents' names the card reads "The family of …"
+  const card = off.has("parents") ? { ...wedding, brideParents: null, groomParents: null } : wedding;
   const evs = await db.select().from(events).where(eq(events.weddingId, weddingId));
   if (o.eventIds?.some((id) => !evs.some((e) => e.id === id))) {
     return Response.json({ error: "invalid events" }, { status: 400 });
   }
 
-  const inv = buildInvitation(withLook(wedding, look), evs, o, `${await appOrigin()}/w/${wedding.slug}?side=${o.version}`);
+  const inv = buildInvitation(withLook(card, look), evs, o, `${await appOrigin()}/w/${wedding.slug}?side=${o.version}`);
   const pdf = await renderInvitationPdf(inv, o, look.theme);
   return new Response(new Uint8Array(pdf), {
     headers: {

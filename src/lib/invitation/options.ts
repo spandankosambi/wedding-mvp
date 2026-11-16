@@ -46,6 +46,10 @@ export function defaultMonogram(bride: string, groom: string, version: "bride" |
   return version === "groom" ? `${g} | ${b}` : `${b} | ${g}`;
 }
 
+/** Wording the family can leave off the printed card (the website keeps it). */
+export const OMITTABLE = ["invocation", "shloka", "rsvpContacts", "compliments", "closingLine", "parents"] as const;
+export type Omittable = (typeof OMITTABLE)[number];
+
 export const invitationSchema = z.object({
   /** whose invitation: the bride's family's or the groom's */
   version: z.enum(["bride", "groom"]).default("bride"),
@@ -76,6 +80,8 @@ export const invitationSchema = z.object({
   complimentsBride: text(240),
   complimentsGroom: text(240),
   note: text(160),
+  /** wording unticked on the print page: not printed on this card */
+  omit: z.array(z.enum(OMITTABLE)).max(OMITTABLE.length).default([]),
   qr: z.boolean().default(true),
   dressCode: z.boolean().default(true),
   replyBy: z.boolean().default(true),

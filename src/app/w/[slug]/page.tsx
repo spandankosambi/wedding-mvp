@@ -129,9 +129,9 @@ export default async function WeddingPage({
       <Hero wedding={wedding} side={side} city={weddingCity(wedding.city, events)} decor={wedding.decor} />
       <Marquee items={[...shown.map((e) => e.name), fmtWeddingDate(wedding.weddingDate)]} />
       <Story theme={wedding.theme} story={wedding.story} no={storyNo} divider={wedding.decor.divider} />
-      <EventTimeline theme={wedding.theme} events={shown} no={eventsNo} icons={wedding.decor.icons} style={wedding.decor.eventStyle} />
+      <EventTimeline theme={wedding.theme} events={shown} no={eventsNo} icons={wedding.decor.icons} />
       {hasTravel && <TravelStay travel={wedding.travel} no={travelNo} />}
-      {gallery.enabled && <Gallery theme={wedding.theme} no={galleryNo} photos={gallery.photos} frames={wedding.decor.frames} />}
+      {gallery.enabled && <Gallery theme={wedding.theme} no={galleryNo} photos={gallery.photos} />}
       <ThingsToKnow items={wedding.know} no={knowNo} />
       <RsvpCta slug={wedding.slug} side={side} open={window.open} deadline={wedding.rsvpDeadline} contacts={wedding.contacts} invite={invite} />
       <Closing theme={wedding.theme} closingLine={wedding.closingLine} compliments={wordingLines(wedding.compliments)} divider={wedding.decor.divider} />

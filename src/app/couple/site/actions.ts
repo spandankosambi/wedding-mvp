@@ -85,7 +85,6 @@ export async function saveDecor(formData: FormData) {
   const ctx = await scoped(formData);
   const r = await editor.updateDecor(ctx.weddingId, ctx.family, {
     motion: str(formData, "motion") || undefined, scene: str(formData, "scene") || undefined,
-    eventStyle: str(formData, "eventStyle") || undefined, frames: str(formData, "frames") || undefined,
     reveal: str(formData, "reveal") || undefined, falling: str(formData, "falling") || undefined, divider: str(formData, "divider") || undefined,
     toran: formData.get("toran") === "on", corners: formData.get("corners") === "on", icons: formData.get("icons") === "on",
   });
@@ -260,29 +259,4 @@ export async function removeMusic(formData: FormData) {
   const before = await editor.setMusic(ctx.weddingId, ctx.family, null);
   if (before && gallery.photoStorageConfigured()) await del(before.url).catch(() => {});
   done(ctx, "music");
-}
-
-/** A photo for one celebration's medallion (already shrunk in the browser). */
-export async function uploadEventPhoto(formData: FormData): Promise<{ ok: boolean; error?: string }> {
-  const ctx = await scoped(formData);
-  if (!gallery.photoStorageConfigured()) return { ok: false, error: "Photo storage isn't set up on this site yet." };
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) return { ok: false, error: "no photo received" };
-  if (!(gallery.PHOTO_TYPES as readonly string[]).includes(file.type)) return { ok: false, error: "use a JPG, PNG or WebP photo" };
-  if (file.size > gallery.MAX_PHOTO_BYTES) return { ok: false, error: "that photo is too large" };
-  const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
-  const blob = await put(`weddings/${ctx.weddingId}/events/${crypto.randomUUID()}.${ext}`, file, { access: "public", contentType: file.type });
-  const r = await editor.setEventPhoto(ctx.weddingId, str(formData, "eventId"), { url: blob.url, pathname: blob.pathname });
-  if (!r.ok) { await del(blob.url).catch(() => {}); return { ok: false, error: r.error }; }
-  if (r.before) await del(r.before.url).catch(() => {});
-  refresh(ctx);
-  return { ok: true };
-}
-
-export async function removeEventPhoto(formData: FormData): Promise<{ ok: boolean; error?: string }> {
-  const ctx = await scoped(formData);
-  const r = await editor.setEventPhoto(ctx.weddingId, str(formData, "eventId"), null);
-  if (r.ok && r.before && gallery.photoStorageConfigured()) await del(r.before.url).catch(() => {});
-  refresh(ctx);
-  return { ok: r.ok, error: r.error };
 }

@@ -6,7 +6,8 @@ import { requireAccess } from "@/lib/authz";
 import { getChecklist } from "@/lib/checklist";
 import { PortalFrame, Checklist } from "../../PortalFrame";
 import { eventForSide, eventLabel } from "@/lib/sides";
-import { asFamilySide, getLooks, namesFor, wordingOf } from "@/lib/looks";
+import { asFamilySide, getLooks, namesFor, otherSide, wordingOf } from "@/lib/looks";
+import { seesSide } from "@/lib/access";
 import { decorOf } from "@/lib/site-decor";
 import { THEME_META } from "@/themes/catalog";
 import { PortalNav } from "../../PortalNav";
@@ -46,6 +47,7 @@ export default async function PrintCards({
     <main className="portal-page">
       <PortalNav names={namesFor(wedding, family).couple} current={family} page="print" weddingId={weddingId} admin={admin} access={staff.access} />
       <PortalFrame
+        roomy
         jump={[["print-options", "Card options"], ["print-preview", "Preview & download"]]}
         right={<Checklist title={`${who === "bride" ? "Bride" : "Groom"}'s side: what's done`} items={await getChecklist(weddingId, family, admin)} />}
       >
@@ -70,6 +72,8 @@ export default async function PrintCards({
           icons={decorOf(look).icons}
           wordingHref={`/couple/site?${admin ? `wedding=${weddingId}&` : ""}family=${family}#wording`}
           hasDeadline={!!look.rsvpDeadline}
+          savedConfig={look.printConfig ?? null}
+          partnerConfig={seesSide(staff.access, otherSide(family)) ? looks[otherSide(family)].printConfig ?? null : null}
           events={evs.filter((e) => eventForSide(e.side, family)).map((e) => ({ id: e.id, label: eventLabel(e), side: e.side, isPublished: e.isPublished }))}
         />
       </PortalFrame>

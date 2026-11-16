@@ -196,3 +196,39 @@ test("only the couple can make the cards", async ({ request }) => {
   expect(res.status()).not.toBe(200);
   expect(res.headers()["content-type"] ?? "").not.toContain("application/pdf");
 });
+
+test("wording can be left off the card, and Save configuration keeps the choices", async ({ page }) => {
+  test.setTimeout(90_000);
+  await signIn(page, "couple@example.com");
+  await page.goto("/couple/bride/print");
+  const box = page.getByTestId("card-wording");
+  // everything that is set starts ticked; what isn't set can't be ticked
+  const parents = box.getByRole("checkbox", { name: "Print: Parents" });
+  await expect(parents).toBeChecked();
+  const size = page.getByRole("combobox", { name: "Card size" });
+  await size.selectOption("a5");
+  // untick the parents: the card reads "The family of …" instead
+  const sent = page.waitForRequest((r) => r.url().endsWith("/couple/invitation") && r.method() === "POST" && (r.postDataJSON()?.options?.omit ?? []).includes("parents"));
+  await parents.uncheck();
+  await expect(box).toContainText("“The family of …” prints instead.");
+  const res = await (await sent).response();
+  expect(res!.status()).toBe(200);
+  if (process.env.SHOTS_DIR) { await page.waitForTimeout(4000); await page.screenshot({ path: `${process.env.SHOTS_DIR}/print-omit.png`, fullPage: true }); }
+
+  // saved with the wedding: still there after this device forgets everything
+  await page.getByRole("button", { name: "Save configuration" }).click();
+  await expect(page.locator("p[role=status]").filter({ hasText: "Saved." })).toContainText("on any device");
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await expect(page.getByRole("combobox", { name: "Card size" })).toHaveValue("a5");
+  await expect(page.getByTestId("card-wording").getByRole("checkbox", { name: "Print: Parents" })).not.toBeChecked();
+  // the groom's card has its own choices, and can copy these
+  await page.goto("/couple/groom/print");
+  await expect(page.getByTestId("card-wording").getByRole("checkbox", { name: "Print: Parents" })).toBeChecked();
+  // tidy up for the other tests
+  await page.goto("/couple/bride/print");
+  await page.getByTestId("card-wording").getByRole("checkbox", { name: "Print: Parents" }).check();
+  await page.getByRole("combobox", { name: "Card size" }).selectOption("5x7");
+  await page.getByRole("button", { name: "Save configuration" }).click();
+  await expect(page.locator("p[role=status]").filter({ hasText: "Saved." })).toBeVisible();
+});

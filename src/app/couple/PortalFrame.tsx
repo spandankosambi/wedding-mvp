@@ -57,11 +57,13 @@ export function Checklist({ title, items }: { title: string; items: ChecklistIte
  * what's done on the right. On a phone the left list becomes a "Jump to"
  * menu and the two side boxes drop below the page.
  */
-export function PortalFrame({ jump = [], right, children }: {
+export function PortalFrame({ jump = [], right, roomy = false, children }: {
   jump?: [string, string][]; right?: React.ReactNode; children: React.ReactNode;
+  /** the page needs the width (the print page's options and preview): the right column waits for a large screen */
+  roomy?: boolean;
 }) {
   return (
-    <div className="portal-shell portal-frame" data-right={right ? "true" : undefined}>
+    <div className="portal-shell portal-frame" data-right={right ? (roomy ? "wide" : "true") : undefined}>
       <div className="portal-left">
         {jump.length > 0 && <JumpNav items={jump} />}
         <AboutCard />

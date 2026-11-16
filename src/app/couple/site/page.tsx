@@ -23,11 +23,11 @@ import { ContactsEditor } from "./ContactsEditor";
 import { contactsOf, MAX_CONTACTS } from "@/lib/contacts";
 import {
   decorOf, REVEALS, REVEAL_LABELS, FALLING, FALLING_LABELS, DIVIDERS, DIVIDER_LABELS,
-  MOTIONS, MOTION_LABELS, SCENES, SCENE_LABELS, EVENT_STYLES, EVENT_STYLE_LABELS, FRAMES, FRAME_LABELS,
+  MOTIONS, MOTION_LABELS, SCENES, SCENE_LABELS,
   MAX_KNOW, KNOW_SUGGESTIONS, MAX_MUSIC_BYTES,
 } from "@/lib/site-decor";
 import { KnowEditor } from "./KnowEditor";
-import { MusicUpload, EventPhotoField } from "./MediaFields";
+import { MusicUpload } from "./MediaFields";
 import { galleryOf, photoStorageConfigured, MAX_GALLERY_PHOTOS } from "@/lib/gallery";
 import {
   saveWords, saveWording, saveDecor, saveKnow, removeMusic, saveTravel, saveEvent, addPresetEvent, toggleEvent, removeEvent, moveEventAction, sortEvents,
@@ -190,22 +190,6 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                 </Field>
               </div>
               <fieldset>
-                <legend className="text-sm font-medium">How the celebrations are shown</legend>
-                <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-2">
-                  {EVENT_STYLES.map((r) => (
-                    <label key={r} className="portal-choice">
-                      <input type="radio" name="eventStyle" value={r} defaultChecked={decor.eventStyle === r} className="mt-0.5 h-4 w-4" />
-                      <span><span className="block text-sm font-medium">{EVENT_STYLE_LABELS[r][0]}</span><span className="block text-xs text-neutral-500">{EVENT_STYLE_LABELS[r][1]}</span></span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-              <Field label="Photo frames in the gallery" className="md:max-w-xs">
-                <select name="frames" defaultValue={decor.frames} className="portal-input">
-                  {FRAMES.map((v) => <option key={v} value={v}>{FRAME_LABELS[v]}</option>)}
-                </select>
-              </Field>
-              <fieldset>
                 <legend className="text-sm font-medium">Decorations</legend>
                 <div className="mt-2 space-y-2 text-sm">
                   <label className="flex items-start gap-2"><input type="checkbox" name="toran" defaultChecked={decor.toran} className="mt-0.5 h-4 w-4" /><span>Toran across the top <span className="text-xs text-neutral-500">— mango leaves and marigolds, as on the card</span></span></label>
@@ -330,7 +314,6 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                         <Field label="A line about it" className="md:col-span-2"><input name="description" defaultValue={e.description ?? ""} maxLength={400} className="portal-input" /></Field>
                         <EventSideField initial={e.side} eventName={e.name} family={family} />
                         <EventIconField initial={e.icon} initialImage={e.iconImage} eventName={e.name} enabled={decor.icons} />
-                        <EventPhotoField scope={{ weddingId, admin: staff.role === "admin", family }} eventId={e.id} eventName={e.name} url={e.photo?.url ?? null} uploadsOn={uploadsOn} />
                         <label className="flex items-center gap-2 text-sm md:col-span-2">
                           <input type="checkbox" name="isPublished" defaultChecked={e.isPublished} className="h-4 w-4" />
                           Show this event on the site and RSVP form

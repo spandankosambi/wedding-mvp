@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { adoptCardWordingAction } from "./actions";
+import { adoptCardWordingAction, savePrintConfigAction } from "./actions";
 import { eventForSide, type Side } from "@/lib/sides";
 import type { Theme } from "@/themes/catalog";
 import {
   BLEED_MM, CARD_SIZES, CUSTOM_MAX_MM, CUSTOM_MIN_MM, MAX_PHOTO_CHARS, MM_PER_INCH, MONOGRAM_STYLES,
   defaultMonogram, isPortrait, trimSize, type InvitationOptions, type MonogramStyle, type SizeId,
+  OMITTABLE, type Omittable,
 } from "@/lib/invitation/options";
 import { crest, paletteFor, type Motif, type Palette } from "@/lib/invitation/motifs";
 import {
@@ -38,6 +39,10 @@ type Props = {
   groomParents: string | null;
   hasDeadline: boolean;
   events: PrintEvent[];
+  /** choices saved with "Save configuration" (kept with the wedding, so on any device) */
+  savedConfig?: Record<string, unknown> | null;
+  /** the other family's saved choices, for "same as your partner's card" */
+  partnerConfig?: Record<string, unknown> | null;
 };
 
 export type CardWording = { invocation: string | null; shloka: string | null; rsvpContacts: string | null; compliments: string | null; closingLine: string | null };
@@ -57,7 +62,7 @@ function initial(p: Props): Form {
   return {
     version: p.family, size: "5x7", orientation: "portrait", eventLayout: "together",
     eventIds: defaultEvents(p.events, p.family), output: "printer", cropMarks: false, colours: "theme",
-    qr: true, dressCode: true, replyBy: p.hasDeadline,
+    omit: [], qr: true, dressCode: true, replyBy: p.hasDeadline,
     frame: "classic", toran: false, patternBorder: false, borderStyle: "diamond", pattern: "none", symbol: "motif", symbolImage: "", icons: false, cardIcons: true, monogram: false, monogramText: "", monogramStyle: "circle",
     fill: "classic", nameFont: "serif", photo: null, photoPlace: "front", photoShape: "arch",
     customW: "", customH: "", unit: "in",
@@ -68,6 +73,7 @@ function initial(p: Props): Form {
 function fromSaved(base: Form, saved: Record<string, unknown>): Form {
   const out: Record<string, unknown> = { ...base };
   for (const k of Object.keys(base)) if (k in saved && saved[k] !== undefined) out[k] = saved[k];
+  out.omit = Array.isArray(out.omit) ? out.omit.filter((k) => (OMITTABLE as readonly unknown[]).includes(k)) : [];
   if (out.version !== "bride" && out.version !== "groom") out.version = base.version;
   // a symbol that's no longer offered, or "your own" with nothing uploaded
   if (!(SYMBOLS as readonly string[]).includes(out.symbol as string) || (out.symbol === "custom" && !out.symbolImage)) out.symbol = "motif";
@@ -97,7 +103,7 @@ const legacyKey = (id: string) => `print-invitation:${id}`;
 /** What "same as your partner's card" copies: the setup and design — not
     whose card it is or its events (the wording has its own "Same as" on the site). */
 const SHARED_KEYS = [
-  "size", "orientation", "eventLayout", "output", "cropMarks", "colours", "qr", "dressCode", "replyBy",
+  "size", "orientation", "eventLayout", "output", "cropMarks", "colours", "omit", "qr", "dressCode", "replyBy",
   "frame", "toran", "patternBorder", "borderStyle", "pattern", "symbol", "symbolImage", "icons", "cardIcons", "monogram", "monogramStyle", "fill", "nameFont", "photo", "photoPlace", "photoShape", "customW", "customH", "unit",
 ] as const;
 const readSaved = (key: string): Record<string, unknown> | null => {
@@ -260,10 +266,12 @@ export function PrintInvitation(props: Props) {
   const [moved, setMoved] = useState<CardWording | null>(null);
   const [moving, setMoving] = useState(false);
   useEffect(() => {
-    const saved = readSaved(storeKey(props.weddingId, props.family)) ?? readSaved(legacyKey(props.weddingId));
+    const local = readSaved(storeKey(props.weddingId, props.family)) ?? readSaved(legacyKey(props.weddingId));
+    // the saved configuration wins; the photo is only ever kept on this device
+    const saved = props.savedConfig ? { ...props.savedConfig, photo: local?.photo ?? null } : local;
     // wording typed here before it moved to the site: offer to move it
     const kept = readSaved(oldWordingKey(props.weddingId, props.family)) as CardWording | null;
-    const old = kept ?? (saved ? oldWording(saved, props.family) : null);
+    const old = kept ?? (local ? oldWording(local, props.family) : null);
     if (old) {
       try { localStorage.setItem(oldWordingKey(props.weddingId, props.family), JSON.stringify(old)); } catch { /* fine */ }
       setMoved(old);
@@ -276,12 +284,12 @@ export function PrintInvitation(props: Props) {
         return { ...next, version: props.family, eventIds: next.eventIds.filter((id) => known.has(id)) };
       });
     }
-    setPartnerSaved(!!readSaved(storeKey(props.weddingId, props.family === "bride" ? "groom" : "bride")));
-  }, [props.weddingId, props.events, props.family]);
+    setPartnerSaved(!!props.partnerConfig || !!readSaved(storeKey(props.weddingId, props.family === "bride" ? "groom" : "bride")));
+  }, [props.weddingId, props.events, props.family, props.savedConfig, props.partnerConfig]);
 
   const [partnerSaved, setPartnerSaved] = useState(false);
   function copyPartner() {
-    const other = readSaved(storeKey(props.weddingId, props.family === "bride" ? "groom" : "bride"));
+    const other = props.partnerConfig ?? readSaved(storeKey(props.weddingId, props.family === "bride" ? "groom" : "bride"));
     if (!other) return;
     setForm((f) => {
       const next: Record<string, unknown> = { ...f };
@@ -331,8 +339,11 @@ export function PrintInvitation(props: Props) {
   const optionsKey = useMemo(() => JSON.stringify({ options, wording: props.wording, icons: props.icons }), [options, props.wording, props.icons]);
 
   const chosen = props.events.filter((e) => form.eventIds.includes(e.id));
-  const details = form.qr || !!props.wording.rsvpContacts || !!props.wording.compliments
-    || !!props.wording.closingLine || (form.replyBy && props.hasDeadline);
+  const prints = (k: Omittable) => !form.omit.includes(k);
+  const hasParents = !!(props.brideParents?.trim() || props.groomParents?.trim());
+  const toggleOmit = (k: Omittable) => setForm((f) => ({ ...f, omit: f.omit.includes(k) ? f.omit.filter((x) => x !== k) : [...f.omit, k] }));
+  const details = form.qr || (prints("rsvpContacts") && !!props.wording.rsvpContacts) || (prints("compliments") && !!props.wording.compliments)
+    || (prints("closingLine") && !!props.wording.closingLine) || (form.replyBy && props.hasDeadline);
   const separate = form.eventLayout === "separate";
   const backPhoto = !!form.photo && form.photoPlace === "back";
   const pages = 1 + ((!separate && chosen.length) || details || backPhoto ? 1 : 0) + (separate ? chosen.length : 0);
@@ -378,6 +389,19 @@ export function PrintInvitation(props: Props) {
     } catch {
       try { localStorage.setItem(storeKey(props.weddingId, props.family), JSON.stringify({ ...form, photo: null })); } catch { /* fine */ }
     }
+  }
+
+  const [saving, setSaving] = useState(false);
+  const [savedNote, setSavedNote] = useState<string | null>(null);
+  async function saveConfig() {
+    setSaving(true); setError(null); setSavedNote(null); setDone(null);
+    remember();
+    try {
+      const r = await savePrintConfigAction({ weddingId: props.admin ? props.weddingId : undefined, family: props.family, config: form });
+      if (r.ok) setSavedNote(form.photo ? "Saved. Your choices will be here next time, on any device. The photo is kept on this device only." : "Saved. Your choices will be here next time, on any device.");
+      else setError("Couldn't save the configuration. Please try again.");
+    } catch { setError("Couldn't save the configuration. Please try again."); }
+    setSaving(false);
   }
 
   async function download() {
@@ -470,19 +494,33 @@ export function PrintInvitation(props: Props) {
                     <p className="font-medium text-neutral-700">Wording on the card — the same as on your website</p>
                     <a href={props.wordingHref} className="underline">Change it in Edit your site</a>
                   </div>
-                  <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
+                  <p className="mt-1 text-neutral-500">Untick anything you don&apos;t want printed on this card. Your website keeps it.</p>
+                  <ul className="mt-2 space-y-1.5">
                     {(Object.keys(WORDING_LABELS) as (keyof CardWording)[]).map((k) => (
-                      <div key={k} className="contents">
-                        <dt className="text-neutral-500">{WORDING_LABELS[k]}</dt>
-                        <dd className={props.wording[k] ? "whitespace-pre-line text-neutral-800" : "italic text-neutral-400"}>{props.wording[k] ?? "not set"}</dd>
-                      </div>
+                      <li key={k}>
+                        <label className={`grid grid-cols-[auto_minmax(0,2fr)_minmax(0,3fr)] items-start gap-x-2.5 ${props.wording[k] ? "cursor-pointer" : ""}`}>
+                          <input type="checkbox" className="mt-0.5 h-3.5 w-3.5" aria-label={`Print: ${WORDING_LABELS[k]}`}
+                            checked={!!props.wording[k] && prints(k)} disabled={!props.wording[k]} onChange={() => toggleOmit(k)} />
+                          <span className="text-neutral-500">{WORDING_LABELS[k]}</span>
+                          <span className={!props.wording[k] ? "italic text-neutral-400" : prints(k) ? "whitespace-pre-line text-neutral-800" : "whitespace-pre-line text-neutral-400 line-through"}>{props.wording[k] ?? "not set"}</span>
+                        </label>
+                      </li>
                     ))}
-                    <dt className="text-neutral-500">Parents</dt>
-                    <dd className="text-neutral-800">
-                      {[props.brideParents, props.groomParents].filter(Boolean).join(" · ") || <span className="italic text-neutral-400">not set — “The family of …” prints instead</span>}
-                      {" "}<a href={props.siteEditorHref} className="text-neutral-500 underline">on the dashboard</a>
-                    </dd>
-                  </dl>
+                    <li>
+                      <div className="grid grid-cols-[auto_minmax(0,2fr)_minmax(0,3fr)] items-start gap-x-2.5">
+                        <input type="checkbox" id="print-parents" className="mt-0.5 h-3.5 w-3.5" aria-label="Print: Parents"
+                          checked={hasParents && prints("parents")} disabled={!hasParents} onChange={() => toggleOmit("parents")} />
+                        <label htmlFor="print-parents" className="text-neutral-500">Parents</label>
+                        <span className="text-neutral-800">
+                          {hasParents
+                            ? <span className={prints("parents") ? "" : "text-neutral-400 line-through"}>{[props.brideParents, props.groomParents].filter(Boolean).join(" · ")}</span>
+                            : <span className="italic text-neutral-400">not set — “The family of …” prints instead</span>}
+                          {hasParents && !prints("parents") && <span className="italic text-neutral-500"> “The family of …” prints instead.</span>}
+                          {" "}<a href={props.siteEditorHref} className="text-neutral-500 underline">on the dashboard</a>
+                        </span>
+                      </div>
+                    </li>
+                  </ul>
                 </div>
 
                 <fieldset>
@@ -752,7 +790,8 @@ export function PrintInvitation(props: Props) {
 
         <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200 pt-5">
           <p className="text-xs text-neutral-500" data-testid="print-summary">{summary}</p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={saveConfig} disabled={saving || !customOk} className="portal-button-secondary">{saving ? "Saving…" : "Save configuration"}</button>
             {step > 1 && <button type="button" onClick={() => go((step - 1) as Step)} className="portal-button-secondary">← Back</button>}
             {step < 2 ? (
               <button type="button" onClick={() => go((step + 1) as Step)} disabled={!customOk} className="portal-button">
@@ -765,6 +804,7 @@ export function PrintInvitation(props: Props) {
             )}
           </div>
         </div>
+        {savedNote && <p className="mt-3 text-right text-xs text-emerald-700" role="status">{savedNote}</p>}
         {done && <p className="mt-3 text-right text-xs text-emerald-700" role="status">Downloaded {done}. Change anything to make another version.</p>}
         {error && <p className="mt-3 text-right text-xs text-red-700" role="alert">{error}</p>}
       </div>

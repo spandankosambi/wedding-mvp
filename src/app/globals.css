@@ -81,8 +81,12 @@ a.portal-nav-brand:hover { color: #7a5f2f; }
   .portal-frame[data-right] .portal-right { grid-column: 2; margin-top: 0; }
 }
 @media (min-width: 1280px) {
-  .portal-frame[data-right] { grid-template-columns: 11.5rem minmax(0, 1fr) 15.5rem; }
-  .portal-frame[data-right] .portal-right { grid-column: 3; position: sticky; top: calc(var(--nav-h) + 2.25rem); }
+  .portal-frame[data-right="true"] { grid-template-columns: 11.5rem minmax(0, 1fr) 15.5rem; }
+  .portal-frame[data-right="true"] .portal-right { grid-column: 3; position: sticky; top: calc(var(--nav-h) + 2.25rem); }
+}
+@media (min-width: 1600px) {
+  .portal-frame[data-right="wide"] { grid-template-columns: 11.5rem minmax(0, 1fr) 15.5rem; }
+  .portal-frame[data-right="wide"] .portal-right { grid-column: 3; position: sticky; top: calc(var(--nav-h) + 2.25rem); }
 }
 /* the guest list: its buttons and column titles stay put while the rows scroll */
 .guest-table { overflow-x: auto !important; }
@@ -1322,10 +1326,10 @@ html.fx .rule-grow.is-in::before { transform: scaleX(1); }
 .people-table .portal-input { min-width: 6.25rem; padding-inline: 0.55rem; padding-block: 0.45rem; }
 .people-table td:nth-child(5), .people-table td:nth-child(6) { vertical-align: middle; }
 
-/* ═════ Motion setting, animated scenes, medallions, notes and music ═════ */
+/* ═════ Motion setting, animated scenes, notes and music ═════ */
 
 /* "Still": nothing moves (the same end state reduced motion gets) */
-.themed[data-motion="none"] :is(.rise, .reveal, .ltr, .petal, .marquee-track, .foil, .scroll-cue, .draw-load [pathLength], .scene *, .medallion-frame) { animation: none !important; }
+.themed[data-motion="none"] :is(.rise, .reveal, .ltr, .petal, .marquee-track, .foil, .scroll-cue, .draw-load [pathLength], .scene *) { animation: none !important; }
 .themed[data-motion="none"] .petal { display: none; }
 
 /* "Lively": bigger entrances, a soft focus pull, and bands of colour between sections */
@@ -1342,8 +1346,6 @@ html.fx .themed[data-motion="lively"] .reveal.is-in { opacity: 1; transform: non
 }
 .themed[data-motion="lively"] > section:nth-of-type(odd):not(.hero) > * { max-width: 64rem; margin-inline: auto; }
 .themed[data-motion="lively"] .hero-orn { animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both, scene-bob 6s ease-in-out 1s infinite; }
-.themed[data-motion="lively"] .medallion.is-in .medallion-frame { animation: medallion-float 6s ease-in-out calc(var(--k, 0) * -1.3s) infinite; }
-@keyframes medallion-float { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-8px) rotate(0.8deg); } }
 
 /* ── scenes ── */
 .scene { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
@@ -1392,20 +1394,6 @@ html.fx .themed[data-motion="lively"] .reveal.is-in { opacity: 1; transform: non
 .is-opening .reveal-drape { transform: translateX(-106%); }
 .reveal-drapes ~ .reveal-centre { background: color-mix(in srgb, var(--surface) 92%, transparent); border-radius: 1.25rem; padding: 1.75rem 2rem; backdrop-filter: blur(3px); }
 
-/* ── celebrations as medallions ── */
-.medallions { display: grid; grid-template-columns: repeat(auto-fit, minmax(15.5rem, 1fr)); gap: clamp(2.5rem, 5vw, 4rem) clamp(1.5rem, 3vw, 2.5rem); justify-items: center; text-align: center; }
-.medallion { max-width: 22rem; }
-.medallion-frame { margin-inline: auto; width: clamp(9.5rem, 22vw, 12.5rem); aspect-ratio: 4 / 5; border-radius: 50%; padding: 7px; border: 1.5px solid var(--accent); box-shadow: 0 0 0 5px var(--bg), 0 0 0 6px color-mix(in srgb, var(--accent) 55%, transparent), 0 22px 40px -24px rgba(0, 0, 0, 0.55); }
-.medallion-oval { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
-.medallion-oval img { width: 100%; height: 100%; object-fit: cover; }
-.medallion-icon .event-icon { width: clamp(3.4rem, 8vw, 4.6rem); }
-.medallion-icon .event-icon-own { width: clamp(3.4rem, 8vw, 4.6rem); }
-
-/* ── arched photo frames ── */
-[data-frames="arch"] .plate { border-radius: 999px 999px 10px 10px / min(34%, 9rem) min(34%, 9rem) 10px 10px; outline: 1px solid color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: 4px; overflow: hidden; }
-[data-frames="arch"] .plate img { border-radius: 999px 999px 6px 6px / min(34%, 8.5rem) min(34%, 8.5rem) 6px 6px; }
-[data-frames="arch"] .photo-rows { row-gap: 22px !important; padding: 6px; }
-
 /* ── things to know ── */
 .know-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
 .know-card { position: relative; border: 1px solid var(--hairline); border-radius: 1rem; background: var(--surface); padding: 1.6rem 1.4rem 1.4rem; }
@@ -1425,7 +1413,7 @@ html.fx .themed[data-motion="lively"] .reveal.is-in { opacity: 1; transform: non
 @keyframes music-bar { from { height: 20%; } to { height: 100%; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .scene *, .medallion-frame, .music-bars i, .hero-orn { animation: none !important; }
+  .scene *, .music-bars i, .hero-orn { animation: none !important; }
   .scene-lantern, .scene-leaf { display: none; }
   .reveal-drape { transition-duration: 0.2s; transition-delay: 0s; }
   html.fx .themed[data-motion="lively"] .reveal { filter: none; }

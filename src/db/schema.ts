@@ -15,10 +15,6 @@ export type SiteDecor = {
   motion?: "none" | "gentle" | "lively";
   /** an animated backdrop behind the opening */
   scene?: "none" | "night" | "garden" | "palace";
-  /** celebrations as a list, or as framed medallions */
-  eventStyle?: "list" | "medallions";
-  /** gallery photos in plain mats or arched frames */
-  frames?: "plain" | "arch";
   reveal?: "none" | "envelope" | "doors" | "curtain";
   falling?: "petals" | "marigold" | "sparkles" | "diyas" | "none";
   toran?: boolean;
@@ -44,8 +40,6 @@ export type GalleryInfo = { enabled: boolean; photos: GalleryPhoto[] };
 export type KnowItem = { title: string; text: string };
 /** Background music for a family's site: one MP3 in Vercel Blob. */
 export type SiteMusic = { url: string; pathname: string; name: string };
-/** A photo for an event's medallion. */
-export type EventPhoto = { url: string; pathname: string };
 /** Extra per-guest columns the couple or committee adds (Stay, Room no.…). */
 export type GuestColumn = { id: string; label: string };
 
@@ -108,6 +102,8 @@ export const weddingSides = pgTable("wedding_sides", {
   know: jsonb("know").$type<KnowItem[]>(),
   /** background music */
   music: jsonb("music").$type<SiteMusic>(),
+  /** the print page's saved choices (size, design…), without the photo */
+  printConfig: jsonb("print_config").$type<Record<string, unknown>>(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [primaryKey({ columns: [t.weddingId, t.side] })]);
 
@@ -130,8 +126,6 @@ export const events = pgTable("events", {
   icon: text("icon"),
   /** an uploaded icon ("custom"): a 96×96 alpha mask, base64 — drawn in the theme's colour */
   iconImage: text("icon_image"),
-  /** a photo for this event's medallion on the site */
-  photo: jsonb("photo").$type<EventPhoto>(),
 });
 
 export const families = pgTable("families", {

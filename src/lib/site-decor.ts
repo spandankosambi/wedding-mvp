@@ -5,8 +5,6 @@ import type { SiteDecor } from "@/db/schema";
 export const REVEALS = ["none", "envelope", "doors", "curtain"] as const;
 export const MOTIONS = ["none", "gentle", "lively"] as const;
 export const SCENES = ["none", "night", "garden", "palace"] as const;
-export const EVENT_STYLES = ["list", "medallions"] as const;
-export const FRAMES = ["plain", "arch"] as const;
 
 export const MOTION_LABELS: Record<(typeof MOTIONS)[number], [string, string]> = {
   none: ["Still", "Nothing moves; best for very slow phones"],
@@ -19,11 +17,6 @@ export const SCENE_LABELS: Record<(typeof SCENES)[number], [string, string]> = {
   garden: ["Garden", "Swaying vines, fluttering leaves and butterflies"],
   palace: ["Palace", "Arches and domes at dusk with flickering lamps"],
 };
-export const EVENT_STYLE_LABELS: Record<(typeof EVENT_STYLES)[number], [string, string]> = {
-  list: ["List", "One celebration under another"],
-  medallions: ["Medallions", "Each celebration in an oval frame, with its icon or your photo"],
-};
-export const FRAME_LABELS: Record<(typeof FRAMES)[number], string> = { plain: "Plain mats", arch: "Arched frames" };
 export const FALLING = ["petals", "marigold", "sparkles", "diyas", "none"] as const;
 export const DIVIDERS = ["theme", "lotus", "paisley", "diamonds"] as const;
 
@@ -43,8 +36,6 @@ export const DIVIDER_LABELS: Record<(typeof DIVIDERS)[number], string> = {
 export const decorSchema = z.object({
   motion: z.enum(MOTIONS).default("gentle"),
   scene: z.enum(SCENES).default("none"),
-  eventStyle: z.enum(EVENT_STYLES).default("list"),
-  frames: z.enum(FRAMES).default("plain"),
   reveal: z.enum(REVEALS).default("none"),
   falling: z.enum(FALLING).default("petals"),
   toran: z.boolean().default(false),

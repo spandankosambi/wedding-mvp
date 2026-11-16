@@ -25,47 +25,9 @@ type EventRow = {
   dressCode: string | null;
   description?: string | null;
   side?: Side;
-  photo?: { url: string } | null;
 };
 
-/** Celebrations as framed ovals: the family's photo for the event, else its icon. */
-function Medallions({ events }: { events: EventRow[] }) {
-  return (
-    <ol className="medallions" data-testid="medallions">
-      {events.map((e, i) => (
-        <li key={e.id} className="reveal medallion" data-fx="scale" style={{ "--rd": `${(i % 3) * 0.14}s`, "--k": i } as React.CSSProperties}>
-          <div className="medallion-frame">
-            <span className="medallion-oval">
-              {e.photo
-                ? <img src={e.photo.url} alt="" loading="lazy" />
-                : <span className="medallion-icon" data-testid="event-icon">{ownIcon(e) ?? <MotifSvg m={icon(iconOf(e))} className="event-icon" />}</span>}
-            </span>
-          </div>
-          <h3 className="font-display mt-5 text-3xl tracking-tight md:text-4xl">{e.name}</h3>
-          {e.side && sideLabel(e.side) && <p className="kicker mt-2" style={{ color: "var(--accent)" }}>{sideLabel(e.side)}</p>}
-          <p className="kicker mt-3">{fmtEventDate(e.startsAt)} · {fmtEventTime(e.startsAt)}</p>
-          <p className="mt-3 text-base font-medium">{e.venueName}</p>
-          <p className="mt-1 text-sm" style={{ color: "var(--ink-soft)" }}>{e.address}</p>
-          {e.description && <p className="mx-auto mt-3 max-w-xs text-sm leading-relaxed" style={{ color: "var(--ink-soft)" }}>{e.description}</p>}
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-            {e.mapUrl && <a href={e.mapUrl} target="_blank" rel="noreferrer" className="text-sm underline underline-offset-4" style={{ color: "var(--accent-2)" }}>View map ↗</a>}
-            {e.dressCode && <span className="kicker rounded-full px-3 py-1.5" style={{ border: "1px solid var(--hairline)", letterSpacing: "0.22em" }}>Dress · {e.dressCode}</span>}
-          </div>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-export function EventTimeline({ theme: _theme, events, no = "02", icons = false, style = "list" }: { theme: string; events: EventRow[]; no?: string; icons?: boolean; style?: "list" | "medallions" }) {
-  if (style === "medallions") {
-    return (
-      <section className="mx-auto max-w-6xl px-6 py-24 md:py-32">
-        <SectionHeader no={no} title="The Celebrations" />
-        <Medallions events={events} />
-      </section>
-    );
-  }
+export function EventTimeline({ theme: _theme, events, no = "02", icons = false }: { theme: string; events: EventRow[]; no?: string; icons?: boolean }) {
   return (
     <section className="mx-auto max-w-5xl px-6 py-24 md:py-32">
       <SectionHeader no={no} title="The Celebrations" />
