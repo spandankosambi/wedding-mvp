@@ -5,7 +5,7 @@ import { JumpNav } from "./JumpNav";
 /* Edit these three to change what the "About us" box says on every page. */
 export const ABOUT = {
   heading: "About us",
-  text: "Nimantran puts a wedding's invitation website, guest list, RSVPs and printed cards in one place, with a section for each family.",
+  text: "One Tap Invites puts a wedding's invitation website, guest list, RSVPs and printed cards in one place, with a section for each family.",
   /** shown under "Need help?" when filled in, e.g. "hello@example.com" or "+91 98200 00000" */
   contactEmail: "",
   contactWhatsApp: "",

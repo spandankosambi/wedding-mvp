@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BRAND, BRAND_TAGLINE } from "@/lib/brand";
+import { BRAND, BRAND_TAGLINE, COPYRIGHT } from "@/lib/brand";
 import { EVENT_PRESETS } from "@/lib/presets";
 import { SiteHeader } from "./home/SiteHeader";
 import { ThemeSweep } from "./home/ThemeSweep";
@@ -9,10 +9,13 @@ import { RsvpDemo } from "./home/RsvpDemo";
 import { OpsBoard } from "./home/OpsBoard";
 import { Mark } from "@/themes/mark";
 
+const DESCRIPTION =
+  "A themed invitation site, per-ceremony RSVP, a guest list that counts itself, and the logistics of a five-day Indian wedding. Free while we're in pilot.";
 export const metadata = {
-  title: `${BRAND} — the Indian wedding, run from one link`,
-  description:
-    "A themed invitation site, per-ceremony RSVP, a guest list that counts itself, and the logistics of a five-day Indian wedding. Free while we're in pilot.",
+  title: { absolute: `${BRAND} — ${BRAND_TAGLINE}` },
+  description: DESCRIPTION,
+  openGraph: { siteName: BRAND, title: `${BRAND} — ${BRAND_TAGLINE}`, description: DESCRIPTION, type: "website", url: "/" },
+  twitter: { card: "summary", title: `${BRAND} — ${BRAND_TAGLINE}`, description: DESCRIPTION },
 };
 
 /* The ceremonies, in the order a wedding week actually runs them. A real
@@ -220,6 +223,7 @@ export default function Home() {
           <Link href="/w/ananya-weds-arjun" className="nav-link">Example wedding</Link>
           <a href="#roadmap" className="nav-link">Roadmap</a>
         </nav>
+        <p className="mt-8 text-xs" style={{ color: "var(--ink-soft)" }} data-testid="copyright">{COPYRIGHT}</p>
       </footer>
     </div>
   );

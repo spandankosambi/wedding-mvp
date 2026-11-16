@@ -39,7 +39,7 @@ describe("sendInvite (file mode)", () => {
 describe("fromHeader", () => {
   const prev = { from: process.env.EMAIL_FROM, user: process.env.SMTP_USER };
   beforeAll(() => {
-    process.env.EMAIL_FROM = "Nimantran <hello@example.com>";
+    process.env.EMAIL_FROM = "One Tap Invites <hello@example.com>";
     process.env.SMTP_USER = "hello@example.com";
   });
   afterAll(() => {
@@ -50,12 +50,12 @@ describe("fromHeader", () => {
     expect(fromHeader("Ananya & Arjun")).toBe('"Ananya & Arjun" <hello@example.com>');
   });
   it("falls back to the configured sender with no display name", () => {
-    expect(fromHeader()).toBe("Nimantran <hello@example.com>");
+    expect(fromHeader()).toBe("One Tap Invites <hello@example.com>");
   });
   it("strips quotes and newlines that would break the header", () => {
     expect(fromHeader('A"B\r\nBcc: evil@example.com')).toBe('"ABBcc: evil@example.com" <hello@example.com>');
   });
   it("falls back when the name is only strippable characters", () => {
-    expect(fromHeader('"""')).toBe("Nimantran <hello@example.com>");
+    expect(fromHeader('"""')).toBe("One Tap Invites <hello@example.com>");
   });
 });

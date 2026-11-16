@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Instrument_Serif, Cormorant_Garamond, Fraunces, Inter, Marcellus, Rozha_One, Prata } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
-import { BRAND, BRAND_TAGLINE } from "@/lib/brand";
+import { BRAND, BRAND_TAGLINE, SITE_URL } from "@/lib/brand";
 
 const instrument = Instrument_Serif({
   weight: "400", style: ["normal", "italic"], subsets: ["latin"], variable: "--font-instrument",
@@ -30,8 +30,13 @@ const tiro = localFont({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  applicationName: BRAND,
   title: { default: BRAND, template: `%s · ${BRAND}` },
   description: BRAND_TAGLINE,
+  // what WhatsApp, iMessage and social apps show when a link is shared
+  openGraph: { siteName: BRAND, title: BRAND, description: BRAND_TAGLINE, type: "website" },
+  twitter: { card: "summary", title: BRAND, description: BRAND_TAGLINE },
 };
 
 export default function RootLayout({

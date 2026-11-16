@@ -104,3 +104,20 @@ for (const width of [390, 1280]) {
     }
   });
 }
+
+test("the product is One Tap Invites everywhere a visitor or a share preview looks", async ({ page }) => {
+  await expect(page).toHaveTitle("One Tap Invites — Invites, RSVPs and guests, sorted.");
+  await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute("content", "One Tap Invites");
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", /One Tap Invites/);
+  await expect(page.locator("header.nav")).toContainText("One Tap Invites");
+  const foot = page.locator("footer").last();
+  await expect(foot).toContainText("Invites, RSVPs and guests, sorted.");
+  await expect(foot.getByTestId("copyright")).toHaveText("© 2026 One Tap Invites · A product of The Event Day Desk");
+  await expect(page.locator("body")).not.toContainText(/nimantran/i);
+  await page.goto("/signin");
+  await expect(page).toHaveTitle(/One Tap Invites/);
+  await expect(page.locator("body")).toContainText("One Tap Invites");
+  await page.goto("/w/ananya-weds-arjun");
+  await expect(page).toHaveTitle(/· One Tap Invites$/);
+  await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute("content", "One Tap Invites");
+});

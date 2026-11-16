@@ -493,7 +493,7 @@ export async function renderInvitationPdf(inv: Invitation, o: InvitationOptions,
     ? await QRCode.toDataURL(inv.back.details.qrUrl, { margin: 1, width: 360, errorCorrectionLevel: "M", color: { dark: "#000000", light: "#ffffff" } })
     : null;
   const doc = (
-    <Document title="Wedding invitation" creator="Nimantran" producer="Nimantran">
+    <Document title="Wedding invitation" creator="One Tap Invites" producer="One Tap Invites">
       <Front c={c} inv={inv} />
       <Back c={c} inv={inv} qr={qr} />
       {inv.inserts.map((card) => <Insert key={card.event.id} c={c} card={card} />)}

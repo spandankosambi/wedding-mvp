@@ -50,7 +50,7 @@ export async function expandMapLink(url: string, fetchImpl: typeof fetch = fetch
         method: "GET",
         redirect: "manual",
         signal: AbortSignal.timeout(5000),
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; Nimantran link check)" },
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; OneTapInvites link check)" },
       });
       const next = res.headers.get("location");
       if (!next) break;

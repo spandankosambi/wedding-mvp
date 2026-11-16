@@ -14,6 +14,7 @@ import { TravelStay } from "./sections/TravelStay";
 import { Gallery } from "./sections/Gallery";
 import { Closing } from "./sections/Closing";
 import { Reveal } from "./sections/Reveal";
+import { BRAND } from "@/lib/brand";
 import { ThingsToKnow } from "./sections/ThingsToKnow";
 import { MusicPlayer } from "./sections/MusicPlayer";
 import { wordingLines } from "@/lib/invitation/content";
@@ -73,6 +74,7 @@ export async function generateMetadata({
     title: `${n.first} weds ${n.second}`,
     description: wedding.heroTagline ?? `Join us on ${fmtWeddingDate(wedding.weddingDate)}`,
     openGraph: {
+      siteName: BRAND,
       title: n.couple,
       description: `${fmtWeddingDate(wedding.weddingDate)}${wedding.city ? ` · ${wedding.city}` : ""} — you're invited. Tap to see the celebrations and RSVP.`,
       type: "website",
