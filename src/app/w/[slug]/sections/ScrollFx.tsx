@@ -24,11 +24,13 @@ export function ScrollFx() {
     document.querySelectorAll(".reveal, .draw, .rule-grow").forEach((el) => io.observe(el));
 
     const parallax = document.querySelector<HTMLElement>(".parallax");
+    const scene = document.querySelector<HTMLElement>(".scene");
     let raf = 0;
     const onScroll = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
         parallax?.style.setProperty("--py", `${window.scrollY * 0.22}px`);
+        if (scene && window.scrollY < window.innerHeight * 1.2) scene.style.setProperty("--sy", `${window.scrollY}px`);
       });
     };
     onScroll();

@@ -1,6 +1,7 @@
 import { Ornament } from "@/themes/ornaments";
 import { fmtWeddingDate } from "@/lib/format";
 import { Petals } from "./Petals";
+import { Scene } from "./Scene";
 import { Countdown } from "./Countdown";
 import { Mark } from "@/themes/mark";
 import { hostWords, wordingLines } from "@/lib/invitation/content";
@@ -51,6 +52,7 @@ export function Hero({ wedding, city, side = "bride", decor = DEFAULT_DECOR }: {
      screen, on a laptop and on a phone. */
   return (
     <section className={`hero relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-6 text-center ${decor.toran ? "has-toran" : ""}`}>
+      <Scene kind={decor.scene} />
       <Petals kind={decor.falling} />
       {decor.toran && (
         <div className="hero-toran" aria-hidden data-testid="site-toran">

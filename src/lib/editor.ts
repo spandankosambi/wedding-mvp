@@ -2,12 +2,12 @@ import { z } from "zod";
 import { expandMapLink } from "@/lib/maplinks";
 import { getLook, saveTravelLook, updateLook, type FamilySide, type LookPatch } from "@/lib/looks";
 import { contactsOf, MAX_CONTACTS } from "@/lib/contacts";
-import { decorSchema } from "@/lib/site-decor";
+import { decorSchema, knowSchema } from "@/lib/site-decor";
 import { ICONS } from "@/lib/invitation/decor";
 import { isIconMask } from "@/lib/icon-mask";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
-import { weddings, events, families, eventInvites, rsvps, type TravelInfo } from "@/db/schema";
+import { weddings, events, families, eventInvites, rsvps, type TravelInfo, type SiteMusic, type EventPhoto } from "@/db/schema";
 import { THEMES } from "@/themes/catalog";
 
 /* Everything the couple can change about their own site. Pure DB logic —
@@ -256,4 +256,30 @@ export async function sortEventsByTime(weddingId: string): Promise<Result> {
     if (rows[k].sortOrder !== k) await db.update(events).set({ sortOrder: k }).where(eq(events.id, rows[k].id));
   }
   return { ok: true };
+}
+
+/** "Things to know": up to six short notes for guests. Blank rows are dropped. */
+export async function updateKnow(weddingId: string, side: FamilySide, rows: { title: string; text: string }[]): Promise<Result> {
+  const filled = rows.map((r) => ({ title: r.title.trim(), text: r.text.trim() })).filter((r) => r.title || r.text);
+  if (filled.some((r) => !r.title || !r.text)) return { ok: false, error: "Each note needs a title and a few words." };
+  const p = knowSchema.safeParse(filled);
+  if (!p.success) return { ok: false, error: "invalid input" };
+  await updateLook(weddingId, side, { know: p.data.length ? p.data : null });
+  return { ok: true };
+}
+
+/** Sets or clears the family's background music; answers the track it replaced (to delete its file). */
+export async function setMusic(weddingId: string, side: FamilySide, music: SiteMusic | null): Promise<SiteMusic | null> {
+  const before = (await getLook(weddingId, side)).music ?? null;
+  await updateLook(weddingId, side, { music });
+  return before;
+}
+
+/** Sets or clears an event's medallion photo; answers the one it replaced. */
+export async function setEventPhoto(weddingId: string, eventId: string, photo: EventPhoto | null): Promise<{ ok: boolean; before?: EventPhoto | null; error?: string }> {
+  if (!z.string().uuid().safeParse(eventId).success) return { ok: false, error: "invalid input" };
+  const [e] = await db.select().from(events).where(and(eq(events.id, eventId), eq(events.weddingId, weddingId)));
+  if (!e) return { ok: false, error: "event not found" };
+  await db.update(events).set({ photo }).where(eq(events.id, eventId));
+  return { ok: true, before: e.photo ?? null };
 }

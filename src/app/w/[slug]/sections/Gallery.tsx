@@ -13,10 +13,10 @@ const PLATES = [
 
 /** The couple's photos (justified rows + viewer) when they've added some;
     until then, illustrated plates so the section never looks empty. */
-export function Gallery({ theme: _theme, no = "04", photos = [] }: { theme: string; no?: string; photos?: GalleryPhoto[] }) {
+export function Gallery({ theme: _theme, no = "04", photos = [], frames = "plain" }: { theme: string; no?: string; photos?: GalleryPhoto[]; frames?: "plain" | "arch" }) {
   const own = photos.length > 0;
   return (
-    <section className="mx-auto max-w-5xl px-6 py-24 md:py-32">
+    <section className="mx-auto max-w-5xl px-6 py-24 md:py-32" data-frames={frames}>
       <SectionHeader no={no} title="Gallery" />
       {own ? (
         <PhotoGallery photos={photos} />

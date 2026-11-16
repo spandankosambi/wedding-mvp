@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { weddings, weddingSides, type GalleryInfo, type TravelInfo } from "@/db/schema";
+import { weddings, weddingSides, type GalleryInfo, type KnowItem, type SiteMusic, type TravelInfo } from "@/db/schema";
 import { decorOf, type Decor } from "@/lib/site-decor";
 import { contactLine, contactsOf, type RsvpPerson } from "@/lib/contacts";
 
@@ -54,11 +54,11 @@ export const wordingOf = (look: Look): Wording => ({
 export function withLook<W extends {
   theme: Look["theme"]; heroTagline: string | null; story: string | null; hashtag: string | null; contactPhone: string | null;
   travel: TravelInfo | null; gallery: GalleryInfo | null; rsvpOpen: boolean; rsvpDeadline: Date | null;
-}>(w: W, look: Look): W & Wording & { contacts: RsvpPerson[]; decor: Decor } {
+}>(w: W, look: Look): W & Wording & { contacts: RsvpPerson[]; decor: Decor; know: KnowItem[]; music: SiteMusic | null } {
   return {
     ...w, theme: look.theme, heroTagline: look.heroTagline, story: look.story, hashtag: look.hashtag, contactPhone: look.contactPhone,
     travel: look.travel, gallery: look.gallery, rsvpOpen: look.rsvpOpen, rsvpDeadline: look.rsvpDeadline, ...wordingOf(look),
-    contacts: contactsOf(look), decor: decorOf(look),
+    contacts: contactsOf(look), decor: decorOf(look), know: look.know ?? [], music: look.music ?? null,
   };
 }
 
@@ -80,7 +80,7 @@ export function namesFor(
   };
 }
 
-export type LookPatch = Partial<Pick<Look, "theme" | "heroTagline" | "story" | "hashtag" | "contactPhone" | "travel" | "gallery" | "rsvpOpen" | "rsvpDeadline" | "rsvpPeople" | "decor" | (typeof WORDING_KEYS)[number]>>;
+export type LookPatch = Partial<Pick<Look, "theme" | "heroTagline" | "story" | "hashtag" | "contactPhone" | "travel" | "gallery" | "rsvpOpen" | "rsvpDeadline" | "rsvpPeople" | "decor" | "know" | "music" | (typeof WORDING_KEYS)[number]>>;
 
 export async function updateLook(weddingId: string, side: FamilySide, patch: LookPatch) {
   await getLooks(weddingId); // make sure the row exists

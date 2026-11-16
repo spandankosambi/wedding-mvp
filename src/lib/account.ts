@@ -147,7 +147,7 @@ export async function resetWedding(weddingId: string, scope: ResetScope, keepUse
       lp.gallery = { enabled: scope.content ? true : g.enabled, photos: [] };
     }
     if (scope.content) {
-      Object.assign(lp, { heroTagline: "Two families, one big yes.", story: null, hashtag: null, contactPhone: null, decor: null, rsvpPeople: null, rsvpContacts: null, travel: null, theme: "ivory-editorial" as const, rsvpOpen: true, rsvpDeadline: null });
+      Object.assign(lp, { heroTagline: "Two families, one big yes.", story: null, hashtag: null, contactPhone: null, decor: null, know: null, music: null, rsvpPeople: null, rsvpContacts: null, travel: null, theme: "ivory-editorial" as const, rsvpOpen: true, rsvpDeadline: null });
       if (!scope.photos) lp.gallery = { enabled: true, photos: g.photos };
     }
     if (Object.keys(lp).length) await updateLook(weddingId, side, lp);
@@ -193,7 +193,7 @@ export async function resetSide(weddingId: string, side: FamilySide, scope: Rese
   }
   if (scope.content) {
     Object.assign(lp, {
-      heroTagline: "Two families, one big yes.", story: null, hashtag: null, contactPhone: null, decor: null, rsvpPeople: null, rsvpContacts: null, travel: null,
+      heroTagline: "Two families, one big yes.", story: null, hashtag: null, contactPhone: null, decor: null, know: null, music: null, rsvpPeople: null, rsvpContacts: null, travel: null,
       theme: "ivory-editorial" as const, rsvpOpen: true, rsvpDeadline: null,
     });
     if (!scope.photos) lp.gallery = { enabled: true, photos: g.photos };

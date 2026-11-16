@@ -1321,3 +1321,113 @@ html.fx .rule-grow.is-in::before { transform: scaleX(1); }
 .people-table td { padding: 0.55rem 0.5rem; vertical-align: top; }
 .people-table .portal-input { min-width: 6.25rem; padding-inline: 0.55rem; padding-block: 0.45rem; }
 .people-table td:nth-child(5), .people-table td:nth-child(6) { vertical-align: middle; }
+
+/* ═════ Motion setting, animated scenes, medallions, notes and music ═════ */
+
+/* "Still": nothing moves (the same end state reduced motion gets) */
+.themed[data-motion="none"] :is(.rise, .reveal, .ltr, .petal, .marquee-track, .foil, .scroll-cue, .draw-load [pathLength], .scene *, .medallion-frame) { animation: none !important; }
+.themed[data-motion="none"] .petal { display: none; }
+
+/* "Lively": bigger entrances, a soft focus pull, and bands of colour between sections */
+html.fx .themed[data-motion="lively"] .reveal {
+  transform: translateY(54px) scale(0.97); filter: blur(6px);
+  transition: opacity 1.1s cubic-bezier(0.22, 1, 0.36, 1) var(--rd, 0s), transform 1.1s cubic-bezier(0.22, 1, 0.36, 1) var(--rd, 0s), filter 0.9s ease var(--rd, 0s);
+}
+html.fx .themed[data-motion="lively"] .reveal[data-fx="scale"] { transform: scale(0.8) rotate(-2deg); }
+html.fx .themed[data-motion="lively"] .reveal.is-in { opacity: 1; transform: none; filter: none; }
+.themed[data-motion="lively"] > section:nth-of-type(odd):not(.hero) {
+  max-width: none;
+  background:
+    linear-gradient(to bottom, transparent, color-mix(in srgb, var(--accent) 9%, transparent) 14%, color-mix(in srgb, var(--accent-2) 9%, transparent) 86%, transparent);
+}
+.themed[data-motion="lively"] > section:nth-of-type(odd):not(.hero) > * { max-width: 64rem; margin-inline: auto; }
+.themed[data-motion="lively"] .hero-orn { animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both, scene-bob 6s ease-in-out 1s infinite; }
+.themed[data-motion="lively"] .medallion.is-in .medallion-frame { animation: medallion-float 6s ease-in-out calc(var(--k, 0) * -1.3s) infinite; }
+@keyframes medallion-float { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-8px) rotate(0.8deg); } }
+
+/* ── scenes ── */
+.scene { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.scene-layer { position: absolute; inset: 0; width: 100%; height: 100%; transform: translate3d(0, calc(var(--sy, 0px) * var(--depth, 0.1)), 0); will-change: transform; }
+.hero > :not(.scene):not([aria-hidden]) { position: relative; z-index: 1; }
+.scene-night { background: radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--ink) 9%, transparent), transparent 70%); }
+.scene-twinkle { transform-box: fill-box; transform-origin: center; animation: scene-twinkle 3s ease-in-out infinite; }
+@keyframes scene-twinkle { 0%, 100% { opacity: 0.25; transform: scale(0.7); } 50% { opacity: 0.95; transform: scale(1.15); } }
+.scene-bob { transform-box: fill-box; transform-origin: center; animation: scene-bob 9s ease-in-out infinite; }
+@keyframes scene-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+.scene-drift { animation: scene-drift 80s linear infinite; }
+@keyframes scene-drift { from { transform: translateX(-30%); } to { transform: translateX(105%); } }
+.scene-lantern { position: absolute; bottom: -12%; width: clamp(20px, 3.2vw, 38px); aspect-ratio: 20 / 28; animation: scene-rise 28s linear infinite; filter: drop-shadow(0 0 10px color-mix(in srgb, var(--accent) 60%, transparent)); }
+@keyframes scene-rise { 0% { transform: translate(0, 0); opacity: 0; } 8% { opacity: 0.9; } 50% { transform: translate(3vw, -60svh); } 92% { opacity: 0.7; } 100% { transform: translate(-2vw, -125svh); opacity: 0; } }
+.scene-flicker { transform-box: fill-box; transform-origin: 50% 90%; animation: scene-flicker 1.7s ease-in-out infinite; }
+@keyframes scene-flicker { 0%, 100% { opacity: 0.55; transform: scale(1); } 40% { opacity: 1; transform: scale(1.12, 1.2); } 70% { opacity: 0.7; transform: scale(0.94, 0.9); } }
+.scene-vine { position: absolute; top: -2%; left: 0; height: min(58svh, 30rem); width: auto; }
+.scene-vine-r { left: auto; right: 0; }
+.scene-vine-mid { display: none; }
+@media (min-width: 900px) {
+  .scene-vine-mid { display: block; position: absolute; top: -6%; left: 13%; height: 36svh; opacity: 0.6; }
+  .scene-vine-mid .scene-vine { position: static; height: 100%; }
+  .scene-vine-mid-r { left: auto; right: 13%; }
+}
+.scene-sway { transform-origin: 50% 0; animation: scene-sway 7s ease-in-out infinite; }
+@keyframes scene-sway { 0%, 100% { transform: rotate(-3.5deg); } 50% { transform: rotate(3.5deg); } }
+.scene-leaf { position: absolute; top: -6%; animation: scene-leaf 16s linear infinite; }
+@keyframes scene-leaf { 0% { transform: translate(0, 0) rotate(0); opacity: 0; } 8% { opacity: 1; } 50% { transform: translate(5vw, 55svh) rotate(200deg); } 100% { transform: translate(-3vw, 112svh) rotate(420deg); opacity: 0.6; } }
+.scene-butterfly { position: absolute; width: clamp(18px, 2.4vw, 30px); animation: scene-flutter 14s ease-in-out infinite; }
+@keyframes scene-flutter { 0%, 100% { transform: translate(0, 0) rotate(-8deg); } 25% { transform: translate(5vw, -6svh) rotate(10deg); } 50% { transform: translate(9vw, 2svh) rotate(-4deg); } 75% { transform: translate(3vw, 7svh) rotate(12deg); } }
+.scene-flap { transform-origin: 0 0; animation: scene-flap 0.45s ease-in-out infinite alternate; }
+@keyframes scene-flap { from { transform: scaleX(1); } to { transform: scaleX(0.25); } }
+.scene-skyline { top: auto; bottom: 0; height: min(46svh, 24rem); }
+.scene-glow { transform-box: fill-box; transform-origin: center; animation: scene-glow 7s ease-in-out infinite; }
+@keyframes scene-glow { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+
+/* ── paper-cut curtain opening ── */
+.reveal-drapes { position: absolute; top: 0; bottom: 0; width: 56%; }
+.reveal-drapes-l { left: 0; }
+.reveal-drapes-r { right: 0; transform: scaleX(-1); }
+.reveal-drape { position: absolute; inset: 0; height: 100%; width: calc(100% - var(--k) * 13%); filter: drop-shadow(4px 0 6px rgba(0, 0, 0, 0.22)); transition: transform 1.25s cubic-bezier(0.7, 0, 0.2, 1) calc(0.25s + (2 - var(--k)) * 0.16s); }
+.reveal-drape[data-layer="0"] { fill: color-mix(in srgb, var(--surface) 62%, var(--accent)); }
+.reveal-drape[data-layer="1"] { fill: color-mix(in srgb, var(--surface) 76%, var(--accent-2)); }
+.reveal-drape[data-layer="2"] { fill: var(--surface); }
+.reveal-drape path { stroke: var(--accent); stroke-width: 0.5; vector-effect: non-scaling-stroke; }
+.is-opening .reveal-drape { transform: translateX(-106%); }
+.reveal-drapes ~ .reveal-centre { background: color-mix(in srgb, var(--surface) 92%, transparent); border-radius: 1.25rem; padding: 1.75rem 2rem; backdrop-filter: blur(3px); }
+
+/* ── celebrations as medallions ── */
+.medallions { display: grid; grid-template-columns: repeat(auto-fit, minmax(15.5rem, 1fr)); gap: clamp(2.5rem, 5vw, 4rem) clamp(1.5rem, 3vw, 2.5rem); justify-items: center; text-align: center; }
+.medallion { max-width: 22rem; }
+.medallion-frame { margin-inline: auto; width: clamp(9.5rem, 22vw, 12.5rem); aspect-ratio: 4 / 5; border-radius: 50%; padding: 7px; border: 1.5px solid var(--accent); box-shadow: 0 0 0 5px var(--bg), 0 0 0 6px color-mix(in srgb, var(--accent) 55%, transparent), 0 22px 40px -24px rgba(0, 0, 0, 0.55); }
+.medallion-oval { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.medallion-oval img { width: 100%; height: 100%; object-fit: cover; }
+.medallion-icon .event-icon { width: clamp(3.4rem, 8vw, 4.6rem); }
+.medallion-icon .event-icon-own { width: clamp(3.4rem, 8vw, 4.6rem); }
+
+/* ── arched photo frames ── */
+[data-frames="arch"] .plate { border-radius: 999px 999px 10px 10px / min(34%, 9rem) min(34%, 9rem) 10px 10px; outline: 1px solid color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: 4px; overflow: hidden; }
+[data-frames="arch"] .plate img { border-radius: 999px 999px 6px 6px / min(34%, 8.5rem) min(34%, 8.5rem) 6px 6px; }
+[data-frames="arch"] .photo-rows { row-gap: 22px !important; padding: 6px; }
+
+/* ── things to know ── */
+.know-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+.know-card { position: relative; border: 1px solid var(--hairline); border-radius: 1rem; background: var(--surface); padding: 1.6rem 1.4rem 1.4rem; }
+.know-mark { display: block; width: 0.7rem; height: 0.7rem; margin-bottom: 0.9rem; background: var(--accent); transform: rotate(45deg); box-shadow: 1.1rem -1.1rem 0 -0.15rem color-mix(in srgb, var(--accent-2) 70%, transparent); }
+
+/* ── music button ── */
+.music-btn { position: fixed; left: clamp(0.8rem, 2vw, 1.5rem); bottom: clamp(0.8rem, 2vw, 1.5rem); z-index: 40; width: 2.9rem; height: 2.9rem; border-radius: 50%; display: grid; place-items: center; cursor: pointer; background: var(--surface); color: var(--accent); border: 1px solid var(--accent); box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.5); }
+.music-btn.is-raised { bottom: 5.5rem; }
+.music-btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.music-bars { display: flex; align-items: flex-end; gap: 3px; height: 1.05rem; }
+.music-bars i { width: 3px; height: 30%; border-radius: 2px; background: currentColor; }
+.music-btn:not(.is-playing) .music-bars { opacity: 0.55; }
+.music-btn.is-playing .music-bars i { animation: music-bar 0.9s ease-in-out infinite alternate; }
+.music-btn.is-playing .music-bars i:nth-child(2) { animation-delay: -0.3s; }
+.music-btn.is-playing .music-bars i:nth-child(3) { animation-delay: -0.6s; }
+.music-btn.is-playing .music-bars i:nth-child(4) { animation-delay: -0.15s; }
+@keyframes music-bar { from { height: 20%; } to { height: 100%; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .scene *, .medallion-frame, .music-bars i, .hero-orn { animation: none !important; }
+  .scene-lantern, .scene-leaf { display: none; }
+  .reveal-drape { transition-duration: 0.2s; transition-delay: 0s; }
+  html.fx .themed[data-motion="lively"] .reveal { filter: none; }
+}
+@media print { .scene, .music-btn { display: none !important; } }

@@ -14,6 +14,8 @@ import { TravelStay } from "./sections/TravelStay";
 import { Gallery } from "./sections/Gallery";
 import { Closing } from "./sections/Closing";
 import { Reveal } from "./sections/Reveal";
+import { ThingsToKnow } from "./sections/ThingsToKnow";
+import { MusicPlayer } from "./sections/MusicPlayer";
 import { wordingLines } from "@/lib/invitation/content";
 import { RsvpCta, type InvitedGuest } from "./sections/RsvpCta";
 import { InviteBar } from "./sections/InviteBar";
@@ -111,13 +113,15 @@ export default async function WeddingPage({
   const travelNo = hasTravel ? no() : "";
   const gallery = galleryOf(wedding);
   const galleryNo = gallery.enabled ? no() : "";
+  const knowNo = wedding.know.length ? no() : "";
+  const motion = wedding.decor.motion;
 
   return (
-    <main data-theme={wedding.theme} className="themed flex-1">
+    <main data-theme={wedding.theme} data-motion={motion} className="themed flex-1">
       {/* arm scroll-fx before below-fold sections paint (no reveal flash);
           ScrollFx then drives the observers after hydration */}
-      <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('fx')" }} />
-      <ScrollFx />
+      {motion !== "none" && <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('fx')" }} />}
+      {motion !== "none" && <ScrollFx />}
       {wedding.decor.reveal !== "none" && (
         <Reveal kind={wedding.decor.reveal} slug={`${wedding.slug}:${side}`} first={namesFor(wedding, side).first} second={namesFor(wedding, side).second}
           line={`${fmtWeddingDate(wedding.weddingDate)}${weddingCity(wedding.city, events) ? ` · ${weddingCity(wedding.city, events)}` : ""}`} />
@@ -125,9 +129,10 @@ export default async function WeddingPage({
       <Hero wedding={wedding} side={side} city={weddingCity(wedding.city, events)} decor={wedding.decor} />
       <Marquee items={[...shown.map((e) => e.name), fmtWeddingDate(wedding.weddingDate)]} />
       <Story theme={wedding.theme} story={wedding.story} no={storyNo} divider={wedding.decor.divider} />
-      <EventTimeline theme={wedding.theme} events={shown} no={eventsNo} icons={wedding.decor.icons} />
+      <EventTimeline theme={wedding.theme} events={shown} no={eventsNo} icons={wedding.decor.icons} style={wedding.decor.eventStyle} />
       {hasTravel && <TravelStay travel={wedding.travel} no={travelNo} />}
-      {gallery.enabled && <Gallery theme={wedding.theme} no={galleryNo} photos={gallery.photos} />}
+      {gallery.enabled && <Gallery theme={wedding.theme} no={galleryNo} photos={gallery.photos} frames={wedding.decor.frames} />}
+      <ThingsToKnow items={wedding.know} no={knowNo} />
       <RsvpCta slug={wedding.slug} side={side} open={window.open} deadline={wedding.rsvpDeadline} contacts={wedding.contacts} invite={invite} />
       <Closing theme={wedding.theme} closingLine={wedding.closingLine} compliments={wordingLines(wedding.compliments)} divider={wedding.decor.divider} />
       {/* room under the footer so the invitation bar never covers it */}
@@ -138,6 +143,7 @@ export default async function WeddingPage({
           {wedding.hashtag && <span>#{wedding.hashtag}</span>}
         </p>
       </footer>
+      {wedding.music && <MusicPlayer url={wedding.music.url} name={wedding.music.name} raised={!!invite} />}
       {invite && <InviteBar familyName={invite.familyName} href={invite.href} answered={invite.answered} />}
     </main>
   );

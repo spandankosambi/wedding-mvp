@@ -2,13 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 
+// a drape: straight on three sides, scalloped along its inner edge (like cut paper)
+const SCALLOPED = `M0 0 H92 ${Array.from({ length: 10 }, (_, i) => `Q100 ${i * 10 + 5} 92 ${i * 10 + 10}`).join(" ")} H0 Z`;
+
 /**
- * The opening screen, when the family chose one: a sealed envelope or a pair
- * of palace doors over the site, opened with a tap. Opened once per visit
+ * The opening screen, when the family chose one: a sealed envelope, a pair
+ * of palace doors or paper-cut curtains over the site, opened with a tap. Opened once per visit
  * (remembered for the browser tab); with reduced motion it simply fades.
  */
 export function Reveal({ kind, slug, first, second, line }: {
-  kind: "envelope" | "doors"; slug: string; first: string; second: string;
+  kind: "envelope" | "doors" | "curtain"; slug: string; first: string; second: string;
   /** e.g. "29 January 2027 · Pune" */
   line: string;
 }) {
@@ -34,15 +37,28 @@ export function Reveal({ kind, slug, first, second, line }: {
     if (state !== "closed") return;
     try { sessionStorage.setItem(key, "1"); } catch { /* fine */ }
     setState("opening");
+    window.dispatchEvent(new Event("invitation:opened")); // inside the tap, so music may start
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    window.setTimeout(() => setState("gone"), reduce ? 250 : 1500);
+    window.setTimeout(() => setState("gone"), reduce ? 250 : kind === "curtain" ? 2100 : 1500);
   }
 
   if (state === "gone") return null;
   const initials = `${first.charAt(0)}${second.charAt(0)}`.toUpperCase();
   return (
     <div className={`reveal-screen reveal-${kind} ${state === "opening" ? "is-opening" : ""}`} data-testid="reveal" role="dialog" aria-modal="true" aria-label="Your invitation">
-      {kind === "doors" ? (
+      {kind === "curtain" ? (
+        <>
+          {(["l", "r"] as const).map((side) => (
+            <div key={side} className={`reveal-drapes reveal-drapes-${side}`} aria-hidden>
+              {[0, 1, 2].map((layer) => (
+                <svg key={layer} className="reveal-drape" data-layer={layer} viewBox="0 0 100 100" preserveAspectRatio="none" style={{ "--k": layer } as React.CSSProperties}>
+                  <path d={SCALLOPED} />
+                </svg>
+              ))}
+            </div>
+          ))}
+        </>
+      ) : kind === "doors" ? (
         <>
           <div className="reveal-door reveal-door-l" aria-hidden><span className="reveal-door-panel" /></div>
           <div className="reveal-door reveal-door-r" aria-hidden><span className="reveal-door-panel" /></div>

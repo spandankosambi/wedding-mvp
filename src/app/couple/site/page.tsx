@@ -21,10 +21,16 @@ import { allows, homeSide, seesSide } from "@/lib/access";
 import { redirect } from "next/navigation";
 import { ContactsEditor } from "./ContactsEditor";
 import { contactsOf, MAX_CONTACTS } from "@/lib/contacts";
-import { decorOf, REVEALS, REVEAL_LABELS, FALLING, FALLING_LABELS, DIVIDERS, DIVIDER_LABELS } from "@/lib/site-decor";
+import {
+  decorOf, REVEALS, REVEAL_LABELS, FALLING, FALLING_LABELS, DIVIDERS, DIVIDER_LABELS,
+  MOTIONS, MOTION_LABELS, SCENES, SCENE_LABELS, EVENT_STYLES, EVENT_STYLE_LABELS, FRAMES, FRAME_LABELS,
+  MAX_KNOW, KNOW_SUGGESTIONS, MAX_MUSIC_BYTES,
+} from "@/lib/site-decor";
+import { KnowEditor } from "./KnowEditor";
+import { MusicUpload, EventPhotoField } from "./MediaFields";
 import { galleryOf, photoStorageConfigured, MAX_GALLERY_PHOTOS } from "@/lib/gallery";
 import {
-  saveWords, saveWording, saveDecor, saveTravel, saveEvent, addPresetEvent, toggleEvent, removeEvent, moveEventAction, sortEvents,
+  saveWords, saveWording, saveDecor, saveKnow, removeMusic, saveTravel, saveEvent, addPresetEvent, toggleEvent, removeEvent, moveEventAction, sortEvents,
   saveGallerySettings, removeGalleryPhotoAction, moveGalleryPhotoAction, copyPartAction,
 } from "./actions";
 
@@ -88,7 +94,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
     <main className="portal-page">
       <PortalNav names={coupleNames} current={family} page="site" weddingId={weddingId} admin={!!adminQ} access={staff.access} />
       <PortalFrame
-        jump={[["theme", "Look"], ["decor", "Design touches"], ["wording", "Invitation wording"], ["words", "Tagline & story"], ["events", "Celebrations"], ["travel", "Travel & stay"], ["gallery", "Photos"]]}
+        jump={[["theme", "Look"], ["decor", "Design touches"], ["wording", "Invitation wording"], ["words", "Tagline & story"], ["events", "Celebrations"], ["travel", "Travel & stay"], ["gallery", "Photos"], ["know", "Things to know"], ["music", "Music"]]}
         right={<Checklist title={`${family === "bride" ? "Bride" : "Groom"}'s side: what's done`} items={checklist} />}
       >
         {readOnly && (
@@ -139,8 +145,30 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
             <form action={saveDecor} className="mt-5 space-y-6">
               {wid}
               <fieldset>
+                <legend className="text-sm font-medium">How much the site moves</legend>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {MOTIONS.map((r) => (
+                    <label key={r} className="portal-choice">
+                      <input type="radio" name="motion" value={r} defaultChecked={decor.motion === r} className="mt-0.5 h-4 w-4" />
+                      <span><span className="block text-sm font-medium">{MOTION_LABELS[r][0]}</span><span className="block text-xs text-neutral-500">{MOTION_LABELS[r][1]}</span></span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend className="text-sm font-medium">Animated scene behind the opening</legend>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                  {SCENES.map((r) => (
+                    <label key={r} className="portal-choice">
+                      <input type="radio" name="scene" value={r} defaultChecked={decor.scene === r} className="mt-0.5 h-4 w-4" />
+                      <span><span className="block text-sm font-medium">{SCENE_LABELS[r][0]}</span><span className="block text-xs text-neutral-500">{SCENE_LABELS[r][1]}</span></span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <fieldset>
                 <legend className="text-sm font-medium">How the site opens</legend>
-                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                   {REVEALS.map((r) => (
                     <label key={r} className="portal-choice">
                       <input type="radio" name="reveal" value={r} defaultChecked={decor.reveal === r} className="mt-0.5 h-4 w-4" />
@@ -161,6 +189,22 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                   </select>
                 </Field>
               </div>
+              <fieldset>
+                <legend className="text-sm font-medium">How the celebrations are shown</legend>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-2">
+                  {EVENT_STYLES.map((r) => (
+                    <label key={r} className="portal-choice">
+                      <input type="radio" name="eventStyle" value={r} defaultChecked={decor.eventStyle === r} className="mt-0.5 h-4 w-4" />
+                      <span><span className="block text-sm font-medium">{EVENT_STYLE_LABELS[r][0]}</span><span className="block text-xs text-neutral-500">{EVENT_STYLE_LABELS[r][1]}</span></span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <Field label="Photo frames in the gallery" className="md:max-w-xs">
+                <select name="frames" defaultValue={decor.frames} className="portal-input">
+                  {FRAMES.map((v) => <option key={v} value={v}>{FRAME_LABELS[v]}</option>)}
+                </select>
+              </Field>
               <fieldset>
                 <legend className="text-sm font-medium">Decorations</legend>
                 <div className="mt-2 space-y-2 text-sm">
@@ -286,6 +330,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                         <Field label="A line about it" className="md:col-span-2"><input name="description" defaultValue={e.description ?? ""} maxLength={400} className="portal-input" /></Field>
                         <EventSideField initial={e.side} eventName={e.name} family={family} />
                         <EventIconField initial={e.icon} initialImage={e.iconImage} eventName={e.name} enabled={decor.icons} />
+                        <EventPhotoField scope={{ weddingId, admin: staff.role === "admin", family }} eventId={e.id} eventName={e.name} url={e.photo?.url ?? null} uploadsOn={uploadsOn} />
                         <label className="flex items-center gap-2 text-sm md:col-span-2">
                           <input type="checkbox" name="isPublished" defaultChecked={e.isPublished} className="h-4 w-4" />
                           Show this event on the site and RSVP form
@@ -393,6 +438,39 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
               ) : (
                 <p className="text-sm text-neutral-500">Photo uploads aren&apos;t switched on for this site yet.</p>
               )}
+            </div>
+          </section>
+
+          {/* ── Things to know ── */}
+          <section id="know" className="portal-panel p-6">
+            <p className="portal-eyebrow">Things to know</p>
+            <h2 className="mt-1 font-semibold">Short notes for your guests</h2>
+            <p className="mt-1 max-w-2xl text-sm text-neutral-500">Parking, the weather, what to wear, gifts — up to {MAX_KNOW} notes, shown as their own section on your site. Leave it empty to leave the section out.</p>
+            <form action={saveKnow} className="mt-5 space-y-4">
+              {wid}
+              <KnowEditor initial={look.know ?? []} max={MAX_KNOW} suggestions={KNOW_SUGGESTIONS} />
+              <SaveButton />
+            </form>
+          </section>
+
+          {/* ── Background music ── */}
+          <section id="music" className="portal-panel p-6">
+            <p className="portal-eyebrow">Music</p>
+            <h2 className="mt-1 font-semibold">A song behind your site</h2>
+            <p className="mt-1 max-w-2xl text-sm text-neutral-500">
+              One MP3 or M4A, up to {MAX_MUSIC_BYTES / 1048576} MB (about four minutes). It starts when a guest opens the invitation or taps the music button, never on its own, and guests can mute it. Use music you have the right to share.
+            </p>
+            {look.music && (
+              <div className="mt-4 flex flex-wrap items-center gap-3" data-testid="music-current">
+                <audio controls preload="none" src={look.music.url} className="h-9 max-w-full" />
+                <span className="text-sm text-neutral-700">{look.music.name}</span>
+                <form action={removeMusic}>{wid}<button type="submit" className="text-xs text-neutral-500 underline underline-offset-2 hover:text-red-700">Remove</button></form>
+              </div>
+            )}
+            <div className="mt-4">
+              {uploadsOn
+                ? <MusicUpload scope={{ weddingId, admin: staff.role === "admin", family }} has={!!look.music} maxMb={MAX_MUSIC_BYTES / 1048576} />
+                : <p className="text-sm text-neutral-500">File uploads aren&apos;t switched on for this site yet.</p>}
             </div>
           </section>
 

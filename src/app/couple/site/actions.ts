@@ -11,6 +11,7 @@ import * as editor from "@/lib/editor";
 import { EVENT_PRESETS, presetStart } from "@/lib/presets";
 import { put, del } from "@vercel/blob";
 import * as gallery from "@/lib/gallery";
+import { MAX_KNOW, MAX_MUSIC_BYTES, MUSIC_TYPES } from "@/lib/site-decor";
 import { asFamilySide, otherSide, copyFromPartner, photoInUse, type FamilySide, type LookPart } from "@/lib/looks";
 
 /* Every action re-resolves the wedding server-side: a couple is pinned to
@@ -83,6 +84,8 @@ export async function saveWording(formData: FormData) {
 export async function saveDecor(formData: FormData) {
   const ctx = await scoped(formData);
   const r = await editor.updateDecor(ctx.weddingId, ctx.family, {
+    motion: str(formData, "motion") || undefined, scene: str(formData, "scene") || undefined,
+    eventStyle: str(formData, "eventStyle") || undefined, frames: str(formData, "frames") || undefined,
     reveal: str(formData, "reveal") || undefined, falling: str(formData, "falling") || undefined, divider: str(formData, "divider") || undefined,
     toran: formData.get("toran") === "on", corners: formData.get("corners") === "on", icons: formData.get("icons") === "on",
   });
@@ -220,4 +223,66 @@ export async function uploadGalleryPhoto(formData: FormData): Promise<{ ok: bool
   revalidatePath(`/w/${ctx.slug}`);
   revalidatePath("/couple", "layout");
   return { ok: true };
+}
+
+/** "Things to know": short notes for guests. */
+export async function saveKnow(formData: FormData) {
+  const ctx = await scoped(formData);
+  const rows = [];
+  for (let i = 0; i < MAX_KNOW; i++) rows.push({ title: str(formData, `know${i}title`), text: str(formData, `know${i}text`) });
+  const r = await editor.updateKnow(ctx.weddingId, ctx.family, rows);
+  done(ctx, "know", r.ok ? undefined : r.error);
+}
+
+function refresh(ctx: Ctx) {
+  revalidatePath(`/w/${ctx.slug}`);
+  revalidatePath("/couple", "layout");
+}
+
+/** Background music for this family's site: one MP3 (or M4A), played only after a guest taps. */
+export async function uploadMusic(formData: FormData): Promise<{ ok: boolean; error?: string }> {
+  const ctx = await scoped(formData);
+  if (!gallery.photoStorageConfigured()) return { ok: false, error: "File storage isn't set up on this site yet." };
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return { ok: false, error: "no file received" };
+  if (!(MUSIC_TYPES as readonly string[]).includes(file.type)) return { ok: false, error: "Use an MP3 or M4A file." };
+  if (file.size > MAX_MUSIC_BYTES) return { ok: false, error: "That file is over 4 MB. Trim the track or export it at a lower quality." };
+  const ext = file.type.includes("mpeg") || file.type.includes("mp3") ? "mp3" : "m4a";
+  const blob = await put(`weddings/${ctx.weddingId}/music/${crypto.randomUUID()}.${ext}`, file, { access: "public", contentType: file.type });
+  const before = await editor.setMusic(ctx.weddingId, ctx.family, { url: blob.url, pathname: blob.pathname, name: file.name.replace(/\.[^.]+$/, "").slice(0, 80) || "Music" });
+  if (before) await del(before.url).catch(() => {});
+  refresh(ctx);
+  return { ok: true };
+}
+
+export async function removeMusic(formData: FormData) {
+  const ctx = await scoped(formData);
+  const before = await editor.setMusic(ctx.weddingId, ctx.family, null);
+  if (before && gallery.photoStorageConfigured()) await del(before.url).catch(() => {});
+  done(ctx, "music");
+}
+
+/** A photo for one celebration's medallion (already shrunk in the browser). */
+export async function uploadEventPhoto(formData: FormData): Promise<{ ok: boolean; error?: string }> {
+  const ctx = await scoped(formData);
+  if (!gallery.photoStorageConfigured()) return { ok: false, error: "Photo storage isn't set up on this site yet." };
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return { ok: false, error: "no photo received" };
+  if (!(gallery.PHOTO_TYPES as readonly string[]).includes(file.type)) return { ok: false, error: "use a JPG, PNG or WebP photo" };
+  if (file.size > gallery.MAX_PHOTO_BYTES) return { ok: false, error: "that photo is too large" };
+  const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  const blob = await put(`weddings/${ctx.weddingId}/events/${crypto.randomUUID()}.${ext}`, file, { access: "public", contentType: file.type });
+  const r = await editor.setEventPhoto(ctx.weddingId, str(formData, "eventId"), { url: blob.url, pathname: blob.pathname });
+  if (!r.ok) { await del(blob.url).catch(() => {}); return { ok: false, error: r.error }; }
+  if (r.before) await del(r.before.url).catch(() => {});
+  refresh(ctx);
+  return { ok: true };
+}
+
+export async function removeEventPhoto(formData: FormData): Promise<{ ok: boolean; error?: string }> {
+  const ctx = await scoped(formData);
+  const r = await editor.setEventPhoto(ctx.weddingId, str(formData, "eventId"), null);
+  if (r.ok && r.before && gallery.photoStorageConfigured()) await del(r.before.url).catch(() => {});
+  refresh(ctx);
+  return { ok: r.ok, error: r.error };
 }

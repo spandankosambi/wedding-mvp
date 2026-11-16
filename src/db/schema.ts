@@ -11,7 +11,15 @@ export const familySourceEnum = pgEnum("family_source", ["committee", "import", 
 /** Travel & stay copy the couple writes in their editor — prose, not relational data. */
 /** A family's design touches on its site (see lib/site-decor.ts for the choices). */
 export type SiteDecor = {
-  reveal?: "none" | "envelope" | "doors";
+  /** how much moves: nothing, the gentle default, or everything */
+  motion?: "none" | "gentle" | "lively";
+  /** an animated backdrop behind the opening */
+  scene?: "none" | "night" | "garden" | "palace";
+  /** celebrations as a list, or as framed medallions */
+  eventStyle?: "list" | "medallions";
+  /** gallery photos in plain mats or arched frames */
+  frames?: "plain" | "arch";
+  reveal?: "none" | "envelope" | "doors" | "curtain";
   falling?: "petals" | "marigold" | "sparkles" | "diyas" | "none";
   toran?: boolean;
   corners?: boolean;
@@ -32,6 +40,12 @@ export type TravelInfo = {
     `null` (every wedding before this existed) means: shown, no photos yet. */
 export type GalleryPhoto = { url: string; pathname: string; width: number; height: number };
 export type GalleryInfo = { enabled: boolean; photos: GalleryPhoto[] };
+/** "Things to know": short notes for guests (parking, weather, hashtag…). */
+export type KnowItem = { title: string; text: string };
+/** Background music for a family's site: one MP3 in Vercel Blob. */
+export type SiteMusic = { url: string; pathname: string; name: string };
+/** A photo for an event's medallion. */
+export type EventPhoto = { url: string; pathname: string };
 /** Extra per-guest columns the couple or committee adds (Stay, Room no.…). */
 export type GuestColumn = { id: string; label: string };
 
@@ -90,6 +104,10 @@ export const weddingSides = pgTable("wedding_sides", {
   closingLine: text("closing_line"),
   /** design touches on the site: opening reveal, falling effect, decorations, icons */
   decor: jsonb("decor").$type<SiteDecor>(),
+  /** "Things to know" notes for guests */
+  know: jsonb("know").$type<KnowItem[]>(),
+  /** background music */
+  music: jsonb("music").$type<SiteMusic>(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [primaryKey({ columns: [t.weddingId, t.side] })]);
 
@@ -112,6 +130,8 @@ export const events = pgTable("events", {
   icon: text("icon"),
   /** an uploaded icon ("custom"): a 96×96 alpha mask, base64 — drawn in the theme's colour */
   iconImage: text("icon_image"),
+  /** a photo for this event's medallion on the site */
+  photo: jsonb("photo").$type<EventPhoto>(),
 });
 
 export const families = pgTable("families", {
