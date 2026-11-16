@@ -49,11 +49,11 @@ test("a family that has replied is offered their answers, not a fresh RSVP", asy
   await expect(page.locator("#rsvp").getByRole("link", { name: "See or change your RSVP" })).toBeAttached();
 });
 
-test("an old, wrong or other wedding's code just shows the ordinary site", async ({ page }) => {
+test("an old, wrong or other wedding's code opens nothing: only names and the date", async ({ page }) => {
   await page.goto("/w/ananya-weds-arjun?invite=not-a-real-invitation-code-at-all");
-  await expect(page.getByText(/Ananya/i).first()).toBeVisible();
+  await expect(page.getByTestId("private-invitation")).toContainText(/Ananya/);
   await expect(page.getByTestId("invite-bar")).toHaveCount(0);
-  await expect(page.locator("#rsvp").getByRole("link", { name: "Confirm your attendance" })).toHaveAttribute("href", "/w/ananya-weds-arjun/rsvp?side=bride"); // the bride's family's look
+  await expect(page.locator("#rsvp")).toHaveCount(0);
 
   await page.goto(`/w/gaurav-weds-karishma?invite=${tokenOf("The Guptas")}`);
   await expect(page.getByTestId("invite-bar")).toHaveCount(0);
@@ -78,7 +78,7 @@ test("each household's site shows only their celebrations, and Travel & Stay onl
   await expect(travel).toBeAttached();
 
   // the general site is unchanged
-  await page.goto("/w/ananya-weds-arjun");
+  await page.goto("/w/ananya-weds-arjun?k=sample");
   await expect(celebration("Haldi")).toBeAttached();
   await expect(travel).toBeAttached();
 });

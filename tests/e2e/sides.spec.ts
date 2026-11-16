@@ -68,9 +68,9 @@ test("an event can be one family's own; each family's section, list and site fol
   await expect(dialog.getByRole("button", { name: /Mehendi/ })).toHaveCount(0);
 
   // ── guests: each family's site shows its own events ──────────
-  await page.goto("/w/gaurav-weds-karishma?side=bride");
+  await page.goto("/w/gaurav-weds-karishma?side=bride&k=sample");
   await expect(page.getByRole("heading", { name: "Mehendi", level: 3 })).toBeVisible();
-  await page.goto("/w/gaurav-weds-karishma?side=groom");
+  await page.goto("/w/gaurav-weds-karishma?side=groom&k=sample");
   await expect(page.getByRole("heading", { name: "Mehendi", level: 3 })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Sangeet", level: 3 })).toBeVisible();
 });
@@ -100,10 +100,10 @@ test("hotels can be common or one family's own, and you can add as many as neede
   await expect(page.locator("#travel input[value='Bride Side Inn']")).toHaveCount(0);
 
   const stay = (name: string) => page.getByRole("heading", { name, level: 3 });
-  await page.goto("/w/gaurav-weds-karishma?side=groom");
+  await page.goto("/w/gaurav-weds-karishma?side=groom&k=sample");
   await expect(stay("Shared Haveli")).toBeAttached();
   await expect(stay("Bride Side Inn")).toHaveCount(0);
-  await page.goto("/w/gaurav-weds-karishma?side=bride");
+  await page.goto("/w/gaurav-weds-karishma?side=bride&k=sample");
   await expect(stay("Shared Haveli")).toBeAttached();
   await expect(stay("Bride Side Inn")).toBeAttached();
 
@@ -112,19 +112,19 @@ test("hotels can be common or one family's own, and you can add as many as neede
   await page.locator("#travel").getByRole("button", { name: "Remove Bride Side Inn" }).click();
   await page.locator("#travel").getByRole("button", { name: "Save" }).click();
   await expect(page).toHaveURL(/saved=travel/);
-  await page.goto("/w/gaurav-weds-karishma?side=bride");
+  await page.goto("/w/gaurav-weds-karishma?side=bride&k=sample");
   await expect(stay("Bride Side Inn")).toHaveCount(0);
 });
 
 test("each family's site and section put its own child's name first", async ({ page }) => {
-  await page.goto("/w/gaurav-weds-karishma?side=groom");
+  await page.goto("/w/gaurav-weds-karishma?side=groom&k=sample");
   await expect(page).toHaveTitle(/Gaurav weds Karishma/);
   await expect(page.locator("h1").first()).toHaveText(/Gaurav\s*with\s*Karishma/);
   await expect(page.locator("footer")).toContainText("Gaurav & Karishma");
-  await page.goto("/w/gaurav-weds-karishma?side=bride");
+  await page.goto("/w/gaurav-weds-karishma?side=bride&k=sample");
   await expect(page).toHaveTitle(/Karishma weds Gaurav/);
   await expect(page.locator("h1").first()).toHaveText(/Karishma\s*with\s*Gaurav/);
-  await page.goto("/w/gaurav-weds-karishma/rsvp?side=groom");
+  await page.goto("/w/gaurav-weds-karishma/rsvp?side=groom&k=sample");
   await expect(page.getByRole("link", { name: /Gaurav & Karishma/ })).toBeVisible();
 
   await signIn(page, "couple2@example.com");
@@ -148,7 +148,7 @@ test("design touches: an opening screen, what falls, decorations and celebration
   await expect(page).toHaveURL(/saved=decor/);
 
   // guests first see the closed doors; one tap opens the invitation
-  await page.goto("/w/gaurav-weds-karishma?side=groom");
+  await page.goto("/w/gaurav-weds-karishma?side=groom&k=sample");
   const doors = page.getByTestId("reveal");
   await expect(doors).toContainText("Gaurav & Karishma");
   await page.getByRole("button", { name: "Open the invitation" }).click();
@@ -178,7 +178,7 @@ test("design touches: an opening screen, what falls, decorations and celebration
   await sangeet.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("Saved. Your site is up to date.")).toBeVisible();
   await expect(sangeet.locator("input[name=icon]")).toHaveValue("custom");
-  await page.goto("/w/gaurav-weds-karishma?side=groom");
+  await page.goto("/w/gaurav-weds-karishma?side=groom&k=sample");
   await expect(page.locator("[data-own-icon]")).toHaveCount(1); // only its shape is kept: no SVG markup reaches the site
   expect(await page.evaluate(() => (window as unknown as { bad?: number }).bad)).toBeUndefined();
   // the print dialog says the cards carry them too
@@ -188,14 +188,14 @@ test("design touches: an opening screen, what falls, decorations and celebration
   const cardIcons = page.getByTestId("print-page").getByRole("checkbox", { name: /Celebration icons/ });
   await expect(cardIcons).toBeChecked();
   await cardIcons.uncheck();
-  await page.goto("/w/gaurav-weds-karishma?side=groom");
+  await page.goto("/w/gaurav-weds-karishma?side=groom&k=sample");
   await expect(page.getByTestId("event-icon").first()).toBeAttached(); // the website keeps them
   // opened once per visit
   await page.reload();
   await expect(page.getByTestId("reveal")).toHaveCount(0);
 
   // the bride's family keeps its own (none of these)
-  await page.goto("/w/gaurav-weds-karishma?side=bride");
+  await page.goto("/w/gaurav-weds-karishma?side=bride&k=sample");
   await expect(page.getByTestId("reveal")).toHaveCount(0);
   await expect(page.getByTestId("site-toran")).toHaveCount(0);
   await expect(page.getByTestId("event-icon")).toHaveCount(0);

@@ -14,7 +14,7 @@ import { ShareCard } from "../ShareCard";
 import { SummaryCards } from "../SummaryCards";
 import { Stat, weddingStats } from "../stats";
 import { SaveButton } from "../site/SaveButton";
-import { saveRsvpSettings } from "../site/actions";
+import { saveRsvpSettings, renewShareLink } from "../site/actions";
 import { PortalNav } from "../PortalNav";
 import { DangerZone } from "../danger/DangerZone";
 import { istParts } from "@/lib/editor";
@@ -78,7 +78,19 @@ export default async function FamilySection({
       )}
 
       <div className="mb-6" id="share">
-        <ShareCard slug={wedding.slug} coupleNames={coupleNames} weddingDateText={fmtWeddingDate(wedding.weddingDate)} family={family} />
+        <ShareCard
+          slug={wedding.slug} coupleNames={coupleNames} weddingDateText={fmtWeddingDate(wedding.weddingDate)} family={family}
+          shareKey={look.shareKey} openReplies={look.rsvpOpen}
+          renew={staff.access.manage && (
+            <form action={renewShareLink} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-500">
+              {admin && <input type="hidden" name="weddingId" value={weddingId} />}
+              <input type="hidden" name="family" value={family} />
+              <span>Link gone too far?</span>
+              <button type="submit" className="underline underline-offset-2 hover:text-red-700">Get a new link</button>
+              <span>(the old link and any printed QR stop opening the invitation)</span>
+            </form>
+          )}
+        />
       </div>
 
       <div id="numbers" className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -95,6 +107,7 @@ export default async function FamilySection({
       <section id="rsvp" className="portal-panel p-6">
         <p className="portal-eyebrow">RSVP</p>
         <h2 className="mt-1 font-semibold">Who can reply to the {who}&apos;s side, and until when</h2>
+        <p className="mt-1 text-sm text-neutral-500">Families on your guest list always reply from their personal invitation links, until the reply-by date.</p>
         <form action={saveRsvpSettings} className="mt-5 space-y-4">
           <fieldset disabled={!canRsvp} className="portal-fieldset space-y-4">
           {admin && <input type="hidden" name="weddingId" value={weddingId} />}
@@ -102,8 +115,8 @@ export default async function FamilySection({
           <label className="flex items-start gap-3 text-sm">
             <input type="checkbox" name="rsvpOpen" defaultChecked={look.rsvpOpen} className="mt-0.5 h-4 w-4" />
             <span>
-              <span className="font-medium">Accept RSVPs from this family&apos;s shared link</span>
-              <span className="block text-xs text-neutral-500">Off = the {who}&apos;s site shows the family contact instead of the form. Personal invitation links keep working.</span>
+              <span className="font-medium">Accept replies from people who are not on the guest list</span>
+              <span className="block text-xs text-neutral-500">Off (the default): only families you invited from the guest list can reply, from their personal links. On: anyone who opens the {who}&apos;s shared link or QR can reply, and is added to the guest list marked &ldquo;via link&rdquo;.</span>
             </span>
           </label>
           <label className="block">

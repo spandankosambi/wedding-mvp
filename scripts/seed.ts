@@ -96,8 +96,9 @@ async function main() {
   const travel = w.travel && { ...w.travel, stays: w.travel.stays.map((s) => ({ ...s, common: true })) };
   const look = { heroTagline: w.heroTagline, story: w.story, hashtag: w.hashtag, contactPhone: w.contactPhone, travel, gallery: w.gallery };
   await db.insert(weddingSides).values([
-    { weddingId: w.id, side: "bride", theme: w.theme, ...look },
-    { weddingId: w.id, side: "groom", theme: "raj-mahal", ...look },
+    // the example wedding: a fixed link code, and anyone with the link may reply
+    { weddingId: w.id, side: "bride", theme: w.theme, shareKey: "sample", rsvpOpen: true, ...look },
+    { weddingId: w.id, side: "groom", theme: "raj-mahal", shareKey: "sample", rsvpOpen: true, ...look },
   ]);
 
   const evs = await db.insert(events).values(
@@ -143,6 +144,13 @@ async function main() {
       gettingThere: "The Delhi celebrations are at private venues — no stay needed. For the wedding days, fly into Udaipur (UDR), thirty minutes from the lake. The Pheras at Jagmandir Island are reached by boat from the City Palace jetty; departures start an hour before.",
     },
   }).returning();
+
+  // the second demo wedding: fixed link code too, open to replies from the link
+  const gkLook = { theme: w2.theme, heroTagline: w2.heroTagline, story: w2.story, hashtag: w2.hashtag, contactPhone: w2.contactPhone, travel: w2.travel, gallery: w2.gallery };
+  await db.insert(weddingSides).values([
+    { weddingId: w2.id, side: "bride", shareKey: "sample", rsvpOpen: true, ...gkLook },
+    { weddingId: w2.id, side: "groom", shareKey: "sample", rsvpOpen: true, ...gkLook },
+  ]);
 
   const gkEvs = await db.insert(events).values(
     GK_EVENTS.map((e) => ({ ...e, weddingId: w2.id, startsAt: new Date(e.startsAt) })),

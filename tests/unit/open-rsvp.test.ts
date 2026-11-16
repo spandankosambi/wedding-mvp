@@ -4,7 +4,7 @@ import { db, migrateDb } from "@/db/client";
 import { weddings, events, families, rsvps, guests } from "@/db/schema";
 import { getPublicWedding, submitOpenRsvp, rsvpWindow } from "@/lib/open-rsvp";
 import { getFamilyByToken } from "@/lib/rsvp";
-import { updateLook } from "@/lib/looks";
+import { getLook, updateLook } from "@/lib/looks";
 
 let weddingId: string, sangeet: string, pheras: string, hidden: string;
 
@@ -20,6 +20,9 @@ beforeAll(async () => {
     { weddingId, name: "Secret afterparty", startsAt: new Date(), venueName: "V", address: "X", sortOrder: 2, isPublished: false },
   ]).returning();
   [sangeet, pheras, hidden] = rows.map((r) => r.id);
+  // both families let people who are not on the list reply, each from its own link
+  await updateLook(weddingId, "bride", { rsvpOpen: true, shareKey: "bridekey" });
+  await updateLook(weddingId, "groom", { rsvpOpen: true, shareKey: "groomkey" });
 });
 
 describe("getPublicWedding", () => {
@@ -38,10 +41,10 @@ describe("rsvpWindow", () => {
 });
 
 describe("submitOpenRsvp", () => {
-  const base = { slug: "open1", name: "The Raos", phone: "+91 98765 43210", diet: "veg" };
+  const base = { slug: "open1", name: "The Raos", phone: "+91 98765 43210", diet: "veg", k: "bridekey" };
 
   it("needs a phone or email", async () => {
-    const r = await submitOpenRsvp({ slug: "open1", name: "Nobody", responses: [{ eventId: sangeet, status: "attending", headcount: 1 }] });
+    const r = await submitOpenRsvp({ slug: "open1", name: "Nobody", k: "bridekey", responses: [{ eventId: sangeet, status: "attending", headcount: 1 }] });
     expect(r).toEqual({ ok: false, error: "phone or email required" });
   });
   it("rejects hidden events", async () => {
@@ -74,15 +77,33 @@ describe("submitOpenRsvp", () => {
     expect(row.headcount).toBe(4);
   });
   it("matches by email too", async () => {
-    const r = await submitOpenRsvp({ slug: "open1", name: "Rao again", email: "RAO@example.com", responses: [{ eventId: pheras, status: "attending", headcount: 1 }] });
+    const r = await submitOpenRsvp({ slug: "open1", name: "Rao again", email: "RAO@example.com", k: "bridekey", responses: [{ eventId: pheras, status: "attending", headcount: 1 }] });
     expect(r.ok).toBe(true);
     expect((await db.select().from(families).where(eq(families.weddingId, weddingId))).length).toBe(1);
   });
   it("refuses when that family closes RSVP; the other family's link still works", async () => {
     await updateLook(weddingId, "groom", { rsvpOpen: false });
-    const r = await submitOpenRsvp({ ...base, side: "groom", responses: [{ eventId: sangeet, status: "attending", headcount: 1 }] });
+    const r = await submitOpenRsvp({ ...base, side: "groom", linkSide: "groom", k: "groomkey", responses: [{ eventId: sangeet, status: "attending", headcount: 1 }] });
     expect(r).toEqual({ ok: false, error: "rsvp closed" });
     const ok = await submitOpenRsvp({ ...base, name: "The Pais", phone: "+91 98765 00001", side: "bride", responses: [{ eventId: sangeet, status: "attending", headcount: 1 }] });
     expect(ok.ok).toBe(true);
+  });
+  it("refuses anyone without the family's link code, or with the other family's", async () => {
+    const one = [{ eventId: sangeet, status: "attending", headcount: 1 }];
+    const who = { slug: "open1", name: "A Stranger", phone: "+91 90000 00009" };
+    expect(await submitOpenRsvp({ ...who, responses: one }, "stranger")).toEqual({ ok: false, error: "rsvp closed" });
+    expect(await submitOpenRsvp({ ...who, k: "guess", responses: one }, "stranger")).toEqual({ ok: false, error: "rsvp closed" });
+    expect(await submitOpenRsvp({ ...who, k: "groomkey", side: "bride", linkSide: "bride", responses: one }, "stranger")).toEqual({ ok: false, error: "rsvp closed" });
+    expect((await db.select().from(families).where(eq(families.weddingId, weddingId))).some((f) => f.name === "A Stranger")).toBe(false);
+  });
+  it("a new wedding takes no replies from the shared link until a family turns that on", async () => {
+    const [w] = await db.insert(weddings).values({ slug: "open2", brideName: "C", groomName: "D", weddingDate: new Date("2030-11-20") }).returning();
+    const [e] = await db.insert(events).values({ weddingId: w.id, name: "Pheras", startsAt: new Date(), venueName: "V", address: "X" }).returning();
+    const key = (await getLook(w.id, "bride")).shareKey!;
+    expect(key).toMatch(/^[a-z2-9]{8}$/);
+    const input = { slug: "open2", name: "Walk In", phone: "+91 90000 00001", k: key, responses: [{ eventId: e.id, status: "attending", headcount: 1 }] };
+    expect(await submitOpenRsvp(input, "another-visitor")).toEqual({ ok: false, error: "rsvp closed" });
+    await updateLook(w.id, "bride", { rsvpOpen: true });
+    expect((await submitOpenRsvp(input, "another-visitor")).ok).toBe(true);
   });
 });

@@ -3,6 +3,7 @@ import { db } from "@/db/client";
 import { weddings, weddingSides, type GalleryInfo, type KnowItem, type SiteMusic, type TravelInfo } from "@/db/schema";
 import { decorOf, type Decor } from "@/lib/site-decor";
 import { contactLine, contactsOf, type RsvpPerson } from "@/lib/contacts";
+import { newShareKey } from "@/lib/share";
 
 /**
  * The bride's family and the groom's each have their own look for the one
@@ -26,8 +27,15 @@ export async function getLooks(weddingId: string): Promise<Record<FamilySide, Lo
     const [w] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
     if (!w) throw new Error("wedding not found");
     const start = { theme: w.theme, heroTagline: w.heroTagline, story: w.story, hashtag: w.hashtag, contactPhone: w.contactPhone, travel: w.travel, gallery: w.gallery, rsvpOpen: w.rsvpOpen, rsvpDeadline: w.rsvpDeadline };
-    await db.insert(weddingSides).values(FAMILY_SIDES.map((side) => ({ weddingId, side, ...start }))).onConflictDoNothing();
+    await db.insert(weddingSides).values(FAMILY_SIDES.map((side) => ({ weddingId, side, ...start, shareKey: newShareKey() }))).onConflictDoNothing();
     rows = await db.select().from(weddingSides).where(eq(weddingSides.weddingId, weddingId));
+  }
+  // every family's link has a code
+  for (const r of rows) {
+    if (!r.shareKey) {
+      r.shareKey = newShareKey();
+      await db.update(weddingSides).set({ shareKey: r.shareKey }).where(and(eq(weddingSides.weddingId, weddingId), eq(weddingSides.side, r.side)));
+    }
   }
   return {
     bride: rows.find((r) => r.side === "bride")!,
@@ -80,7 +88,7 @@ export function namesFor(
   };
 }
 
-export type LookPatch = Partial<Pick<Look, "theme" | "heroTagline" | "story" | "hashtag" | "contactPhone" | "travel" | "gallery" | "rsvpOpen" | "rsvpDeadline" | "rsvpPeople" | "decor" | "know" | "music" | "printConfig" | (typeof WORDING_KEYS)[number]>>;
+export type LookPatch = Partial<Pick<Look, "theme" | "heroTagline" | "story" | "hashtag" | "contactPhone" | "travel" | "gallery" | "rsvpOpen" | "rsvpDeadline" | "rsvpPeople" | "decor" | "know" | "music" | "printConfig" | "shareKey" | (typeof WORDING_KEYS)[number]>>;
 
 export async function updateLook(weddingId: string, side: FamilySide, patch: LookPatch) {
   await getLooks(weddingId); // make sure the row exists

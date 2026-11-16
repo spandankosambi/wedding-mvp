@@ -31,7 +31,7 @@ test("guest RSVPs via emailed link; public site renders", async ({ page }) => {
   await expect(cards.nth(0).getByText("Who's coming · 1 of 2")).toBeVisible(); // remembered by name
 
   // Public site renders themed sections
-  await page.goto("/w/ananya-weds-arjun");
+  await page.goto("/w/ananya-weds-arjun?k=sample");
   await expect(page.getByText(/Ananya/i).first()).toBeVisible();
   await expect(page.getByText(/Reception/i).first()).toBeVisible();
 });

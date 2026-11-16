@@ -3,6 +3,7 @@ import { db } from "@/db/client";
 import { weddings, events } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
 import { allows } from "@/lib/access";
+import { sharePath } from "@/lib/share";
 import { appOrigin } from "@/lib/origin";
 import { invitationSchema } from "@/lib/invitation/options";
 import { buildInvitation, fileName } from "@/lib/invitation/content";
@@ -53,7 +54,7 @@ export async function POST(req: Request) {
     return Response.json({ error: "invalid events" }, { status: 400 });
   }
 
-  const inv = buildInvitation(withLook(card, look), evs, o, `${await appOrigin()}/w/${wedding.slug}?side=${o.version}`);
+  const inv = buildInvitation(withLook(card, look), evs, o, `${await appOrigin()}${sharePath(wedding.slug, o.version, look.shareKey)}`);
   const pdf = await renderInvitationPdf(inv, o, look.theme);
   return new Response(new Uint8Array(pdf), {
     headers: {

@@ -6,6 +6,8 @@ import { weddings, families, users, emailLog } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
 import { getRsvpSummary } from "@/lib/rsvp";
 import { fmtWeddingDate } from "@/lib/format";
+import { sharePath } from "@/lib/share";
+import { getLook } from "@/lib/looks";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +44,7 @@ export default async function AdminWeddingPage({
           </h1>
         </div>
         <nav className="flex flex-wrap gap-2">
-          <a href={`/w/${wedding.slug}`} target="_blank" rel="noreferrer" className="portal-button-secondary">
+          <a href={sharePath(wedding.slug, "bride", (await getLook(wedding.id, "bride")).shareKey)} target="_blank" rel="noreferrer" className="portal-button-secondary">
             Site ↗
           </a>
           {/* Admin passes both requireRole gates — visiting these IS the impersonation mechanism */}

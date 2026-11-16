@@ -57,7 +57,8 @@ export const weddings = pgTable("weddings", {
   groomParents: text("groom_parents"),
   hashtag: text("hashtag"),
   contactPhone: text("contact_phone"),
-  rsvpOpen: boolean("rsvp_open").notNull().default(true),
+  /** replies from people who are not on the guest list (the shared link); off unless the family turns it on */
+  rsvpOpen: boolean("rsvp_open").notNull().default(false),
   rsvpDeadline: timestamp("rsvp_deadline", { withTimezone: true }),
   travel: jsonb("travel").$type<TravelInfo>(),
   gallery: jsonb("gallery").$type<GalleryInfo>(),
@@ -83,7 +84,8 @@ export const weddingSides = pgTable("wedding_sides", {
   contactPhone: text("contact_phone"),
   travel: jsonb("travel").$type<TravelInfo>(),
   gallery: jsonb("gallery").$type<GalleryInfo>(),
-  rsvpOpen: boolean("rsvp_open").notNull().default(true),
+  /** replies from people who are not on the guest list (the shared link); off unless the family turns it on */
+  rsvpOpen: boolean("rsvp_open").notNull().default(false),
   rsvpDeadline: timestamp("rsvp_deadline", { withTimezone: true }),
   /* the invitation's wording, on the site and the printed cards */
   invocation: text("invocation"),
@@ -102,6 +104,8 @@ export const weddingSides = pgTable("wedding_sides", {
   know: jsonb("know").$type<KnowItem[]>(),
   /** background music */
   music: jsonb("music").$type<SiteMusic>(),
+  /** the code in this family's shared link; without it the site shows only names and date */
+  shareKey: text("share_key"),
   /** the print page's saved choices (size, design…), without the photo */
   printConfig: jsonb("print_config").$type<Record<string, unknown>>(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

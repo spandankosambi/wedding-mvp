@@ -11,8 +11,9 @@ import * as editor from "@/lib/editor";
 import { EVENT_PRESETS, presetStart } from "@/lib/presets";
 import { put, del } from "@vercel/blob";
 import * as gallery from "@/lib/gallery";
+import { newShareKey } from "@/lib/share";
 import { MAX_KNOW, MAX_MUSIC_BYTES, MUSIC_TYPES } from "@/lib/site-decor";
-import { asFamilySide, otherSide, copyFromPartner, photoInUse, type FamilySide, type LookPart } from "@/lib/looks";
+import { asFamilySide, otherSide, copyFromPartner, photoInUse, updateLook, type FamilySide, type LookPart } from "@/lib/looks";
 
 /* Every action re-resolves the wedding server-side: a couple is pinned to
    their own; admin passes one explicitly. Then the site + editor revalidate
@@ -259,4 +260,11 @@ export async function removeMusic(formData: FormData) {
   const before = await editor.setMusic(ctx.weddingId, ctx.family, null);
   if (before && gallery.photoStorageConfigured()) await del(before.url).catch(() => {});
   done(ctx, "music");
+}
+
+/** Swaps a family's link code for a new one: the old link and QR stop opening the invitation. */
+export async function renewShareLink(formData: FormData) {
+  const ctx = await scoped(formData, "couple");
+  await updateLook(ctx.weddingId, ctx.family, { shareKey: newShareKey() });
+  done(ctx, "share", undefined, "section");
 }

@@ -7,6 +7,8 @@ import { db } from "@/db/client";
 import { weddings, events, families, guests, eventInvites, rsvps, emailLog } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
 import { allows, homeSide } from "@/lib/access";
+import { sharePath } from "@/lib/share";
+import { getLook } from "@/lib/looks";
 import { redirect } from "next/navigation";
 import { PortalFrame } from "../couple/PortalFrame";
 import { getRsvpSummary } from "@/lib/rsvp";
@@ -99,7 +101,7 @@ export default async function CommitteePage({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <a href={`/w/${wedding.slug}?side=${family}`} className="portal-button-secondary" target="_blank" rel="noreferrer">
+          <a href={sharePath(wedding.slug, family, (await getLook(weddingId, family)).shareKey)} className="portal-button-secondary" target="_blank" rel="noreferrer">
             View wedding site ↗
           </a>
         </div>

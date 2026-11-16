@@ -67,7 +67,7 @@ describe("reset", () => {
   it("site text and look: back to defaults, names and date untouched, photos kept", async () => {
     await resetWedding(fx.weddingId, { ...NONE, content: true }, fx.coupleId);
     const w = await wedding(fx.weddingId);
-    expect(w).toMatchObject({ story: null, hashtag: null, theme: "ivory-editorial", rsvpOpen: true, brideName: "Pooja", groomName: "Spandan", city: "Pune" });
+    expect(w).toMatchObject({ story: null, hashtag: null, theme: "ivory-editorial", rsvpOpen: false, brideName: "Pooja", groomName: "Spandan", city: "Pune" });
     expect(galleryOf(w).photos).toHaveLength(1);
   });
 
@@ -108,7 +108,7 @@ describe("one family's reset", () => {
     expect((await db.select().from(events).where(eq(events.weddingId, fx.weddingId))).map((e) => e.name).sort()).toEqual(["Haldi", "Sangeet"]); // common ones stay
     expect(r.photoUrls).toEqual(["https://blob.example.com/own.jpg"]); // the shared one is still the groom's
     const b = await getLook(fx.weddingId, "bride"), g = await getLook(fx.weddingId, "groom");
-    expect(b).toMatchObject({ story: null, travel: null, rsvpOpen: true, theme: "ivory-editorial" });
+    expect(b).toMatchObject({ story: null, travel: null, rsvpOpen: false, theme: "ivory-editorial" });
     expect(b.gallery?.photos).toEqual([]);
     expect(g.story).toBe("Groom's story");
     expect(g.gallery?.photos.map((p) => p.pathname)).toEqual(["shared.jpg"]);

@@ -9,6 +9,7 @@ import { rateLimit } from "@/lib/ratelimit";
 import { normalizePhone } from "@/lib/slug";
 import { DIET_OPTIONS } from "@/lib/presets";
 import { getLook, withLook } from "@/lib/looks";
+import { keyOpens } from "@/lib/share";
 
 /** The wedding as guests see it: only published events, in order. */
 export async function getPublicWedding(slug: string) {
@@ -35,6 +36,9 @@ const schema = z.object({
   phone: z.string().trim().max(30).optional(),
   email: z.string().trim().toLowerCase().email().max(254).optional().or(z.literal("")),
   side: z.enum(["bride", "groom"]).optional(),
+  /** the family link the guest arrived on, and its code */
+  linkSide: z.enum(["bride", "groom"]).optional(),
+  k: z.string().max(40).optional(),
   diet: z.enum(DIET_OPTIONS.map((d) => d.value) as [string, ...string[]]).optional(),
   guestNames: z.array(z.string().trim().min(1).max(120)).max(MAX_OPEN_HEADCOUNT).optional(),
   note: z.string().trim().max(500).optional(),
@@ -71,6 +75,8 @@ export async function submitOpenRsvp(input: unknown, clientKey = "local"): Promi
   const data = await getPublicWedding(d.slug);
   if (!data) return { ok: false, error: "wedding not found" };
   const { wedding, events: published } = data;
+  // only someone holding a family's link may reply through it
+  if (!keyOpens(await getLook(wedding.id, d.linkSide ?? d.side ?? "bride"), d.k)) return { ok: false, error: "rsvp closed" };
   // each family opens and closes its own RSVPs
   if (!rsvpWindow(withLook(wedding, await getLook(wedding.id, d.side ?? "bride"))).open) return { ok: false, error: "rsvp closed" };
 

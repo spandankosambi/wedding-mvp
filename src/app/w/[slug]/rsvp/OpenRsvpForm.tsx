@@ -11,7 +11,7 @@ type Status = "attending" | "declined" | null;
 
 const field = { background: "var(--surface)", border: "1px solid var(--hairline)", color: "var(--ink)" } as const;
 
-export function OpenRsvpForm({ slug, events, initialSide = "bride" }: { slug: string; events: EventProp[]; initialSide?: "bride" | "groom" }) {
+export function OpenRsvpForm({ slug, events, initialSide = "bride", shareKey }: { slug: string; events: EventProp[]; initialSide?: "bride" | "groom"; shareKey?: string | null }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -36,7 +36,7 @@ export function OpenRsvpForm({ slug, events, initialSide = "bride" }: { slug: st
     startTransition(async () => {
       const res = await submitOpenRsvpAction({
         slug, name: name.trim(), phone: phone.trim() || undefined, email: email.trim() || undefined,
-        side, diet: diet || undefined,
+        side, linkSide: initialSide, k: shareKey ?? undefined, diet: diet || undefined,
         guestNames: guestNames.split(/[,\n]/).map((s) => s.trim()).filter(Boolean).slice(0, MAX),
         note: note.trim() || undefined,
         responses: answered.map((e) => ({

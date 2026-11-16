@@ -88,10 +88,7 @@ export default async function AdminPage() {
                   <td className="tabular-nums">{w.familyCount}</td>
                   <td className="tabular-nums">{w.responded}/{w.familyCount}</td>
                   <td className="text-right">
-                    <a href={`/w/${w.slug}`} target="_blank" className="portal-link">
-                      site ↗
-                    </a>
-                    <Link href={`/admin/weddings/${w.id}`} className="portal-link ml-4">
+                    <Link href={`/admin/weddings/${w.id}`} className="portal-link">
                       manage
                     </Link>
                   </td>

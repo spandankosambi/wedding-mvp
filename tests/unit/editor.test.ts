@@ -62,7 +62,7 @@ describe("editor", () => {
     let groom = await getLook(weddingId, "groom");
     expect(groom.rsvpOpen).toBe(false);
     expect(groom.rsvpDeadline?.toISOString()).toBe("2027-01-15T18:29:00.000Z");
-    expect(await getLook(weddingId, "bride")).toMatchObject({ rsvpOpen: true, rsvpDeadline: null });
+    expect(await getLook(weddingId, "bride")).toMatchObject({ rsvpOpen: false, rsvpDeadline: null });
     await updateRsvpSettings(weddingId, "groom", { rsvpOpen: true, rsvpDeadline: "" });
     groom = await getLook(weddingId, "groom");
     expect(groom.rsvpDeadline).toBeNull();

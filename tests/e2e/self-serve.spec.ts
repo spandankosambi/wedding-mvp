@@ -44,12 +44,27 @@ test("a couple signs up, edits their site, and a guest RSVPs from the shared lin
   await expect(page.getByText(/1 hidden/)).toBeVisible();
 
   // ── the public site reflects it ────────────────────────────
+  // the family's link carries a code; the plain address shows only names and date
+  await page.goto("/couple/bride");
+  const link = new URL(await page.locator("#share input[readonly]").inputValue());
+  expect(link.pathname + link.search).toMatch(/^\/w\/sanya-weds-kabir\?side=bride&k=[a-z2-9]{8}$/);
   await page.goto("/w/sanya-weds-kabir");
+  await expect(page.getByTestId("private-invitation")).toBeVisible();
+  await page.goto(link.pathname + link.search);
   await expect(page.getByRole("heading", { name: "Mehendi" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Haldi" })).toHaveCount(0);
+  // replies from people who are not on the guest list are off until the family allows them
+  await expect(page.getByRole("link", { name: /Confirm your attendance/ })).toHaveCount(0);
+  await page.goto("/couple/bride");
+  await page.locator("#rsvp input[name=rsvpOpen]").check();
+  await page.locator("#rsvp button[type=submit]").click();
+  await expect(page).toHaveURL(/\/couple\/bride\?saved=rsvp/);
 
   // ── a guest RSVPs from the shared link, no account ─────────
-  await page.goto("/w/sanya-weds-kabir/rsvp");
+  await page.goto(link.pathname + link.search);
+  const replyHref = await page.getByRole("link", { name: /Confirm your attendance/ }).getAttribute("href");
+  expect(replyHref).toMatch(/^\/w\/sanya-weds-kabir\/rsvp\?side=bride&k=/);
+  await page.goto(replyHref!);
   await page.fill("input[placeholder='The Mehtas / Priya Nair']", "The Kapoors");
   await page.fill("input[inputmode=tel]", "+91 98765 43210");
   const cards = page.getByTestId("event-card");
@@ -73,10 +88,10 @@ test("a couple signs up, edits their site, and a guest RSVPs from the shared lin
   // the link the bride's family is told to share must point at the host they are on —
   // an APP_URL left pointing elsewhere would hand 300 guests a dead link
   const shareUrl = await page.locator("#share input[readonly]").inputValue();
-  expect(shareUrl).toBe(new URL("/w/sanya-weds-kabir?side=bride", page.url()).toString());
+  expect(shareUrl).toBe(new URL(link.pathname + link.search, page.url()).toString());
 });
 
-test("RSVPs can be switched off by the couple", async ({ page }) => {
+test("each family decides whether people who are not on its guest list can reply", async ({ page }) => {
   const email = `e2e-off-${Date.now()}@example.com`;
   await page.goto("/start");
   await page.fill("input[name=brideName]", "Riya");
@@ -97,16 +112,21 @@ test("RSVPs can be switched off by the couple", async ({ page }) => {
 
   // …and its own RSVP settings, in its section
   await page.goto("/couple/bride");
-  await page.locator("#rsvp input[name=rsvpOpen]").uncheck();
+  await expect(page.locator("#rsvp input[name=rsvpOpen]")).not.toBeChecked(); // off unless turned on
+  const bride = new URL(await page.locator("#share input[readonly]").inputValue());
+  // the groom's family turns its own on
+  await page.goto("/couple/groom");
+  const groom = new URL(await page.locator("#share input[readonly]").inputValue());
+  await page.locator("#rsvp input[name=rsvpOpen]").check();
   await page.locator("#rsvp button[type=submit]").click();
-  await expect(page).toHaveURL(/\/couple\/bride\?saved=rsvp/);
+  await expect(page).toHaveURL(/\/couple\/groom\?saved=rsvp/);
 
-  await page.goto("/w/riya-weds-veer/rsvp");
-  await expect(page.getByRole("heading", { name: /rsvps are closed/i })).toBeVisible();
+  await page.goto(`/w/riya-weds-veer/rsvp${bride.search}`);
+  await expect(page.getByRole("heading", { name: "Replies are by personal invitation" })).toBeVisible();
   // a tap opens WhatsApp with the family
   await expect(page.getByRole("link", { name: /WhatsApp Riya's dad on \+91 90000 12345/ })).toHaveAttribute("href", "https://wa.me/919000012345");
   await expect(page.getByRole("button", { name: /send rsvp/i })).toHaveCount(0);
   // the groom's family still takes replies
-  await page.goto("/w/riya-weds-veer/rsvp?side=groom");
+  await page.goto(`/w/riya-weds-veer/rsvp${groom.search}`);
   await expect(page.getByRole("heading", { name: "Will you be joining us?" })).toBeVisible();
 });

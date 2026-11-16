@@ -1,14 +1,17 @@
 import { fmtWeddingDate } from "@/lib/format";
 import type { RsvpPerson } from "@/lib/contacts";
 import { ContactList } from "./ContactList";
+import { sharePath } from "@/lib/share";
 
 /** A household that arrived from its personal invitation. */
 export type InvitedGuest = { familyName: string; href: string; answered: boolean };
 
 export function RsvpCta({
-  slug, side, open, deadline, contacts = [], invite,
+  slug, side, shareKey = null, open, deadline, contacts = [], invite,
 }: {
   slug: string; side?: "bride" | "groom"; open: boolean; deadline: Date | null;
+  /** the code of the family's shared link, carried on to the reply form */
+  shareKey?: string | null;
   /** the family's RSVP contacts (as on the printed card) */
   contacts?: RsvpPerson[];
   invite?: InvitedGuest | null;
@@ -60,7 +63,7 @@ export function RsvpCta({
               {deadline ? ` Kindly reply by ${fmtWeddingDate(deadline)}.` : ""}
             </p>
             <a
-              href={`/w/${slug}/rsvp${side ? `?side=${side}` : ""}`}
+              href={sharePath(slug, side ?? "bride", shareKey, "/rsvp")}
               className="rsvp-cta reveal"
               style={{ background: "var(--band-ink)", color: "var(--band-bg)", "--rd": "0.25s" } as React.CSSProperties}
             >
@@ -70,10 +73,11 @@ export function RsvpCta({
         ) : (
           <>
             <h2 className="font-display reveal mx-auto mt-6 max-w-3xl text-3xl tracking-tight sm:text-4xl md:text-6xl">
-              RSVPs are closed — but we&apos;d still love to hear from you.
+              Replies are by personal invitation.
             </h2>
             <p className="reveal mx-auto mt-5 max-w-xl text-sm leading-relaxed opacity-75 md:mt-8">
-              {contacts.length ? "Message the family below and we'll make room." : "Reach out to the family directly and we'll make room."}
+              Please reply from the invitation link sent to your family.{" "}
+              {contacts.length ? "If you haven't received one, message the family below." : "If you haven't received one, reach out to the family directly."}
             </p>
           </>
         )}

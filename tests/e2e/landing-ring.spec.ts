@@ -117,14 +117,14 @@ test("the product is One Tap Invites everywhere a visitor or a share preview loo
   await page.goto("/signin");
   await expect(page).toHaveTitle(/One Tap Invites/);
   await expect(page.locator("body")).toContainText("One Tap Invites");
-  await page.goto("/w/ananya-weds-arjun");
+  await page.goto("/w/ananya-weds-arjun?k=sample");
   await expect(page).toHaveTitle(/· One Tap Invites$/);
   await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute("content", "One Tap Invites");
   // guests can find who made the invitation, and how to reach us
   const made = page.locator("footer").getByTestId("made-with");
   await expect(made.getByRole("link", { name: "One Tap Invites" })).toHaveAttribute("href", "https://onetapinvites.com/?from=invite");
   await expect(made.getByRole("link", { name: "Questions? Contact us" })).toHaveAttribute("href", "https://onetapinvites.com/?from=invite#contact");
-  await page.goto("/w/ananya-weds-arjun/rsvp");
+  await page.goto("/w/ananya-weds-arjun/rsvp?k=sample");
   await expect(page.getByTestId("made-with")).toBeVisible();
   await page.goto("/#contact");
   await expect(page.locator("#contact").getByRole("link", { name: "onetapinvites@gmail.com" })).toHaveAttribute("href", "mailto:onetapinvites@gmail.com");

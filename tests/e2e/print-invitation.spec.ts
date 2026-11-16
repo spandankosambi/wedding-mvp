@@ -38,7 +38,7 @@ test("the wording is typed once in Edit your site — the website opens with it,
   await expect(page).toHaveURL(/saved=wording/);
 
   // the groom's website opens the way his family's card does
-  await page.goto("/w/ananya-weds-arjun?side=groom");
+  await page.goto("/w/ananya-weds-arjun?side=groom&k=sample");
   await expect(page.getByTestId("invocation")).toHaveText("॥ श्री गणेशाय नमः ॥");
   await expect(page.getByTestId("shloka")).toContainText("निर्विघ्नं कुरु मे देव");
   const hosts = page.getByTestId("hosts");
@@ -55,7 +55,7 @@ test("the wording is typed once in Edit your site — the website opens with it,
   // from the invocation to the countdown, all on one screen — laptop and phone
   for (const [width, height] of [[1366, 657], [390, 664], [375, 553]] as const) {
     await page.setViewportSize({ width, height });
-    await page.goto("/w/ananya-weds-arjun?side=groom");
+    await page.goto("/w/ananya-weds-arjun?side=groom&k=sample");
     const top = (await page.getByTestId("invocation").boundingBox())!.y;
     const count = (await page.getByTestId("countdown").boundingBox())!;
     expect(top, `${width}×${height}`).toBeGreaterThanOrEqual(0);
@@ -63,7 +63,7 @@ test("the wording is typed once in Edit your site — the website opens with it,
   }
   await page.setViewportSize({ width: 1280, height: 720 });
   // the bride's site has its own wording (none yet)
-  await page.goto("/w/ananya-weds-arjun?side=bride");
+  await page.goto("/w/ananya-weds-arjun?side=bride&k=sample");
   await expect(page.getByTestId("invocation")).toHaveCount(0);
   await expect(page.getByTestId("hosts")).toContainText("at the wedding of their daughter");
 });
@@ -187,7 +187,7 @@ test("wording typed in the print dialog before is offered to move to the site", 
   await banner.getByRole("button", { name: "Move it to my site" }).click();
   await expect(banner).toHaveCount(0);
   await expect(page.getByTestId("card-wording")).toContainText("Anil Malhotra +91 98220 12345");
-  await page.goto("/w/gaurav-weds-karishma?side=bride");
+  await page.goto("/w/gaurav-weds-karishma?side=bride&k=sample");
   await expect(page.getByTestId("invocation")).toHaveText("|| Shree Ganeshaya Namah ||");
 });
 

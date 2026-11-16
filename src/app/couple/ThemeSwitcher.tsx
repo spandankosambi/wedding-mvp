@@ -11,6 +11,7 @@ export function ThemeSwitcher({
   weddingId,
   current,
   slug,
+  previewHref,
   coupleNames,
   family,
   partnerTheme,
@@ -18,6 +19,8 @@ export function ThemeSwitcher({
   weddingId: string;
   current: Theme;
   slug: string;
+  /** this family's site, with its link code */
+  previewHref: string;
   coupleNames: string;
   /** whose look this is */
   family: "bride" | "groom";
@@ -63,7 +66,7 @@ export function ThemeSwitcher({
             </button>
           )}
           <a
-            href={`/w/${slug}?side=${family}`}
+            href={previewHref}
             target="_blank"
             className="text-sm text-neutral-600 underline underline-offset-4"
           >

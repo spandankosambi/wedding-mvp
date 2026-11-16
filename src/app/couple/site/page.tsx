@@ -27,6 +27,7 @@ import {
   MAX_KNOW, KNOW_SUGGESTIONS, MAX_MUSIC_BYTES,
 } from "@/lib/site-decor";
 import { KnowEditor } from "./KnowEditor";
+import { sharePath } from "@/lib/share";
 import { MusicUpload } from "./MediaFields";
 import { galleryOf, photoStorageConfigured, MAX_GALLERY_PHOTOS } from "@/lib/gallery";
 import {
@@ -112,7 +113,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
               and city are shared — change them on the <Link href={`/couple${adminQ ? `?${adminQ.slice(0, -1)}` : ""}`} className="underline">dashboard</Link>.
             </p>
           </div>
-          <a href={`/w/${w.slug}?side=${family}`} target="_blank" rel="noreferrer" className="portal-button-secondary">Preview site ↗</a>
+          <a href={sharePath(w.slug, family, look.shareKey)} target="_blank" rel="noreferrer" className="portal-button-secondary">Preview site ↗</a>
         </header>
 
         {sp.saved && (
@@ -129,7 +130,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
         <div className="space-y-8">
           {/* ── Theme ───────────────────────────────────────────── */}
           <div id="theme">
-            <ThemeSwitcher weddingId={weddingId} current={look.theme} slug={w.slug} coupleNames={coupleNames} family={family} partnerTheme={partner.theme} />
+            <ThemeSwitcher weddingId={weddingId} current={look.theme} slug={w.slug} previewHref={sharePath(w.slug, family, look.shareKey)} coupleNames={coupleNames} family={family} partnerTheme={partner.theme} />
           </div>
 
           {/* ── Design touches ─────────────────────────────────── */}

@@ -102,21 +102,21 @@ test("the couple can switch the gallery off and back on", async ({ page }) => {
   await expect(gallery.getByText(/decorative illustrations/)).toBeVisible();
   if (shots) { await gallery.scrollIntoViewIfNeeded(); await gallery.screenshot({ path: `${shots}/gallery-editor.png` }); }
 
-  await page.goto("/w/ananya-weds-arjun");
+  await page.goto("/w/ananya-weds-arjun?k=sample");
   await expect(page.getByRole("heading", { name: "Gallery" })).toBeVisible();
 
   await page.goto("/couple/site#gallery");
   await gallery.locator("input[name=galleryEnabled]").uncheck();
   await gallery.getByRole("button", { name: /save/i }).click();
   await expect(page).toHaveURL(/saved=gallery/);
-  await page.goto("/w/ananya-weds-arjun");
+  await page.goto("/w/ananya-weds-arjun?k=sample");
   await expect(page.getByRole("heading", { name: "Gallery" })).toHaveCount(0);
 
   await page.goto("/couple/site#gallery");
   await gallery.locator("input[name=galleryEnabled]").check();
   await gallery.getByRole("button", { name: /save/i }).click();
   await expect(page).toHaveURL(/saved=gallery/);
-  await page.goto("/w/ananya-weds-arjun");
+  await page.goto("/w/ananya-weds-arjun?k=sample");
   await expect(page.getByRole("heading", { name: "Gallery" })).toBeVisible();
 });
 

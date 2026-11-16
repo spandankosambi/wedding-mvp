@@ -86,7 +86,7 @@ export default function Home() {
               </p>
               <div className="hero-ctas">
                 <Link href="/start" className="cta">Create your site</Link>
-                <Link href="/w/ananya-weds-arjun" className="cta-ghost">Open a real wedding</Link>
+                <Link href="/w/ananya-weds-arjun?k=sample" className="cta-ghost">Open a real wedding</Link>
               </div>
               <p className="hero-note">Free while we&apos;re in pilot. No card, no app, no sales call.</p>
             </div>
@@ -220,7 +220,7 @@ export default function Home() {
         <nav aria-label="Footer" className="mt-6 flex flex-wrap items-center justify-center gap-6">
           <Link href="/start" className="nav-link">Create a site</Link>
           <Link href="/signin" className="nav-link">Sign in</Link>
-          <Link href="/w/ananya-weds-arjun" className="nav-link">Example wedding</Link>
+          <Link href="/w/ananya-weds-arjun?k=sample" className="nav-link">Example wedding</Link>
           <a href="#roadmap" className="nav-link">Roadmap</a>
           <a href="#contact" className="nav-link">Contact</a>
         </nav>

@@ -16,6 +16,8 @@ import { Closing } from "./sections/Closing";
 import { Reveal } from "./sections/Reveal";
 import { BRAND } from "@/lib/brand";
 import { MadeWith } from "@/components/MadeWith";
+import { keyOpens } from "@/lib/share";
+import { PrivateInvitation } from "./PrivateInvitation";
 import { ThingsToKnow } from "./sections/ThingsToKnow";
 import { MusicPlayer } from "./sections/MusicPlayer";
 import { wordingLines } from "@/lib/invitation/content";
@@ -66,12 +68,16 @@ export async function generateMetadata({
   const data = await getPublicWedding((await params).slug);
   if (!data) return { title: "Wedding" };
   const { wedding } = data;
-  const personal = typeof (await searchParams).invite === "string";
   const side = (await invitedGuest(wedding.id, searchParams))?.side ?? asFamilySide((await searchParams).side) ?? "bride";
   const n = namesFor(wedding, side);
+  const invited = await invitedGuest(wedding.id, searchParams);
+  if (!invited && !keyOpens(await getLook(wedding.id, side), (await searchParams).k)) {
+    return { title: `${n.first} weds ${n.second}`, description: "A private wedding invitation.", robots: { index: false, follow: false }, openGraph: { siteName: BRAND, title: n.couple, description: "A private wedding invitation.", type: "website" } };
+  }
   return {
     // a personal invitation link is nobody's search result
-    ...(personal ? { robots: { index: false, follow: false } } : {}),
+    // invitations are private: none of them is a search result
+    robots: { index: false, follow: false },
     title: `${n.first} weds ${n.second}`,
     description: wedding.heroTagline ?? `Join us on ${fmtWeddingDate(wedding.weddingDate)}`,
     openGraph: {
@@ -98,6 +104,11 @@ export default async function WeddingPage({
   // address shows the bride's.
   const side: FamilySide = invite?.side ?? asFamilySide((await searchParams).side) ?? "bride";
   const look = await getLook(data.wedding.id, side);
+  // A family's link carries a code. Without it (or a personal invitation) a
+  // visitor learns only who is getting married and when.
+  const k = (await searchParams).k;
+  if (!invite && !keyOpens(look, k)) return <PrivateInvitation wedding={data.wedding} look={look} side={side} />;
+  const shareKey = invite ? null : look.shareKey;
   // short Google Maps links some networks can't open → their full address (once)
   const fixed = await fixShortMapLinks(data.wedding.id, data.events, look.travel, side);
   const wedding = withLook(data.wedding, { ...look, travel: fixed.travel });
@@ -136,7 +147,7 @@ export default async function WeddingPage({
       {hasTravel && <TravelStay travel={wedding.travel} no={travelNo} />}
       {gallery.enabled && <Gallery theme={wedding.theme} no={galleryNo} photos={gallery.photos} />}
       <ThingsToKnow items={wedding.know} no={knowNo} />
-      <RsvpCta slug={wedding.slug} side={side} open={window.open} deadline={wedding.rsvpDeadline} contacts={wedding.contacts} invite={invite} />
+      <RsvpCta slug={wedding.slug} side={side} shareKey={shareKey} open={window.open} deadline={wedding.rsvpDeadline} contacts={wedding.contacts} invite={invite} />
       <Closing theme={wedding.theme} closingLine={wedding.closingLine} compliments={wordingLines(wedding.compliments)} divider={wedding.decor.divider} />
       {/* room under the footer so the invitation bar never covers it */}
       <footer className="site-foot hairline-t px-6 py-8 text-center md:py-10" style={invite ? { paddingBottom: "6rem" } : undefined}>

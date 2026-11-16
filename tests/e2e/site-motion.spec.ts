@@ -47,7 +47,7 @@ test("motion, a scene, the curtain and things to know reach the guest site", asy
   await expect(page.locator("#music")).toContainText("up to 4 MB");
 
   // ── the guest site ──
-  await page.goto("/w/gaurav-weds-karishma?side=bride");
+  await page.goto("/w/gaurav-weds-karishma?side=bride&k=sample");
   const curtain = page.getByTestId("reveal");
   await expect(curtain.locator(".reveal-drape")).toHaveCount(6);
   if (shots) await page.screenshot({ path: `${shots}/curtain.png` });
@@ -66,7 +66,7 @@ test("motion, a scene, the curtain and things to know reach the guest site", asy
   // nothing pushes the page sideways, on a laptop or a phone
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.setViewportSize({ width: 390, height: 800 });
-  await page.goto("/w/gaurav-weds-karishma?side=bride");
+  await page.goto("/w/gaurav-weds-karishma?side=bride&k=sample");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   if (shots) await page.screenshot({ path: `${shots}/scene-phone.png` });
 
@@ -78,7 +78,7 @@ test("motion, a scene, the curtain and things to know reach the guest site", asy
     await page.locator("#decor").getByText("Straight to the site", { exact: true }).click();
     await page.locator("#decor").getByRole("button", { name: "Save" }).click();
     await expect(page).toHaveURL(/saved=decor/);
-    await page.goto("/w/gaurav-weds-karishma?side=bride");
+    await page.goto("/w/gaurav-weds-karishma?side=bride&k=sample");
     await expect(page.getByTestId("scene")).toHaveAttribute("data-scene", scene);
     await page.waitForTimeout(1500);
     if (shots) await page.screenshot({ path: `${shots}/scene-${scene}.png` });
@@ -88,12 +88,12 @@ test("motion, a scene, the curtain and things to know reach the guest site", asy
   await page.locator("#decor").getByText("No scene", { exact: true }).click();
   await page.locator("#decor").getByRole("button", { name: "Save" }).click();
   await expect(page).toHaveURL(/saved=decor/);
-  await page.goto("/w/gaurav-weds-karishma?side=bride");
+  await page.goto("/w/gaurav-weds-karishma?side=bride&k=sample");
   await expect(page.locator("main")).toHaveAttribute("data-motion", "none");
   await expect(page.getByTestId("scene")).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.classList.contains("fx"))).toBe(false);
   await expect(page.getByRole("heading", { name: "Things to know" })).toBeVisible(); // nothing waits to fade in
   // the groom's side is untouched
-  await page.goto("/w/gaurav-weds-karishma?side=groom");
+  await page.goto("/w/gaurav-weds-karishma?side=groom&k=sample");
   await expect(page.getByTestId("things-to-know")).toHaveCount(0);
 });

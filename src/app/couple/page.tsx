@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/authz";
 import { istParts } from "@/lib/editor";
 import { getLooks, sideName } from "@/lib/looks";
 import { sidesOf } from "@/lib/access";
+import { sharePath } from "@/lib/share";
 import { getChecklist } from "@/lib/checklist";
 import { PortalFrame, Checklist } from "./PortalFrame";
 import { THEME_META } from "@/themes/catalog";
@@ -120,7 +121,7 @@ export default async function CouplePage({
                 </dl>
                 <div className="mt-5 flex flex-wrap gap-2">
                   <Link href={`/couple/${side}${adminQ}`} className="portal-button">Open {side === "bride" ? "bride" : "groom"}&apos;s section →</Link>
-                  <a href={`/w/${wedding.slug}?side=${side}`} target="_blank" rel="noreferrer" className="portal-button-secondary">View site ↗</a>
+                  <a href={sharePath(wedding.slug, side, looks[side].shareKey)} target="_blank" rel="noreferrer" className="portal-button-secondary">View site ↗</a>
                 </div>
               </div>
             </section>
