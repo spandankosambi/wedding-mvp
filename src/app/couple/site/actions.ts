@@ -6,24 +6,28 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
+import { allows, homeSide, seesSide } from "@/lib/access";
 import * as editor from "@/lib/editor";
 import { EVENT_PRESETS, presetStart } from "@/lib/presets";
 import { put, del } from "@vercel/blob";
 import * as gallery from "@/lib/gallery";
-import { asFamilySide, copyFromPartner, photoInUse, type FamilySide, type LookPart } from "@/lib/looks";
+import { asFamilySide, otherSide, copyFromPartner, photoInUse, type FamilySide, type LookPart } from "@/lib/looks";
 
 /* Every action re-resolves the wedding server-side: a couple is pinned to
    their own; admin passes one explicitly. Then the site + editor revalidate
    and we bounce back to the section that was saved. */
-async function scoped(formData: FormData) {
-  const staff = await requireRole(["couple", "admin"]);
+async function scoped(formData: FormData, need: "site" | "guests" | "couple" = "site") {
+  const staff = await requireRole(["committee", "couple", "admin"]);
   const weddingId = staff.role === "admin" ? String(formData.get("weddingId") ?? "") : staff.weddingId;
   if (!weddingId) redirect("/couple");
   const [w] = await db.select({ slug: weddings.slug, weddingDate: weddings.weddingDate }).from(weddings).where(eq(weddings.id, weddingId));
   if (!w) redirect("/couple");
   // which family's section this came from (the editor is per family)
-  const family: FamilySide = asFamilySide(formData.get("family")) ?? "bride";
-  return { weddingId, slug: w.slug, weddingDate: w.weddingDate, admin: staff.role === "admin", family };
+  const family: FamilySide = asFamilySide(formData.get("family")) ?? homeSide(staff.access);
+  // the site needs full access to that family's site; the shared details are the couple's
+  const ok = need === "couple" ? staff.access.manage : allows(staff.access, need, family, "full");
+  if (!ok) redirect("/couple");
+  return { weddingId, slug: w.slug, weddingDate: w.weddingDate, admin: staff.role === "admin", family, access: staff.access };
 }
 
 type Ctx = Awaited<ReturnType<typeof scoped>>;
@@ -44,7 +48,7 @@ const str = (fd: FormData, k: string) => String(fd.get(k) ?? "");
 
 /** The shared wedding details, saved from the main dashboard. */
 export async function saveDetails(formData: FormData) {
-  const ctx = await scoped(formData);
+  const ctx = await scoped(formData, "couple");
   const r = await editor.updateDetails(ctx.weddingId, {
     brideName: str(formData, "brideName"), groomName: str(formData, "groomName"),
     weddingDate: str(formData, "weddingDate"), city: str(formData, "city"),
@@ -86,7 +90,7 @@ export async function saveDecor(formData: FormData) {
 }
 
 export async function saveRsvpSettings(formData: FormData) {
-  const ctx = await scoped(formData);
+  const ctx = await scoped(formData, "guests");
   const r = await editor.updateRsvpSettings(ctx.weddingId, ctx.family, {
     rsvpOpen: formData.get("rsvpOpen") === "on", rsvpDeadline: str(formData, "rsvpDeadline"),
   });
@@ -96,6 +100,7 @@ export async function saveRsvpSettings(formData: FormData) {
 /** "Same as your partner" for one part of this family's site. */
 export async function copyPartAction(formData: FormData) {
   const ctx = await scoped(formData);
+  if (!seesSide(ctx.access, otherSide(ctx.family))) redirect("/couple"); // it reads the other family's section
   const part = str(formData, "part");
   if (!["decor", "wording", "words", "travel", "gallery", "theme"].includes(part)) return done(ctx, "words", "invalid input");
   const r = await copyFromPartner(ctx.weddingId, ctx.family, part as LookPart);

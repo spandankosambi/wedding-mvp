@@ -32,6 +32,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const [row] = await db.select().from(users).where(eq(users.id, user.id));
       (session.user as any).role = row?.role;
       (session.user as any).weddingId = row?.weddingId ?? null;
+      (session.user as any).side = row?.side ?? "both";
+      (session.user as any).access = row?.access ?? null;
+      (session.user as any).isOwner = !!row?.isOwner;
       return session;
     },
   },

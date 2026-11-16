@@ -47,6 +47,6 @@ export async function createWeddingForCouple(input: unknown): Promise<SignupResu
     heroTagline: "Two families, one big yes.",
   }).returning();
   await db.insert(events).values(starterEvents(weddingDate, d.city).map((e) => ({ ...e, weddingId: w.id })));
-  await db.insert(users).values({ email: d.email, name: `${d.brideName} & ${d.groomName}`, role: "couple", weddingId: w.id });
+  await db.insert(users).values({ email: d.email, name: `${d.brideName} & ${d.groomName}`, role: "couple", weddingId: w.id, isOwner: true });
   return { ok: true, created: true, slug, weddingId: w.id, email: d.email };
 }

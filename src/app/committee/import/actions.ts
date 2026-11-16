@@ -2,9 +2,9 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { db } from "@/db/client";
-import { events } from "@/db/schema";
+import { events, families } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
 import { aiConfigured } from "@/lib/ai";
 import { parseWorkbook, defaultSheetIndex, ImportError, MAX_COLS, MAX_ROWS, type Sheet } from "@/lib/import/spreadsheet";
@@ -33,11 +33,16 @@ function applyMatches(rows: ImportRow[], existing: ExistingFamily[]): number {
   return n;
 }
 
-/* Same rule as the rest of /committee: admin names a wedding, committee is pinned to its own. */
-async function scopedWeddingId(requested: string): Promise<string | null> {
+/* Same rule as the rest of /committee: admin names a wedding, everyone else is
+   pinned to their own, and importing needs full access to the guest list. */
+async function scoped(requested: string) {
   const staff = await requireRole(["committee", "couple", "admin"]);
-  if (staff.role === "admin") return requested;
-  return staff.weddingId;
+  const weddingId = staff.role === "admin" ? requested : staff.weddingId;
+  if (!weddingId || staff.access.guests !== "full") return null;
+  return { weddingId, access: staff.access };
+}
+async function scopedWeddingId(requested: string): Promise<string | null> {
+  return (await scoped(requested))?.weddingId ?? null;
 }
 
 async function weddingEvents(weddingId: string): Promise<EventRef[]> {
@@ -248,9 +253,22 @@ export async function commitRows(input: unknown): Promise<{ ok: true; result: Co
     const bad = parsed.error.issues.find((i) => i.path.includes("email"));
     return { ok: false, error: bad ? "One of the emails isn't valid — fix it or clear it." : "invalid input" };
   }
-  const weddingId = await scopedWeddingId(parsed.data.weddingId);
-  if (!weddingId) return { ok: false, error: "forbidden" };
-  const result = await commitImport(weddingId, parsed.data.rows as ImportRow[], { onExisting: parsed.data.onExisting });
+  const sc = await scoped(parsed.data.weddingId);
+  if (!sc) return { ok: false, error: "forbidden" };
+  const weddingId = sc.weddingId;
+  let rows = parsed.data.rows as ImportRow[];
+  const mine = sc.access.side;
+  if (mine !== "both") {
+    // someone working one family's side imports into that side only, and never over the other's households
+    const matched = rows.map((r) => r.match?.id).filter((id): id is string => !!id && z.string().uuid().safeParse(id).success);
+    const others = matched.length
+      ? await db.select({ id: families.id }).from(families)
+          .where(and(eq(families.weddingId, weddingId), inArray(families.id, matched), ne(families.side, mine)))
+      : [];
+    if (others.length) return { ok: false, error: "Some of these households are on the other family's list, which you can't change." };
+    rows = rows.map((r) => ({ ...r, side: mine }));
+  }
+  const result = await commitImport(weddingId, rows, { onExisting: parsed.data.onExisting });
   revalidatePath("/committee");
   return { ok: true, result };
 }

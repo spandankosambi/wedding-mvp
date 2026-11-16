@@ -171,10 +171,10 @@ async function main() {
 
   await db.insert(users).values([
     { email: STAFF_EMAILS[0], name: "Aadi", role: "admin" as const },
-    { email: STAFF_EMAILS[1], name: "Ananya", role: "couple" as const, weddingId: w.id },
+    { email: STAFF_EMAILS[1], name: "Ananya", role: "couple" as const, weddingId: w.id, isOwner: true },
     { email: STAFF_EMAILS[2], name: "Rohit (Chachu)", role: "committee" as const, weddingId: w.id },
     { email: STAFF_EMAILS[3], name: "Wedding Planner", role: "committee" as const, weddingId: w.id },
-    { email: STAFF_EMAILS[4], name: "Karishma", role: "couple" as const, weddingId: w2.id },
+    { email: STAFF_EMAILS[4], name: "Karishma", role: "couple" as const, weddingId: w2.id, isOwner: true },
   ]);
   console.log("Seeded ananya-weds-arjun + gaurav-weds-karishma ✔");
 }

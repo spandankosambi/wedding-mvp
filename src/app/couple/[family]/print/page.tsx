@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events } from "@/db/schema";
-import { requireRole } from "@/lib/authz";
+import { requireAccess } from "@/lib/authz";
+import { getChecklist } from "@/lib/checklist";
+import { PortalFrame, Checklist } from "../../PortalFrame";
 import { eventForSide, eventLabel } from "@/lib/sides";
 import { asFamilySide, getLooks, namesFor, wordingOf } from "@/lib/looks";
 import { decorOf } from "@/lib/site-decor";
@@ -22,7 +24,7 @@ export default async function PrintCards({
 }) {
   const family = asFamilySide((await params).family);
   if (!family) notFound();
-  const staff = await requireRole(["couple", "admin"]);
+  const staff = await requireAccess("print", family, "full");
   const sp = await searchParams;
   let weddingId = staff.role === "admin" ? (sp.wedding ?? null) : staff.weddingId;
   if (staff.role === "admin" && !weddingId) {
@@ -42,8 +44,11 @@ export default async function PrintCards({
 
   return (
     <main className="portal-page">
-      <PortalNav names={namesFor(wedding, family).couple} current={family} page="print" weddingId={weddingId} admin={admin} />
-      <div className="portal-shell">
+      <PortalNav names={namesFor(wedding, family).couple} current={family} page="print" weddingId={weddingId} admin={admin} access={staff.access} />
+      <PortalFrame
+        jump={[["print-options", "Card options"], ["print-preview", "Preview & download"]]}
+        right={<Checklist title={`${who === "bride" ? "Bride" : "Groom"}'s side: what's done`} items={await getChecklist(weddingId, family, admin)} />}
+      >
         <header className="mb-6">
           <h1 className="portal-heading">Print the {who}&apos;s family&apos;s invitation cards</h1>
           <p className="portal-subheading mt-3 max-w-2xl">
@@ -67,7 +72,7 @@ export default async function PrintCards({
           hasDeadline={!!look.rsvpDeadline}
           events={evs.filter((e) => eventForSide(e.side, family)).map((e) => ({ id: e.id, label: eventLabel(e), side: e.side, isPublished: e.isPublished }))}
         />
-      </div>
+      </PortalFrame>
     </main>
   );
 }

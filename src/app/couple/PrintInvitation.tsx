@@ -420,7 +420,7 @@ export function PrintInvitation(props: Props) {
   );
 
   return (
-    <section data-testid="print-page" aria-label="Print invitation cards">
+    <section id="print-options" data-testid="print-page" aria-label="Print invitation cards">
       <div className="portal-panel !overflow-visible p-5 md:p-7">
 
         {/* the three pages, also clickable */}
@@ -736,7 +736,7 @@ export function PrintInvitation(props: Props) {
             )}
           </div>
 
-          <aside className="lg:sticky lg:top-20 lg:self-start" aria-label="Preview">
+          <aside id="print-preview" className="lg:sticky lg:top-20 lg:self-start" aria-label="Preview">
             <div className="flex items-center justify-between">
               <p className={label}>Preview</p>
               <span className="text-xs text-neutral-500" role="status" data-testid="preview-status">

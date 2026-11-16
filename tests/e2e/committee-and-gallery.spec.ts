@@ -225,8 +225,9 @@ test("Travel & Stay is one tick per household, from either view, and follows the
   await page.goto("/committee?family=groom&view=guests");
   await expect(page.getByLabel("Show Travel & Stay to Rohit Mehta")).toBeChecked();
   // …the bride's Office Gang to 3 of 5
-  await page.getByRole("link", { name: "Bride's family" }).click();
+  await page.getByRole("navigation", { name: "Sections" }).getByRole("link", { name: "Bride's side" }).click();
   await expect(page).toHaveURL(/family=bride/);
+  await page.getByRole("navigation", { name: "View" }).getByRole("link", { name: /Guests ·/ }).click();
   await expect(page).toHaveURL(/view=guests/);
   const priya = page.getByLabel("Show Travel & Stay to Priya Nair");
   const kabir = page.getByLabel("Show Travel & Stay to Kabir Bose");
@@ -314,7 +315,7 @@ test("the guest list: find a family, see who is still waiting, frozen titles, an
     await expect(th).toBeInViewport();
   }
   // the page uses the width of the screen
-  expect((await page.locator(".guest-table").boundingBox())!.width).toBeGreaterThan(1250);
+  expect((await page.locator(".guest-table").boundingBox())!.width).toBeGreaterThan(1050);
 
   // on a phone each family is a card with everything reachable, and nothing scrolls sideways
   await page.setViewportSize({ width: 390, height: 800 });

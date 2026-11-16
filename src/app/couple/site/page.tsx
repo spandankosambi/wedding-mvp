@@ -15,7 +15,10 @@ import { GalleryUploader } from "./GalleryUploader";
 import { StaysEditor } from "./StaysEditor";
 import { StoryField } from "./StoryField";
 import { PortalNav } from "../PortalNav";
-import { JumpNav } from "./JumpNav";
+import { PortalFrame, Checklist } from "../PortalFrame";
+import { getChecklist } from "@/lib/checklist";
+import { allows, homeSide, seesSide } from "@/lib/access";
+import { redirect } from "next/navigation";
 import { ContactsEditor } from "./ContactsEditor";
 import { contactsOf, MAX_CONTACTS } from "@/lib/contacts";
 import { decorOf, REVEALS, REVEAL_LABELS, FALLING, FALLING_LABELS, DIVIDERS, DIVIDER_LABELS } from "@/lib/site-decor";
@@ -48,8 +51,11 @@ function SameAsPartner({ part, family, partner, mine, hidden }: { part: LookPart
 }
 
 export default async function SiteEditorPage({ searchParams }: { searchParams: Promise<{ wedding?: string; family?: string; saved?: string; error?: string; section?: string }> }) {
-  const staff = await requireRole(["couple", "admin"]);
   const sp = await searchParams;
+  const staff = await requireRole(["committee", "couple", "admin"]);
+  const family: FamilySide = asFamilySide(sp.family) ?? homeSide(staff.access);
+  if (!allows(staff.access, "site", family)) redirect("/couple");
+  const readOnly = staff.access.site !== "full";
   let weddingId = staff.role === "admin" ? (sp.wedding ?? null) : staff.weddingId;
   if (staff.role === "admin" && !weddingId) {
     const [first] = await db.select().from(weddings).limit(1);
@@ -57,9 +63,9 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
   }
   if (!weddingId) return <main className="p-10 text-sm text-neutral-500">No wedding assigned to this account.</main>;
 
-  const family: FamilySide = asFamilySide(sp.family) ?? "bride";
   const [w] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
   const looks = await getLooks(weddingId);
+  const checklist = await getChecklist(weddingId, family, staff.role === "admin");
   const look = looks[family], partner = looks[otherSide(family)];
   const decor = decorOf(look);
   // this family's section: common events and its own
@@ -76,14 +82,22 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
   const gal = galleryOf(look);
   const uploadsOn = photoStorageConfigured();
   const adminQ = staff.role === "admin" ? `wedding=${weddingId}&` : "";
-  const same = (part: LookPart) => <SameAsPartner part={part} family={family} partner={partner} mine={look} hidden={wid} />;
+  const same = (part: LookPart) => !seesSide(staff.access, otherSide(family)) ? null : <SameAsPartner part={part} family={family} partner={partner} mine={look} hidden={wid} />;
 
   return (
     <main className="portal-page">
-      <PortalNav names={coupleNames} current={family} page="site" weddingId={weddingId} admin={!!adminQ} />
-      <div className="portal-shell portal-editor">
-        <JumpNav items={[["theme", "Look"], ["decor", "Design touches"], ["wording", "Invitation wording"], ["words", "Tagline & story"], ["events", "Celebrations"], ["travel", "Travel & stay"], ["gallery", "Photos"]]} />
-        <div className="portal-editor-main">
+      <PortalNav names={coupleNames} current={family} page="site" weddingId={weddingId} admin={!!adminQ} access={staff.access} />
+      <PortalFrame
+        jump={[["theme", "Look"], ["decor", "Design touches"], ["wording", "Invitation wording"], ["words", "Tagline & story"], ["events", "Celebrations"], ["travel", "Travel & stay"], ["gallery", "Photos"]]}
+        right={<Checklist title={`${family === "bride" ? "Bride" : "Groom"}'s side: what's done`} items={checklist} />}
+      >
+        {readOnly && (
+          <p className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status" data-testid="view-only">
+            View only — you can look at this family&apos;s site settings but not change them.
+          </p>
+        )}
+        {/* a disabled fieldset switches off every field and button inside it */}
+        <fieldset disabled={readOnly} className="portal-fieldset">
         <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div className="max-w-2xl">
             <h1 className="portal-heading">Edit the {family === "bride" ? "bride" : "groom"}&apos;s family&apos;s site</h1>
@@ -386,8 +400,8 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
             This family&apos;s guest list and invites live in its <Link href={`/committee?${adminQ}family=${family}`} className="underline">guest list</Link>.
           </p>
         </div>
-        </div>
-      </div>
+        </fieldset>
+      </PortalFrame>
     </main>
   );
 }

@@ -173,6 +173,12 @@ export const users = pgTable("users", {
   name: text("name"),
   role: roleEnum("role").notNull(),
   weddingId: uuid("wedding_id").references(() => weddings.id), // null for admin = all weddings
+  /** Whoever signed the wedding up: the only one who can remove the other partner or delete the wedding. */
+  isOwner: boolean("is_owner").notNull().default(false),
+  /** Which family's section a committee member works in. The couple always has both. */
+  side: text("side").$type<"bride" | "groom" | "both">().notNull().default("both"),
+  /** What a committee member may do on each page; null = the old default (guest list only). */
+  access: jsonb("access").$type<{ site: "none" | "view" | "full"; guests: "none" | "view" | "full"; print: "none" | "full" }>(),
   emailVerified: timestamp("email_verified", { withTimezone: true }), // Auth.js adapter field
 });
 

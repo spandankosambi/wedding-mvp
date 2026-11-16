@@ -6,8 +6,9 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
+import { allows, seesSide } from "@/lib/access";
 import { THEMES } from "@/themes/catalog";
-import { copyFromPartner, updateLook } from "@/lib/looks";
+import { copyFromPartner, otherSide, updateLook } from "@/lib/looks";
 import { adoptCardWording } from "@/lib/editor";
 
 const schema = z.object({
@@ -19,9 +20,9 @@ const schema = z.object({
 export async function setTheme(input: unknown): Promise<{ ok: boolean; error?: string }> {
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid input" };
-  const staff = await requireRole(["couple", "admin"]);
+  const staff = await requireRole(["committee", "couple", "admin"]);
   const weddingId = staff.role === "admin" ? parsed.data.weddingId : staff.weddingId;
-  if (!weddingId) return { ok: false, error: "forbidden" };
+  if (!weddingId || !allows(staff.access, "site", parsed.data.family, "full")) return { ok: false, error: "forbidden" };
 
   const [wedding] = await db.select({ slug: weddings.slug }).from(weddings).where(eq(weddings.id, weddingId));
   if (!wedding) return { ok: false, error: "wedding not found" };
@@ -42,9 +43,9 @@ const copySchema = z.object({
 export async function copyFromPartnerAction(input: unknown): Promise<{ ok: boolean; error?: string }> {
   const parsed = copySchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid input" };
-  const staff = await requireRole(["couple", "admin"]);
+  const staff = await requireRole(["committee", "couple", "admin"]);
   const weddingId = staff.role === "admin" ? parsed.data.weddingId : staff.weddingId;
-  if (!weddingId) return { ok: false, error: "forbidden" };
+  if (!weddingId || !allows(staff.access, "site", parsed.data.family, "full") || !seesSide(staff.access, otherSide(parsed.data.family))) return { ok: false, error: "forbidden" };
   const [wedding] = await db.select({ slug: weddings.slug }).from(weddings).where(eq(weddings.id, weddingId));
   if (!wedding) return { ok: false, error: "wedding not found" };
   const r = await copyFromPartner(weddingId, parsed.data.family, parsed.data.part);
@@ -63,9 +64,9 @@ const adoptSchema = z.object({
 export async function adoptCardWordingAction(input: unknown): Promise<{ ok: boolean; filled?: number; error?: string }> {
   const parsed = adoptSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid input" };
-  const staff = await requireRole(["couple", "admin"]);
+  const staff = await requireRole(["committee", "couple", "admin"]);
   const weddingId = staff.role === "admin" ? parsed.data.weddingId : staff.weddingId;
-  if (!weddingId) return { ok: false, error: "forbidden" };
+  if (!weddingId || !allows(staff.access, "site", parsed.data.family, "full")) return { ok: false, error: "forbidden" };
   const [wedding] = await db.select({ slug: weddings.slug }).from(weddings).where(eq(weddings.id, weddingId));
   if (!wedding) return { ok: false, error: "wedding not found" };
   const r = await adoptCardWording(weddingId, parsed.data.family, parsed.data.wording);

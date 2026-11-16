@@ -6,6 +6,9 @@ import { and, eq, inArray, desc } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events, families, guests, eventInvites, rsvps, emailLog } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
+import { allows, homeSide } from "@/lib/access";
+import { redirect } from "next/navigation";
+import { PortalFrame } from "../couple/PortalFrame";
 import { getRsvpSummary } from "@/lib/rsvp";
 import { showsTravel } from "@/lib/travel";
 import { eventForSide, eventLabel } from "@/lib/sides";
@@ -25,7 +28,9 @@ export default async function CommitteePage({
   const requested = sp.wedding;
   const view = sp.view === "guests" ? "guests" : "families";
   // each family keeps its own guest list
-  const family: FamilySide = asFamilySide(sp.family) ?? "bride";
+  const family: FamilySide = asFamilySide(sp.family) ?? homeSide(staff.access);
+  if (!allows(staff.access, "guests", family)) redirect("/couple");
+  const readOnly = staff.access.guests !== "full";
   let weddingId = staff.role === "admin" ? (requested ?? null) : staff.weddingId;
   if (staff.role === "admin" && !weddingId) {
     const [first] = await db.select().from(weddings).limit(1);
@@ -84,8 +89,8 @@ export default async function CommitteePage({
 
   return (
     <main className="portal-page">
-      <PortalNav names={namesFor(wedding, family).couple} current={family} page="guests" weddingId={weddingId} admin={staff.role === "admin"} committee={staff.role === "committee"} />
-      <div className="portal-shell">
+      <PortalNav names={namesFor(wedding, family).couple} current={family} page="guests" weddingId={weddingId} admin={staff.role === "admin"} access={staff.access} />
+      <PortalFrame jump={[["replies", "Replies so far"], ["list", "The list"]]}>
       <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3">
         <div className="max-w-2xl">
           <h1 className="portal-heading">{sideName(family)}&apos;s guest list</h1>
@@ -101,20 +106,10 @@ export default async function CommitteePage({
       </header>
 
       {/* per-event summary strip */}
-      <div className="mb-8"><SummaryCards summary={summary} /></div>
-
-      {/* whose list: the bride's family or the groom's */}
-      {staff.role === "committee" && <nav className="mb-4 mr-3 inline-flex rounded-lg border border-neutral-200 bg-white p-1 text-sm" aria-label="Family">
-        {(["bride", "groom"] as const).map((f) => (
-          <Link key={f} href={link({ family: f })} aria-current={family === f ? "page" : undefined}
-            className={`rounded-md px-4 py-1.5 font-medium ${family === f ? "bg-stone-800 text-white" : "text-neutral-600 hover:text-neutral-900"}`}>
-            {sideName(f)}
-          </Link>
-        ))}
-      </nav>}
+      <div className="mb-8" id="replies"><SummaryCards summary={summary} /></div>
 
       {/* Families ⇄ Guests: same data, two ways to work through it */}
-      <nav className="mb-4 inline-flex rounded-lg border border-neutral-200 bg-white p-1 text-sm" aria-label="View">
+      <nav id="list" className="mb-4 inline-flex rounded-lg border border-neutral-200 bg-white p-1 text-sm" aria-label="View">
         {(["families", "guests"] as const).map((v) => {
           return (
             <Link key={v} href={link({ view: v })} aria-current={view === v ? "page" : undefined}
@@ -132,6 +127,7 @@ export default async function CommitteePage({
           importHref={`/committee/import?${new URLSearchParams({ ...(staff.role === "admin" ? { wedding: weddingId } : {}), family })}`}
           events={evs.map((e) => ({ id: e.id, name: eventLabel(e), side: e.side }))}
           rows={rows}
+          readOnly={readOnly}
         />
       ) : (
         <GuestTable
@@ -140,9 +136,10 @@ export default async function CommitteePage({
           events={evs.map((e) => ({ id: e.id, name: eventLabel(e), side: e.side }))}
           rows={rows}
           columns={wedding.guestColumns ?? []}
+          readOnly={readOnly}
         />
       )}
-      </div>
+      </PortalFrame>
     </main>
   );
 }

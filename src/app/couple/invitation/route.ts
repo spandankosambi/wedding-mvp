@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
+import { allows } from "@/lib/access";
 import { appOrigin } from "@/lib/origin";
 import { invitationSchema } from "@/lib/invitation/options";
 import { buildInvitation, fileName } from "@/lib/invitation/content";
@@ -14,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 /** The couple's printable invitation cards, as a PDF download. */
 export async function POST(req: Request) {
-  const staff = await requireRole(["couple", "admin"]);
+  const staff = await requireRole(["committee", "couple", "admin"]);
   let body: { weddingId?: unknown; options?: unknown };
   try {
     body = await req.json();
@@ -26,6 +27,9 @@ export async function POST(req: Request) {
 
   const parsed = invitationSchema.safeParse(body.options ?? {});
   if (!parsed.success) return Response.json({ error: "invalid options" }, { status: 400 });
+
+  // printing a family's cards needs print access on that family's side
+  if (!allows(staff.access, "print", parsed.data.version, "full")) return Response.json({ error: "forbidden" }, { status: 403 });
 
   const [wedding] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
   if (!wedding) return Response.json({ error: "no wedding" }, { status: 404 });

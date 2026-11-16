@@ -35,10 +35,13 @@ export function FamilyTable({
   rows,
   family,
   importHref,
+  readOnly = false,
 }: {
   weddingId: string;
   family: "bride" | "groom";
   importHref: string;
+  /** view-only access: look, search and filter, but change nothing */
+  readOnly?: boolean;
   events: { id: string; name: string; side: Side }[];
   rows: Row[];
 }) {
@@ -200,7 +203,7 @@ export function FamilyTable({
     </>
   );
   const empty = rows.length === 0
-    ? <>No families yet — add the first one, or <a href={importHref} className="portal-link">import a spreadsheet</a>.</>
+    ? readOnly ? <>No families yet.</> : <>No families yet — add the first one, or <a href={importHref} className="portal-link">import a spreadsheet</a>.</>
     : waitingOnly && !q ? <>Everyone has answered. 🎉</> : <>No family matches that search.</>;
 
   return (
@@ -226,6 +229,7 @@ export function FamilyTable({
           Still waiting · {waiting.length}
         </button>
         <div className="mx-1 hidden h-6 w-px bg-neutral-200 sm:block" />
+        {!readOnly && <>
         <button
           onClick={() => setEditing("new")}
           className="portal-button"
@@ -235,6 +239,7 @@ export function FamilyTable({
         <a href={importHref} className="portal-button-secondary">
           Import guest list
         </a>
+        </>}
         <div className="mx-1 hidden h-6 w-px bg-neutral-200 sm:block" />
         <button
           disabled={!ids.length || pending}
@@ -268,10 +273,11 @@ export function FamilyTable({
         <p className="text-xs font-medium text-neutral-500" aria-live="polite">
           {pending ? "Sending…" : flash ?? (ids.length
             ? `${ids.length} household${ids.length === 1 ? "" : "s"} selected`
-            : q || waitingOnly ? `${shown.length} of ${rows.length} families` : "Select households to email")}
+            : q || waitingOnly ? `${shown.length} of ${rows.length} families` : readOnly ? "View only" : "Select households to email")}
         </p>
       </div>
 
+      <fieldset disabled={readOnly} className="portal-fieldset">
       {phone ? (
         /* on a phone each family is a card: nothing to scroll sideways */
         <div data-testid="family-cards">
@@ -357,6 +363,7 @@ export function FamilyTable({
         </table>
       </div>
       )}
+      </fieldset>
 
       {bulk && (
         <BulkRsvpDialog

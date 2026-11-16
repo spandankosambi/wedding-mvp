@@ -34,7 +34,9 @@ export function GuestTable({
   rows,
   columns,
   family,
+  readOnly = false,
 }: {
+  readOnly?: boolean;
   weddingId: string;
   family: "bride" | "groom";
   events: { id: string; name: string; side: Side }[];
@@ -106,7 +108,7 @@ export function GuestTable({
           >
             Mark RSVP…
           </button>
-          {newColumn === null ? (
+          {readOnly ? null : newColumn === null ? (
             <button type="button" onClick={() => setNewColumn("")} className="portal-button-secondary">+ Add column</button>
           ) : (
             <span className="flex flex-wrap items-center gap-2">
@@ -131,6 +133,7 @@ export function GuestTable({
         </p>
       </div>
 
+      <fieldset disabled={readOnly} className="portal-fieldset">
       {/* with several extra columns the table scrolls sideways instead of freezing its titles */}
       <div className="portal-panel guest-table" data-freeze={columns.length <= 2}>
         <table className="portal-table w-full text-left text-sm" style={{ minWidth: `${48 + columns.length * 10}rem` }}>
@@ -255,6 +258,7 @@ export function GuestTable({
           </tbody>
         </table>
       </div>
+      </fieldset>
 
       {editing && (
         <FamilyForm

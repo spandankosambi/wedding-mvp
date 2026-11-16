@@ -3,7 +3,10 @@ import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings } from "@/db/schema";
-import { requireRole } from "@/lib/authz";
+import { requireAccess } from "@/lib/authz";
+import { allows, seesSide } from "@/lib/access";
+import { getChecklist } from "@/lib/checklist";
+import { PortalFrame, Checklist } from "../PortalFrame";
 import { fmtWeddingDate } from "@/lib/format";
 import { asFamilySide, getLooks, namesFor, otherSide, sideName } from "@/lib/looks";
 import { THEME_META } from "@/themes/catalog";
@@ -31,7 +34,7 @@ export default async function FamilySection({
 }) {
   const family = asFamilySide((await params).family);
   if (!family) notFound();
-  const staff = await requireRole(["couple", "admin"]);
+  const staff = await requireAccess("overview", family);
   const sp = await searchParams;
   let weddingId = staff.role === "admin" ? (sp.wedding ?? null) : staff.weddingId;
   if (staff.role === "admin" && !weddingId) {
@@ -41,7 +44,8 @@ export default async function FamilySection({
   if (!weddingId) return <main className="p-10 text-sm text-neutral-500">No wedding assigned to this account.</main>;
 
   const [wedding] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
-  const [st, looks] = await Promise.all([weddingStats(weddingId, family), getLooks(weddingId)]);
+  const [st, looks, checklist] = await Promise.all([weddingStats(weddingId, family), getLooks(weddingId), getChecklist(weddingId, family, staff.role === "admin")]);
+  const canRsvp = allows(staff.access, "guests", family, "full");
   const look = looks[family];
   const coupleNames = namesFor(wedding, family).couple; // this family's name order
   const admin = staff.role === "admin";
@@ -51,8 +55,11 @@ export default async function FamilySection({
 
   return (
     <main className="portal-page">
-      <PortalNav names={coupleNames} current={family} page="overview" weddingId={weddingId} admin={admin} />
-      <div className="portal-shell">
+      <PortalNav names={coupleNames} current={family} page="overview" weddingId={weddingId} admin={admin} access={staff.access} />
+      <PortalFrame
+        jump={[["share", "Link to share"], ["numbers", "Replies so far"], ["rsvp", "RSVP settings"], ...(staff.role === "couple" ? [["reset", "Reset"] as [string, string]] : [])]}
+        right={<Checklist title={`${who === "bride" ? "Bride" : "Groom"}'s side: what's done`} items={checklist} />}
+      >
       <header className="mb-6">
         <h1 className="portal-heading">{sideName(family)}</h1>
         <p className="portal-subheading mt-3">
@@ -70,11 +77,11 @@ export default async function FamilySection({
         </p>
       )}
 
-      <div className="mb-6">
+      <div className="mb-6" id="share">
         <ShareCard slug={wedding.slug} coupleNames={coupleNames} weddingDateText={fmtWeddingDate(wedding.weddingDate)} family={family} />
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div id="numbers" className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Families" value={st.families.length} />
         <Stat label="Guests" value={st.guests.length} />
         <Stat label="Response rate" value={`${st.responseRate}%`} sub={`${st.respondedCount} of ${st.families.length} families`} />
@@ -89,6 +96,7 @@ export default async function FamilySection({
         <p className="portal-eyebrow">RSVP</p>
         <h2 className="mt-1 font-semibold">Who can reply to the {who}&apos;s side, and until when</h2>
         <form action={saveRsvpSettings} className="mt-5 space-y-4">
+          <fieldset disabled={!canRsvp} className="portal-fieldset space-y-4">
           {admin && <input type="hidden" name="weddingId" value={weddingId} />}
           <input type="hidden" name="family" value={family} />
           <label className="flex items-start gap-3 text-sm">
@@ -105,18 +113,21 @@ export default async function FamilySection({
               <input name="rsvpDeadline" type="date" defaultValue={look.rsvpDeadline ? istParts(look.rsvpDeadline).date : ""} className="portal-input md:max-w-xs" />
             </div>
           </label>
-          <SaveButton />
+          {canRsvp ? <SaveButton /> : <p className="text-xs text-neutral-500">Only people with full access to this guest list can change these.</p>}
+          </fieldset>
         </form>
       </section>
 
       {/* only the couple themselves can reset; admins have their own tools */}
-      {staff.role === "couple" && <div className="mt-6"><DangerZone coupleNames={coupleNames} family={family} /></div>}
+      {staff.role === "couple" && <div className="mt-6" id="reset"><DangerZone coupleNames={coupleNames} family={family} /></div>}
 
+      {seesSide(staff.access, otherSide(family)) && (
       <p className="mt-8 text-center text-xs text-neutral-400">
         Looking for the other side? Open the{" "}
         <Link href={`/couple/${otherSide(family)}${admin ? `?wedding=${weddingId}` : ""}`} className="underline">{sideName(otherSide(family)).toLowerCase()}&apos;s section</Link>.
       </p>
-      </div>
+      )}
+      </PortalFrame>
     </main>
   );
 }

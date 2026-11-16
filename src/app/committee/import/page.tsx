@@ -5,6 +5,9 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
+import { allows, homeSide } from "@/lib/access";
+import { redirect } from "next/navigation";
+import { PortalFrame } from "../../couple/PortalFrame";
 import { aiConfigured } from "@/lib/ai";
 import { ImportWizard } from "./ImportWizard";
 import { asFamilySide, sideName } from "@/lib/looks";
@@ -31,13 +34,14 @@ export default async function ImportPage({
   const evs = await db.select({ id: events.id, name: events.name, sortOrder: events.sortOrder })
     .from(events).where(eq(events.weddingId, weddingId)).orderBy(events.sortOrder);
 
-  const family = asFamilySide(params.family) ?? "bride";
+  const family = asFamilySide(params.family) ?? homeSide(staff.access);
+  if (!allows(staff.access, "guests", family, "full")) redirect("/couple");
   const backHref = `/committee?${new URLSearchParams({ ...(staff.role === "admin" ? { wedding: weddingId } : {}), family })}`;
 
   return (
     <main className="portal-page">
-      <PortalNav names={namesFor(wedding, family).couple} current={family} page="guests" weddingId={weddingId} admin={staff.role === "admin"} committee={staff.role === "committee"} />
-      <div className="portal-shell">
+      <PortalNav names={namesFor(wedding, family).couple} current={family} page="guests" weddingId={weddingId} admin={staff.role === "admin"} access={staff.access} />
+      <PortalFrame>
         <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3">
           <div className="max-w-2xl">
             <h1 className="portal-heading">Import the {family}&apos;s family&apos;s guest list</h1>
@@ -56,7 +60,7 @@ export default async function ImportPage({
           aiConfigured={aiConfigured()}
           family={family}
         />
-      </div>
+      </PortalFrame>
     </main>
   );
 }

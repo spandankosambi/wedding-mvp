@@ -41,7 +41,7 @@ export function fromHeader(displayName?: string): string | undefined {
  * the local outbox file that dev tooling and tests read.
  */
 export async function recordOutbox(m: {
-  to: string; subject: string; kind: "signin" | "invite" | "confirm"; link?: string; html?: string;
+  to: string; subject: string; kind: "signin" | "invite" | "confirm" | "access"; link?: string; html?: string;
 }) {
   await db.insert(outbox).values({ to: m.to, subject: m.subject, kind: m.kind, link: m.link ?? null });
   try {
@@ -50,6 +50,7 @@ export async function recordOutbox(m: {
     const at = new Date().toISOString();
     const line = m.kind === "signin" ? { to: m.to, subject: m.subject, signInUrl: m.link, at }
       : m.kind === "confirm" ? { to: m.to, subject: m.subject, confirmUrl: m.link, at }
+      : m.kind === "access" ? { to: m.to, subject: m.subject, accessUrl: m.link, at }
       : { to: m.to, subject: m.subject, html: m.html, rsvpUrl: m.link, at };
     fs.appendFileSync(path.join(dir, "mail.jsonl"), JSON.stringify(line) + "\n");
   } catch {
@@ -103,5 +104,20 @@ ${list}
     await smtpTransport().sendMail({ from: process.env.EMAIL_FROM, to: args.to, subject, html });
   } else {
     await recordOutbox({ to: args.to, subject, kind: "confirm", link: args.link, html });
+  }
+}
+
+/** Tells someone the couple has given them a sign-in for the wedding. */
+export async function sendAccessEmail(args: { to: string; coupleNames: string; link: string; what: string }) {
+  const subject = `You've been added to ${args.coupleNames}'s wedding`;
+  const html = `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.55;color:#22201c;max-width:520px">
+<p>You&rsquo;ve been given access to <b>${escapeHtml(args.coupleNames)}</b>&rsquo;s wedding: ${escapeHtml(args.what)}.</p>
+<p><a href="${args.link}" style="display:inline-block;background:#292723;color:#fff;text-decoration:none;padding:10px 16px;border-radius:8px;font-weight:600">Sign in</a></p>
+<p style="color:#6b6760;font-size:13px">Sign in with this email address (${escapeHtml(args.to)}). We&rsquo;ll email you a one-time link each time; there is no password.</p>
+</div>`;
+  if (smtpConfigured()) {
+    await smtpTransport().sendMail({ from: process.env.EMAIL_FROM, to: args.to, subject, html });
+  } else {
+    await recordOutbox({ to: args.to, subject, kind: "access", link: args.link, html });
   }
 }

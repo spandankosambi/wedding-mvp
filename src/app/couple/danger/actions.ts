@@ -23,12 +23,13 @@ async function couple() {
   const [u] = await db.select().from(users).where(eq(users.id, staff.userId));
   const [w] = await db.select().from(weddings).where(eq(weddings.id, staff.weddingId));
   if (!u || !w) return null;
-  return { userId: u.id, email: u.email, weddingId: w.id, coupleNames: `${w.brideName} & ${w.groomName}` };
+  return { userId: u.id, email: u.email, owner: staff.access.owner, weddingId: w.id, coupleNames: `${w.brideName} & ${w.groomName}` };
 }
 
 async function request(kind: "delete" | "reset", scope?: ResetScope): Promise<Requested> {
   const c = await couple();
   if (!c) return { ok: false, error: "No wedding is linked to this login." };
+  if (kind === "delete" && !c.owner) return { ok: false, error: "Only the person who set this wedding up can delete it." };
   if (!rateLimit(`account-action:${c.userId}`, { max: 3, windowMs: 10 * 60_000 }))
     return { ok: false, error: "Too many requests. Wait a few minutes, then try again." };
   const { token } = await createAction(kind, c.weddingId, c.userId, scope);

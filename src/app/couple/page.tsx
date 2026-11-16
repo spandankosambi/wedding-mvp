@@ -4,7 +4,10 @@ import { db } from "@/db/client";
 import { weddings } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
 import { istParts } from "@/lib/editor";
-import { FAMILY_SIDES, getLooks, sideName } from "@/lib/looks";
+import { getLooks, sideName } from "@/lib/looks";
+import { sidesOf } from "@/lib/access";
+import { getChecklist } from "@/lib/checklist";
+import { PortalFrame, Checklist } from "./PortalFrame";
 import { THEME_META } from "@/themes/catalog";
 import { SummaryCards } from "./SummaryCards";
 import { PortalNav } from "./PortalNav";
@@ -32,7 +35,7 @@ export default async function CouplePage({
 }: {
   searchParams: Promise<{ wedding?: string; saved?: string; error?: string }>;
 }) {
-  const staff = await requireRole(["couple", "admin"]);
+  const staff = await requireRole(["committee", "couple", "admin"]);
   const sp = await searchParams;
   let weddingId = staff.role === "admin" ? (sp.wedding ?? null) : staff.weddingId;
   if (staff.role === "admin" && !weddingId) {
@@ -44,10 +47,15 @@ export default async function CouplePage({
   }
 
   const [wedding] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
-  const [all, bride, groom, looks] = await Promise.all([
+  // someone who works one family's side sees that side's numbers only
+  const mySides = sidesOf(staff.access);
+  const one = mySides.length === 1 ? mySides[0] : null;
+  const [both, bride, groom, looks, lists] = await Promise.all([
     weddingStats(weddingId), weddingStats(weddingId, "bride"), weddingStats(weddingId, "groom"), getLooks(weddingId),
+    Promise.all(mySides.map((s) => getChecklist(weddingId!, s, staff.role === "admin"))),
   ]);
   const bySide = { bride, groom };
+  const all = one ? bySide[one] : both;
   const coupleNames = `${wedding.brideName} & ${wedding.groomName}`;
   const adminQ = staff.role === "admin" ? `?wedding=${weddingId}` : "";
   const wid = staff.role === "admin" ? <input type="hidden" name="weddingId" value={weddingId} /> : null;
@@ -55,12 +63,15 @@ export default async function CouplePage({
 
   return (
     <main className="portal-page">
-      <PortalNav names={coupleNames} current="dashboard" weddingId={weddingId} admin={staff.role === "admin"} />
-      <div className="portal-shell">
+      <PortalNav names={coupleNames} current="dashboard" weddingId={weddingId} admin={staff.role === "admin"} access={staff.access} />
+      <PortalFrame
+        jump={[["numbers", "The numbers"], ["families", one ? "Your section" : "The two families"], ...(staff.access.manage ? [["details", "Shared details"], ["people", "People & access"]] as [string, string][] : [])]}
+        right={<>{mySides.map((s, i) => <Checklist key={s} title={`${s === "bride" ? "Bride" : "Groom"}'s side: what's done`} items={lists[i]} />)}</>}
+      >
       <header className="mb-8">
         <h1 className="portal-heading">Your wedding at a glance</h1>
         <p className="portal-subheading mt-3 max-w-2xl">
-          Both families together. Each family designs its own site, guest list and printed cards in its section below.
+          {one ? `The ${one}'s side: its replies so far and the way into its section.` : "Both families together. Each family designs its own site, guest list and printed cards in its section below."}
         </p>
       </header>
 
@@ -74,9 +85,9 @@ export default async function CouplePage({
       )}
 
       {/* ── key numbers ─────────────────────────────────────────── */}
-      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="Families invited" value={all.families.length} sub={`${bride.families.length} bride's · ${groom.families.length} groom's`} />
-        <Stat label="Guests" value={attending} sub={`${bride.guests.length} bride's · ${groom.guests.length} groom's`} />
+      <div id="numbers" className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Stat label="Families invited" value={all.families.length} sub={one ? undefined : `${bride.families.length} bride's · ${groom.families.length} groom's`} />
+        <Stat label="Guests" value={attending} sub={one ? undefined : `${bride.guests.length} bride's · ${groom.guests.length} groom's`} />
         <Stat label="Response rate" value={`${all.responseRate}%`} sub={`${all.respondedCount} of ${all.families.length} families`} />
         <Stat label="Peak attendance" value={all.peak} sub="largest single event" />
       </div>
@@ -86,8 +97,8 @@ export default async function CouplePage({
       </div>
 
       {/* ── the two families ────────────────────────────────────── */}
-      <div className="mb-8 grid gap-4 md:grid-cols-2">
-        {FAMILY_SIDES.map((side) => {
+      <div id="families" className="mb-8 grid gap-4 md:grid-cols-2">
+        {mySides.map((side) => {
           const st = bySide[side];
           const meta = THEME_META[looks[side].theme];
           return (
@@ -117,6 +128,7 @@ export default async function CouplePage({
         })}
       </div>
 
+      {staff.access.manage && (<>
       {/* ── shared details ──────────────────────────────────────── */}
       <div className="grid gap-6">
         <section id="details" className="portal-panel p-6">
@@ -136,9 +148,19 @@ export default async function CouplePage({
 
       </div>
 
+      <section id="people" className="portal-panel mt-6 p-6">
+        <p className="portal-eyebrow">People &amp; access</p>
+        <h2 className="mt-1 font-semibold">Who can sign in, and what they can do</h2>
+        <p className="mt-2 max-w-2xl text-sm text-neutral-600">
+          Give family and friends their own sign-in, on the bride&apos;s side, the groom&apos;s side or both, and choose what each may see or change.
+        </p>
+        <Link href={`/couple/people${adminQ}`} className="portal-button mt-4">Manage people</Link>
+      </section>
+      </>)}
+
       {/* only the couple themselves can delete; each family resets its own part in its section */}
-      {staff.role === "couple" && <div className="mt-8"><DangerZone coupleNames={coupleNames} /></div>}
-      </div>
+      {staff.role === "couple" && staff.access.owner && <div className="mt-8"><DangerZone coupleNames={coupleNames} /></div>}
+      </PortalFrame>
     </main>
   );
 }

@@ -2,21 +2,46 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { families, guests, eventInvites, events } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
+import type { Access } from "@/lib/access";
 import { issueInvites, whatsappInvite } from "@/lib/invites";
 import * as household from "@/lib/household";
 import { syncHousehold } from "@/lib/primary";
 import { eventForSide } from "@/lib/sides";
 
-/* Admin may act on any wedding (passes it explicitly); committee is pinned
-   to their own. Every action re-resolves this server-side — never trust input. */
-async function scopedWeddingId(requested: string): Promise<string | null> {
+/* Admin may act on any wedding (passes it explicitly); everyone else is pinned
+   to their own. Every action re-resolves this server-side — never trust input.
+   Changing the guest list needs full access to it, and a person who works one
+   family's side may only touch that side's households. */
+async function scope(requested: string): Promise<{ weddingId: string; access: Access } | null> {
   const staff = await requireRole(["committee", "couple", "admin"]);
-  if (staff.role === "admin") return requested;
-  return staff.weddingId;
+  const weddingId = staff.role === "admin" ? requested : staff.weddingId;
+  if (!weddingId || staff.access.guests !== "full") return null;
+  return { weddingId, access: staff.access };
+}
+async function scopedWeddingId(requested: string, touching?: { familyIds?: unknown; guestIds?: unknown; side?: unknown }): Promise<string | null> {
+  const s = await scope(requested);
+  if (!s) return null;
+  if (s.access.side === "both" || !touching) return s.weddingId;
+  if (touching.side !== undefined && touching.side !== s.access.side) return null;
+  const uuids = (v: unknown) => (Array.isArray(v) ? v : []).filter((x): x is string => z.string().uuid().safeParse(x).success);
+  let famIds = uuids(touching.familyIds);
+  const gIds = uuids(touching.guestIds);
+  if (gIds.length) {
+    const gs = await db.select({ familyId: guests.familyId }).from(guests).where(inArray(guests.id, gIds));
+    if (gs.length !== new Set(gIds).size) return null;
+    famIds = [...famIds, ...gs.map((g) => g.familyId)];
+  }
+  famIds = [...new Set(famIds)];
+  if (famIds.length) {
+    const fs = await db.select({ side: families.side }).from(families)
+      .where(and(eq(families.weddingId, s.weddingId), inArray(families.id, famIds)));
+    if (fs.length !== famIds.length || fs.some((f) => f.side !== s.access.side)) return null;
+  }
+  return s.weddingId;
 }
 
 // Contact details are per guest and all optional (plenty of households are
@@ -46,7 +71,7 @@ const familySchema = z.object({
 export async function upsertFamily(input: unknown): Promise<{ ok: boolean; error?: string }> {
   const parsed = familySchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid input" };
-  const weddingId = await scopedWeddingId(parsed.data.weddingId);
+  const weddingId = await scopedWeddingId(parsed.data.weddingId, { side: parsed.data.side, familyIds: [parsed.data.familyId] });
   if (!weddingId) return { ok: false, error: "forbidden" };
   const { name, side, relation, eventIds, showTravel } = parsed.data;
   // one primary at most from the form; syncHousehold settles the rest
@@ -105,7 +130,7 @@ const sendSchema = z.object({
 export async function sendInvitesAction(input: unknown) {
   const parsed = sendSchema.safeParse(input);
   if (!parsed.success) return { ok: false as const, error: "invalid input" };
-  const weddingId = await scopedWeddingId(parsed.data.weddingId);
+  const weddingId = await scopedWeddingId(parsed.data.weddingId, { familyIds: parsed.data.familyIds });
   if (!weddingId) return { ok: false as const, error: "forbidden" };
   const results = await issueInvites(weddingId, parsed.data.familyIds, parsed.data.type);
   revalidatePath("/committee");
@@ -117,7 +142,7 @@ const idsSchema = z.object({ weddingId: z.string().uuid(), familyId: z.string().
 export async function deleteFamilyAction(input: unknown): Promise<{ ok: boolean; error?: string }> {
   const parsed = idsSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid input" };
-  const weddingId = await scopedWeddingId(parsed.data.weddingId);
+  const weddingId = await scopedWeddingId(parsed.data.weddingId, { familyIds: [parsed.data.familyId] });
   if (!weddingId) return { ok: false, error: "forbidden" };
   const res = await household.deleteFamily(weddingId, parsed.data.familyId);
   revalidatePath("/committee");
@@ -128,7 +153,7 @@ export async function deleteFamilyAction(input: unknown): Promise<{ ok: boolean;
 export async function recordRsvpAction(input: { weddingId: string } & Record<string, unknown>): Promise<{ ok: boolean; error?: string }> {
   const weddingParsed = z.string().uuid().safeParse(input?.weddingId);
   if (!weddingParsed.success) return { ok: false, error: "invalid input" };
-  const weddingId = await scopedWeddingId(weddingParsed.data);
+  const weddingId = await scopedWeddingId(weddingParsed.data, { familyIds: [input.familyId] });
   if (!weddingId) return { ok: false, error: "forbidden" };
   const res = await household.recordRsvpForFamily(weddingId, input);
   revalidatePath("/committee");
@@ -141,7 +166,12 @@ export async function recordRsvpAction(input: { weddingId: string } & Record<str
 async function scopedFrom(input: unknown) {
   const w = z.object({ weddingId: z.string().uuid() }).safeParse(input);
   if (!w.success) return null;
-  return scopedWeddingId(w.data.weddingId);
+  // whichever households or guests the input names must be on this person's side
+  const i = input as { familyId?: unknown; familyIds?: unknown; guestId?: unknown; guestIds?: unknown };
+  return scopedWeddingId(w.data.weddingId, {
+    familyIds: [...(Array.isArray(i.familyIds) ? i.familyIds : []), i.familyId],
+    guestIds: [...(Array.isArray(i.guestIds) ? i.guestIds : []), i.guestId],
+  });
 }
 const done = () => { revalidatePath("/committee"); revalidatePath("/couple"); };
 
@@ -203,7 +233,7 @@ const travelSchema = z.object({
 export async function setTravelAction(input: unknown): Promise<{ ok: boolean; error?: string }> {
   const parsed = travelSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid input" };
-  const weddingId = await scopedWeddingId(parsed.data.weddingId);
+  const weddingId = await scopedWeddingId(parsed.data.weddingId, { familyIds: [parsed.data.familyId] });
   if (!weddingId) return { ok: false, error: "forbidden" };
   const done = await db.update(families).set({ showTravel: parsed.data.show })
     .where(and(eq(families.id, parsed.data.familyId), eq(families.weddingId, weddingId)))
