@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BRAND, BRAND_TAGLINE, COPYRIGHT } from "@/lib/brand";
+import { BRAND, BRAND_TAGLINE, COPYRIGHT, CONTACT_EMAIL } from "@/lib/brand";
 import { EVENT_PRESETS } from "@/lib/presets";
 import { SiteHeader } from "./home/SiteHeader";
 import { ThemeSweep } from "./home/ThemeSweep";
@@ -222,8 +222,13 @@ export default function Home() {
           <Link href="/signin" className="nav-link">Sign in</Link>
           <Link href="/w/ananya-weds-arjun" className="nav-link">Example wedding</Link>
           <a href="#roadmap" className="nav-link">Roadmap</a>
+          <a href="#contact" className="nav-link">Contact</a>
         </nav>
-        <p className="mt-8 text-xs" style={{ color: "var(--ink-soft)" }} data-testid="copyright">{COPYRIGHT}</p>
+        <p id="contact" className="mt-8 text-sm" style={{ color: "var(--ink-soft)" }}>
+          Questions, or help with an invitation you received? Write to{" "}
+          <a href={`mailto:${CONTACT_EMAIL}`} className="underline underline-offset-4" style={{ color: "var(--ink)" }}>{CONTACT_EMAIL}</a>
+        </p>
+        <p className="mt-4 text-xs" style={{ color: "var(--ink-soft)" }} data-testid="copyright">{COPYRIGHT}</p>
       </footer>
     </div>
   );

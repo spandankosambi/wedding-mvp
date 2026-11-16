@@ -8,3 +8,5 @@ export const COMPANY_SHORT = "TEDD";
 /** The main address; share previews and absolute links resolve against it. */
 export const SITE_URL = "https://onetapinvites.com";
 export const COPYRIGHT = `© 2026 ${BRAND} · A product of ${COMPANY}`;
+/** Where anyone (guests included) can write to us. */
+export const CONTACT_EMAIL = "onetapinvites@gmail.com";

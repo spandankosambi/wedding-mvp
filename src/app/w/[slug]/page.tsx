@@ -15,6 +15,7 @@ import { Gallery } from "./sections/Gallery";
 import { Closing } from "./sections/Closing";
 import { Reveal } from "./sections/Reveal";
 import { BRAND } from "@/lib/brand";
+import { MadeWith } from "@/components/MadeWith";
 import { ThingsToKnow } from "./sections/ThingsToKnow";
 import { MusicPlayer } from "./sections/MusicPlayer";
 import { wordingLines } from "@/lib/invitation/content";
@@ -144,6 +145,7 @@ export default async function WeddingPage({
           <span>{fmtWeddingDate(wedding.weddingDate)}</span>
           {wedding.hashtag && <span>#{wedding.hashtag}</span>}
         </p>
+        <MadeWith className="mt-5" />
       </footer>
       {wedding.music && <MusicPlayer url={wedding.music.url} name={wedding.music.name} raised={!!invite} />}
       {invite && <InviteBar familyName={invite.familyName} href={invite.href} answered={invite.answered} />}

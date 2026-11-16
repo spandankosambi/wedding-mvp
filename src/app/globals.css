@@ -1320,6 +1320,12 @@ html.fx .rule-grow.is-in::before { transform: scaleX(1); }
   .site-foot .kicker span + span::before { content: none; }
 }
 
+.made-with { font-size: 0.75rem; line-height: 1.7; color: var(--ink-soft, #7a756c); }
+.made-with a { text-decoration: underline; text-underline-offset: 3px; color: inherit; }
+.made-with a:hover { color: var(--accent, #9d7a3e); }
+.print-only .made-with, .made-with:empty { display: none; }
+@media print { .made-with { display: none; } }
+
 .glyph-gurmukhi { font-family: var(--font-gurmukhi), serif; }
 .event-icon-own { aspect-ratio: 1; background: var(--accent); }
 .people-table td { padding: 0.55rem 0.5rem; vertical-align: top; }

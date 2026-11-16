@@ -7,6 +7,7 @@ import { Ornament } from "@/themes/ornaments";
 import { ContactList } from "../sections/ContactList";
 import { OpenRsvpForm } from "./OpenRsvpForm";
 import { asFamilySide, getLook, namesFor, withLook, type FamilySide } from "@/lib/looks";
+import { MadeWith } from "@/components/MadeWith";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,7 @@ export default async function OpenRsvpPage({ params, searchParams }: { params: P
           </p>
         )}
       </div>
+      <MadeWith className="mt-10 pb-8 text-center" />
     </main>
   );
 }
