@@ -9,12 +9,12 @@ type Section = "dashboard" | "bride" | "groom" | "people";
 type Page = "overview" | "site" | "guests" | "print";
 
 /**
- * The one line across the top of every couple-side screen: the couple's
- * names (which lead to the dashboard), a switch between the two families,
+ * The one line across the top of every couple-side screen: our logo (which
+ * leads to the dashboard), a switch between the two families by name,
  * then — inside a family — its pages. Switching family keeps you on the same
  * kind of page. Only the families and pages this person has access to appear.
  */
-export function PortalNav({ names, sideNames = DEFAULT_SIDE_NAMES, current, page, weddingId, admin = false, access }: {
+export function PortalNav({ names: _names, sideNames = DEFAULT_SIDE_NAMES, current, page, weddingId, admin = false, access }: {
   names: string; current?: Section; page?: Page;
   /** each family by its child's first name: "Pooja's side" */
   sideNames?: SideNames;
@@ -35,13 +35,13 @@ export function PortalNav({ names, sideNames = DEFAULT_SIDE_NAMES, current, page
   return (
     <div className="portal-nav">
       <div className="portal-nav-inner">
-        {/* our logo first (the symbol alone on a phone), then the couple's names */}
-        <Link href={`/couple${q()}`} className="portal-nav-logo" aria-label={`${BRAND}: your dashboard`} title="Go to the dashboard">
+        {/* our logo (the symbol alone on a phone) leads to the dashboard; the
+            families' names are on the switch beside it */}
+        <Link href={`/couple${q()}`} className="portal-nav-logo" aria-label={`${BRAND}: your dashboard`} title="Go to the dashboard" aria-current={current === "dashboard" ? "page" : undefined}>
           <BrandLogo height={26} label={BRAND} className="portal-nav-logo-full" />
           <BrandSymbol size={26} className="portal-nav-logo-mark" />
         </Link>
         <span className="portal-nav-divider" aria-hidden="true" />
-        <Link href={`/couple${q()}`} className="portal-nav-brand" title="Go to the dashboard" aria-current={current === "dashboard" ? "page" : undefined}>{names}</Link>
         <nav aria-label="Sections" className="portal-nav-sides">
           {admin && <Link href="/admin" className="portal-nav-admin">All weddings</Link>}
           <span className="portal-nav-switch">

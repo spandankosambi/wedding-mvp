@@ -129,7 +129,7 @@ test("each family's site and section put its own child's name first", async ({ p
 
   await signIn(page, "couple2@example.com");
   await page.goto("/couple/groom");
-  await expect(page.locator(".portal-nav-brand")).toHaveText("Gaurav & Karishma");
+  await expect(page.getByRole("heading", { name: "Gaurav's family", exact: true })).toBeVisible();
 });
 
 test("design touches: an opening screen, what falls, decorations and celebration icons", async ({ page }) => {

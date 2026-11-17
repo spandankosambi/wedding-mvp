@@ -180,8 +180,6 @@ a.portal-checklist-tick:hover { border-color: #E2553B; background: #fff1ee; }
   .portal-nav-logo-full { display: none; }
   .portal-nav-logo-mark { display: block; }
   .portal-nav-divider { display: none; }
-  /* the couple's names always get room to show; the side switch moves down a line if needed */
-  .portal-nav-brand { min-width: 7.5rem; }
   .portal-nav-admin { display: none; }
   .portal-nav-wide { display: none; }
   .portal-nav-pages { order: 5; flex: none; width: calc(100% + 1.2rem); margin-inline: -0.6rem; height: 2.3rem; font-size: 0.8125rem; }

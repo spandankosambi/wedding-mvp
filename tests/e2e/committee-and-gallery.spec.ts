@@ -129,11 +129,12 @@ test("the couple can get from the guest list back to their dashboard", async ({ 
   await expect(page).toHaveURL(/\/couple\/groom$/);
   // the bar across the top is the same on every screen, in this family's name order
   const bar = page.getByRole("navigation", { name: "Sections" });
-  await expect(page.locator(".portal-nav-brand")).toHaveText("Arjun & Ananya");
+  // no couple's names in the bar: the switch carries them, the logo leads home
+  await expect(page.locator(".portal-nav-brand")).toHaveCount(0);
   await expect(bar.getByRole("link", { name: "Arjun's side" })).toHaveAttribute("aria-current", "page");
   // everything sits on one line; the couple's names lead to the dashboard
   expect((await page.locator(".portal-nav").boundingBox())!.height).toBeLessThan(64);
-  await page.locator("a.portal-nav-brand").click();
+  await page.getByRole("link", { name: "One Tap Invites: your dashboard" }).click();
   await expect(page).toHaveURL(/\/couple$/);
   await expect(page.getByRole("heading", { name: "Your wedding at a glance" })).toBeVisible();
   await bar.getByRole("link", { name: "Ananya's side" }).click();
