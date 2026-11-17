@@ -21,6 +21,7 @@ async function signIn(page: Page, email: string) {
 const shots = process.env.SHOTS_DIR;
 
 test("the couple give a friend view-only access to one side, widen it, then remove them", async ({ page, browser }) => {
+  test.setTimeout(120_000); // two people, many pages: slow on a cold dev server
   const friend = `friend-${Date.now()}@example.com`;
   await signIn(page, "couple2@example.com");
   await page.getByRole("link", { name: "People", exact: true }).click();
@@ -68,7 +69,9 @@ test("the couple give a friend view-only access to one side, widen it, then remo
   if (shots) await theirs.screenshot({ path: `${shots}/view-only.png` });
   // doors that aren't theirs lead back to the dashboard
   for (const url of ["/couple/site?family=groom", "/couple/groom", "/committee?family=bride", "/committee/import?family=bride", "/couple/bride/print", "/couple/people"]) {
-    await theirs.goto(url);
+    // the local dev server sometimes reports the redirect as an aborted load;
+    // where the page ends up is what matters
+    await theirs.goto(url).catch((e: Error) => { if (!/ERR_ABORTED/.test(e.message)) throw e; });
     await expect(theirs, url).toHaveURL(/\/couple$/);
   }
   // …and the card download refuses them
@@ -115,6 +118,20 @@ test("every page shares one layout: On this page and About us on the left, what'
   await page.goto("/committee?family=groom");
   await expect(page.getByRole("region", { name: "About us" })).toBeVisible();
   await expect(page.getByRole("region", { name: /what's done/ })).toHaveCount(0);
+  // the dashboard: both families in one table, a step per row and a column each
+  await page.goto("/couple");
+  const both = page.getByRole("region", { name: "Both sides: what's done" });
+  await expect(both.getByRole("columnheader", { name: /Bride/ })).toBeVisible();
+  await expect(both.getByRole("columnheader", { name: /Groom/ })).toBeVisible();
+  await expect(both.locator("tbody tr")).toHaveCount(10);
+  await expect(page.getByRole("region", { name: /^(Bride|Groom)'s side: what's done$/ })).toHaveCount(0);
+  // our logo leads every signed-in page's top bar, ahead of the couple's names
+  for (const url of ["/couple", "/couple/groom", "/committee?family=groom", "/couple/people"]) {
+    await page.goto(url);
+    const nav = page.locator(".portal-nav-inner");
+    await expect(nav.getByRole("link", { name: "One Tap Invites home" }), url).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Go to the dashboard" }).or(nav.locator(".portal-nav-brand")).first(), url).toBeVisible();
+  }
   // the checklist's open steps link to where they are done
   await page.goto("/couple/groom");
   const list = page.getByRole("region", { name: "Groom's side: what's done" });

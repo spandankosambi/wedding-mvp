@@ -8,7 +8,7 @@ import { getLooks, sideName } from "@/lib/looks";
 import { sidesOf } from "@/lib/access";
 import { sharePath } from "@/lib/share";
 import { getChecklist } from "@/lib/checklist";
-import { PortalFrame, Checklist } from "./PortalFrame";
+import { PortalFrame, Checklist, ChecklistTable } from "./PortalFrame";
 import { THEME_META } from "@/themes/catalog";
 import { SummaryCards } from "./SummaryCards";
 import { PortalNav } from "./PortalNav";
@@ -67,7 +67,9 @@ export default async function CouplePage({
       <PortalNav names={coupleNames} current="dashboard" weddingId={weddingId} admin={staff.role === "admin"} access={staff.access} />
       <PortalFrame
         jump={[["numbers", "The numbers"], ["families", one ? "Your section" : "The two families"], ...(staff.access.manage ? [["details", "Shared details"], ["people", "People & access"]] as [string, string][] : [])]}
-        right={<>{mySides.map((s, i) => <Checklist key={s} title={`${s === "bride" ? "Bride" : "Groom"}'s side: what's done`} items={lists[i]} />)}</>}
+        right={mySides.length > 1
+          ? <ChecklistTable sides={mySides.map((side, i) => ({ side, items: lists[i] }))} />
+          : <>{mySides.map((s, i) => <Checklist key={s} title={`${s === "bride" ? "Bride" : "Groom"}'s side: what's done`} items={lists[i]} />)}</>}
       >
       <header className="mb-8">
         <h1 className="portal-heading">Your wedding at a glance</h1>

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { signOut } from "@/auth";
 import { allows, seesSide, type Access } from "@/lib/access";
+import { BrandLogo, BrandSymbol } from "@/components/BrandLogo";
+import { BRAND } from "@/lib/brand";
 
 type Section = "dashboard" | "bride" | "groom" | "people";
 type Page = "overview" | "site" | "guests" | "print";
@@ -30,6 +32,12 @@ export function PortalNav({ names, current, page, weddingId, admin = false, acce
   return (
     <div className="portal-nav">
       <div className="portal-nav-inner">
+        {/* our logo first (the symbol alone on a phone), then the couple's names */}
+        <Link href="/" className="portal-nav-logo" aria-label={`${BRAND} home`} title={BRAND}>
+          <BrandLogo height={26} label={BRAND} className="portal-nav-logo-full" />
+          <BrandSymbol size={26} className="portal-nav-logo-mark" />
+        </Link>
+        <span className="portal-nav-divider" aria-hidden="true" />
         <Link href={`/couple${q()}`} className="portal-nav-brand" title="Go to the dashboard" aria-current={current === "dashboard" ? "page" : undefined}>{names}</Link>
         <nav aria-label="Sections" className="portal-nav-sides">
           {admin && <Link href="/admin" className="portal-nav-admin">All weddings</Link>}

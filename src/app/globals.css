@@ -21,6 +21,9 @@ body {
 .portal-shell { margin-inline: auto; max-width: 104rem; padding: 2.25rem var(--portal-pad) 4rem; }
 .portal-nav { position: sticky; top: 0; z-index: 30; border-bottom: 1px solid #e4e1db; background: rgba(250, 249, 246, 0.94); backdrop-filter: blur(8px); }
 .portal-nav-inner { margin-inline: auto; max-width: 104rem; min-height: var(--nav-h); padding: 0 var(--portal-pad); display: flex; align-items: center; gap: 1.1rem; font-size: 0.875rem; }
+.portal-nav-logo { flex: none; display: inline-flex; align-items: center; color: #272624; }
+.portal-nav-logo-mark { display: none; }
+.portal-nav-divider { flex: none; width: 1px; height: 1.5rem; background: #dedad2; }
 .portal-nav-brand { flex: none; font-weight: 650; letter-spacing: -0.01em; color: #272624; white-space: nowrap; }
 a.portal-nav-brand:hover { color: #7a5f2f; }
 .portal-nav-sides { flex: none; display: flex; align-items: center; gap: 0.5rem; }
@@ -67,6 +70,19 @@ a.portal-nav-brand:hover { color: #7a5f2f; }
 .portal-checklist li > span:first-child { flex: none; margin-top: 0.12rem; display: grid; place-items: center; width: 1rem; height: 1rem; border-radius: 50%; border: 1.5px solid #cfcac1; font-size: 0.625rem; line-height: 1; color: #fff; }
 .portal-checklist li[data-done="true"] > span:first-child { border-color: #4a8a5c; background: #4a8a5c; }
 .portal-checklist li[data-done="true"] { color: #8d877d; }
+/* both families in one table: a step per row, a column per family */
+.portal-checklist-table table { width: 100%; border-collapse: collapse; margin-top: 0.4rem; }
+.portal-checklist-table thead th { width: 3.6rem; padding: 0 0 0.6rem; text-align: center; vertical-align: bottom; font-size: 0.6875rem; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; color: #8d877d; }
+.portal-checklist-table thead th:first-child { width: auto; }
+.portal-checklist-score { display: block; margin-top: 0.15rem; font-size: 0.75rem; letter-spacing: 0; text-transform: none; font-weight: 500; color: #57524a; }
+.portal-checklist-score strong { font-size: 1.05rem; color: #272624; }
+.portal-checklist-table .portal-checklist-bar { display: block; margin: 0.35rem auto 0; width: 2.6rem; }
+.portal-checklist-table tbody th { padding: 0.32rem 0.4rem 0.32rem 0; text-align: left; font-weight: 400; color: #57524a; line-height: 1.3; }
+.portal-checklist-table tbody tr + tr > * { border-top: 1px solid #f0ede7; }
+.portal-checklist-table td { text-align: center; padding: 0.32rem 0; }
+.portal-checklist-tick { display: inline-grid; place-items: center; width: 1.05rem; height: 1.05rem; border-radius: 50%; border: 1.5px solid #cfcac1; font-size: 0.625rem; line-height: 1; color: #fff; text-decoration: none !important; }
+.portal-checklist-table td[data-done="true"] .portal-checklist-tick { border-color: #4a8a5c; background: #4a8a5c; }
+a.portal-checklist-tick:hover { border-color: #E2553B; background: #fff1ee; }
 .portal-checklist a { color: #272624; text-decoration: underline; text-decoration-color: #cfcac1; text-underline-offset: 3px; }
 .portal-checklist a:hover { text-decoration-color: #9d7a3e; }
 @media (min-width: 1024px) {
@@ -161,6 +177,11 @@ a.portal-nav-brand:hover { color: #7a5f2f; }
   .portal-page { --nav-h: 5.3rem; }
   .portal-nav-inner { flex-wrap: wrap; gap: 0 0.6rem; padding-top: 0.45rem; }
   .portal-nav-brand { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .portal-nav-logo-full { display: none; }
+  .portal-nav-logo-mark { display: block; }
+  .portal-nav-divider { display: none; }
+  /* the couple's names always get room to show; the side switch moves down a line if needed */
+  .portal-nav-brand { min-width: 7.5rem; }
   .portal-nav-admin { display: none; }
   .portal-nav-wide { display: none; }
   .portal-nav-pages { order: 5; flex: none; width: calc(100% + 1.2rem); margin-inline: -0.6rem; height: 2.3rem; font-size: 0.8125rem; }
