@@ -3,6 +3,7 @@ import Link from "next/link";
 import { auth, signIn } from "@/auth";
 import { ROLE_HOME, type Role } from "@/lib/authz";
 import { BRAND } from "@/lib/brand";
+import { BrandLogo } from "@/components/BrandLogo";
 
 export default async function SignInPage({
   searchParams,
@@ -36,8 +37,8 @@ export default async function SignInPage({
   return (
     <main className="portal-page flex items-center justify-center p-6">
       <div className="portal-panel w-full max-w-md p-7 md:p-9">
-        <p className="portal-eyebrow">{BRAND}</p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">Sign in</h1>
+        <Link href="/" className="inline-block text-neutral-900" aria-label={`${BRAND} home`}><BrandLogo height={36} label={BRAND} /></Link>
+        <h1 className="mt-6 text-2xl font-semibold tracking-tight">Sign in</h1>
         <p className="mt-2 text-sm leading-relaxed text-neutral-500">Couples, planners and family — use the email your wedding is set up with. We&apos;ll send a single-use link, no password.</p>
         {error && !sent ? (
           <p className="mt-6 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-950" role="alert">

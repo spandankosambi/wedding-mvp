@@ -109,14 +109,16 @@ test("the product is One Tap Invites everywhere a visitor or a share preview loo
   await expect(page).toHaveTitle("One Tap Invites — Invites, RSVPs and guests, sorted.");
   await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute("content", "One Tap Invites");
   await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", /One Tap Invites/);
-  await expect(page.locator("header.nav")).toContainText("One Tap Invites");
+  // the logo is drawn, not typed: it is found by its accessible name
+  await expect(page.locator("header.nav").getByRole("img", { name: "One Tap Invites" })).toBeVisible();
+  await expect(page.locator('link[rel="icon"][type="image/svg+xml"]')).toHaveCount(1);
   const foot = page.locator("footer").last();
   await expect(foot).toContainText("Invites, RSVPs and guests, sorted.");
   await expect(foot.getByTestId("copyright")).toHaveText("© 2026 One Tap Invites · A product of The Event Day Desk");
   await expect(page.locator("body")).not.toContainText(/nimantran/i);
   await page.goto("/signin");
   await expect(page).toHaveTitle(/One Tap Invites/);
-  await expect(page.locator("body")).toContainText("One Tap Invites");
+  await expect(page.getByRole("img", { name: "One Tap Invites" })).toBeVisible();
   await page.goto("/w/ananya-weds-arjun?k=sample");
   await expect(page).toHaveTitle(/· One Tap Invites$/);
   await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute("content", "One Tap Invites");

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { BRAND } from "@/lib/brand";
-import { Mark } from "@/themes/mark";
+import { BrandLogo } from "@/components/BrandLogo";
 
 const LINKS = [
   { href: "#looks", label: "Six looks" },
@@ -38,9 +38,8 @@ export function SiteHeader() {
   return (
     <header className="nav" data-stuck={stuck}>
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
-        <Link href="/" className="font-display inline-flex items-center gap-2 text-xl tracking-tight" style={{ color: "var(--ink)" }}>
-          <Mark size={22} style={{ color: "var(--accent)" }} />
-          {BRAND}
+        <Link href="/" className="inline-flex items-center" style={{ color: "var(--ink)" }} aria-label={`${BRAND} home`}>
+          <BrandLogo height={34} label={BRAND} />
         </Link>
 
         <nav aria-label="Sections" className="hidden items-center gap-8 md:flex">

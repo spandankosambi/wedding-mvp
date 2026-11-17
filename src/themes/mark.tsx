@@ -1,4 +1,4 @@
-/* The brand mark: a gaanth — the knot tied between the bride's dupatta and
+/* Wedding ornament (no longer the brand logo — see components/BrandLogo): a gaanth — the knot tied between the bride's dupatta and
    the groom's stole before the pheras. Two loops, one line. Drawn in
    currentColor so it takes whatever ink or accent surrounds it. */
 export function Mark({ size = 20, className, style }: { size?: number | string; className?: string; style?: React.CSSProperties }) {

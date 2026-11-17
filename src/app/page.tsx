@@ -7,7 +7,7 @@ import { CardRing } from "./home/CardRing";
 import { LivePreview } from "./home/LivePreview";
 import { RsvpDemo } from "./home/RsvpDemo";
 import { OpsBoard } from "./home/OpsBoard";
-import { Mark } from "@/themes/mark";
+import { BrandLogo } from "@/components/BrandLogo";
 
 const DESCRIPTION =
   "A themed invitation site, per-ceremony RSVP, a guest list that counts itself, and the logistics of a five-day Indian wedding. Free while we're in pilot.";
@@ -212,9 +212,8 @@ export default function Home() {
       </main>
 
       <footer className="px-6 py-12 text-center">
-        <p className="font-display inline-flex items-center gap-2 text-2xl tracking-tight">
-          <Mark size={26} style={{ color: "var(--accent)" }} />
-          {BRAND}
+        <p className="inline-flex items-center" style={{ color: "var(--ink)" }}>
+          <BrandLogo height={44} label={BRAND} />
         </p>
         <p className="mt-2 text-sm" style={{ color: "var(--ink-soft)" }}>{BRAND_TAGLINE}</p>
         <nav aria-label="Footer" className="mt-6 flex flex-wrap items-center justify-center gap-6">

@@ -1,10 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="One Tap Invites">
-  <rect width="64" height="64" rx="14" fill="#232323"/>
-  <!-- marigold ring: the flower strung over every Indian wedding doorway -->
-  <circle cx="32" cy="32" r="25.5" fill="none" stroke="#e8930c" stroke-width="2.5" opacity="0.55"/>
-  <!-- the gaanth: the knot tied before the pheras. two loops, one line -->
-  <g fill="none" stroke="#e8930c" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" transform="translate(12 12) scale(1.25)">
-    <path d="M12.5 9.5c-5 0-7.5 3-7.5 6.5s2.5 6.5 7.5 6.5c3.2 0 5.2-2.2 6.5-4.6"/>
-    <path d="M19.5 22.5c5 0 7.5-3 7.5-6.5s-2.5-6.5-7.5-6.5c-3.2 0-5.2 2.2-6.5 4.6"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-label="One Tap Invites">
+<rect width="320" height="320" rx="72" fill="#E2553B"/>
+<path d="M 249.0 124.0 A 96 96 0 1 1 180.0 66.1" fill="none" stroke="#FFFFFF" stroke-width="40" stroke-linecap="round"/>
+<circle cx="160" cy="160" r="40" fill="#FFFFFF"/>
 </svg>

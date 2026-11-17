@@ -5,6 +5,7 @@ import { render } from "@react-email/components";
 import { db } from "@/db/client";
 import { emailLog, outbox } from "@/db/schema";
 import { InviteEmail } from "@/emails/InviteEmail";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 type SendArgs = {
   familyId: string; to: string; familyName: string; coupleNames: string;
@@ -80,6 +81,11 @@ export async function sendInvite(args: SendArgs): Promise<{ ok: boolean; error?:
   }
 }
 
+/** Logo at the top of the emails we send as the platform (not the couple's
+    invitations, which come from the couple). A PNG: most mail apps block SVG. */
+const emailLogo = () =>
+  `<p style="margin:0 0 20px"><img src="${SITE_URL}/brand/logo-email.png" width="160" height="54" alt="${BRAND}" style="display:block;border:0"></p>`;
+
 const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 
 /** The email that confirms a delete or reset. The link opens a page with one
@@ -95,6 +101,7 @@ export async function sendConfirmEmail(args: {
     ? "<p>This removes the website, every event, guest, RSVP and photo, and every login for this wedding, including yours. It can't be undone.</p>"
     : `<p>These will be erased:</p><ul>${(args.items ?? []).map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul><p>It can't be undone.</p>`;
   const html = `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.55;color:#22201c;max-width:520px">
+${emailLogo()}
 <p>Someone signed in as ${escapeHtml(args.to)} asked to ${what} for <b>${escapeHtml(args.coupleNames)}</b>.</p>
 ${list}
 <p><a href="${args.link}" style="display:inline-block;background:#9b1c1c;color:#fff;text-decoration:none;padding:10px 16px;border-radius:8px;font-weight:600">Review and confirm</a></p>
@@ -111,6 +118,7 @@ ${list}
 export async function sendAccessEmail(args: { to: string; coupleNames: string; link: string; what: string }) {
   const subject = `You've been added to ${args.coupleNames}'s wedding`;
   const html = `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.55;color:#22201c;max-width:520px">
+${emailLogo()}
 <p>You&rsquo;ve been given access to <b>${escapeHtml(args.coupleNames)}</b>&rsquo;s wedding: ${escapeHtml(args.what)}.</p>
 <p><a href="${args.link}" style="display:inline-block;background:#292723;color:#fff;text-decoration:none;padding:10px 16px;border-radius:8px;font-weight:600">Sign in</a></p>
 <p style="color:#6b6760;font-size:13px">Sign in with this email address (${escapeHtml(args.to)}). We&rsquo;ll email you a one-time link each time; there is no password.</p>

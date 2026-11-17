@@ -3,6 +3,7 @@ import Link from "next/link";
 import { StartForm } from "./StartForm";
 import { Ornament } from "@/themes/ornaments";
 import { BRAND } from "@/lib/brand";
+import { BrandLogo } from "@/components/BrandLogo";
 
 export const metadata: Metadata = {
   title: "Create your wedding site",
@@ -15,7 +16,7 @@ export default async function StartPage({ searchParams }: { searchParams: Promis
     <main data-theme="ivory-editorial" className="themed min-h-svh px-6 py-16 md:py-24">
       <div className="mx-auto max-w-2xl">
         <header className="text-center">
-          <Link href="/" className="kicker rise rise-1 inline-block underline-offset-4 hover:underline">{BRAND}</Link>
+          <Link href="/" className="rise rise-1 inline-block" style={{ color: "var(--ink)" }} aria-label={`${BRAND} home`}><BrandLogo height={36} label={BRAND} /></Link>
           <h1 className="font-display rise rise-2 mt-6 tracking-tight" style={{ fontSize: "clamp(2.6rem, 8vw, 4.5rem)", lineHeight: 1.02 }}>
             Your wedding site,<br />live in two minutes.
           </h1>
