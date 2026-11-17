@@ -28,7 +28,9 @@ const SHARED = new Set(["weddingId", "family"]);
 
 const forms = () => Array.from(document.querySelectorAll<HTMLFormElement>("form[data-save-part]"));
 
-const fmt = (k: string, v: FormDataEntryValue) => `${k}=${typeof v === "string" ? v : `${v.name}:${v.size}`}`;
+/* Line breaks in a text box are read back from the form as "\r\n" but held
+   in the page as "\n", so both are written the same way before comparing. */
+const fmt = (k: string, v: FormDataEntryValue) => `${k}=${typeof v === "string" ? v.replace(/\r\n?/g, "\n") : `${v.name}:${v.size}`}`;
 
 /* React adds a hidden "$ACTION_…" field to forms that comes and goes; it's
    not something anyone edits */

@@ -129,7 +129,7 @@ test("every page shares one layout: On this page and About us on the left, what'
   for (const url of ["/couple", "/couple/groom", "/committee?family=groom", "/couple/people"]) {
     await page.goto(url);
     const nav = page.locator(".portal-nav-inner");
-    await expect(nav.getByRole("link", { name: "One Tap Invites home" }), url).toBeVisible();
+    await expect(nav.getByRole("link", { name: "One Tap Invites: your dashboard" }), url).toHaveAttribute("href", "/couple");
     await expect(nav.getByRole("link", { name: "Go to the dashboard" }).or(nav.locator(".portal-nav-brand")).first(), url).toBeVisible();
   }
   // the checklist's open steps link to where they are done

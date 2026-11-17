@@ -33,7 +33,7 @@ export function PortalNav({ names, current, page, weddingId, admin = false, acce
     <div className="portal-nav">
       <div className="portal-nav-inner">
         {/* our logo first (the symbol alone on a phone), then the couple's names */}
-        <Link href="/" className="portal-nav-logo" aria-label={`${BRAND} home`} title={BRAND}>
+        <Link href={`/couple${q()}`} className="portal-nav-logo" aria-label={`${BRAND}: your dashboard`} title="Go to the dashboard">
           <BrandLogo height={26} label={BRAND} className="portal-nav-logo-full" />
           <BrandSymbol size={26} className="portal-nav-logo-mark" />
         </Link>

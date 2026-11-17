@@ -143,3 +143,24 @@ test("after saving, Save goes grey even for tick-boxes and lists the page manage
   await expect(save).toHaveAttribute("data-ready", "true");
   await expect(save).toHaveText("All changes saved");
 });
+
+test("text with line breaks doesn't count as a change on arrival or after saving", async ({ page }) => {
+  test.setTimeout(150_000);
+  await newCouple(page, "Nisha Patel", "Rohan Desai");
+  await page.goto("/couple/site?family=bride");
+  const save = page.getByTestId("floating-save");
+  await expect(save).toHaveAttribute("data-ready", "true");
+  await page.locator("#words textarea[name=story]").fill("We met in college.\nTen years later, here we are.");
+  await page.locator("#wording textarea[name=shloka]").fill("Line one\nLine two\nLine three");
+  await expect(save).toHaveText("Save changes (2)");
+  await save.click();
+  await expect(page.getByRole("status").first()).toContainText("Saved");
+  await expect(save).toHaveText("All changes saved");
+  // landing on the page again: still nothing to save
+  await page.goto("/couple/site?family=bride");
+  await expect(save).toHaveAttribute("data-ready", "true");
+  await expect(save).toHaveText("All changes saved");
+  await page.reload();
+  await expect(save).toHaveAttribute("data-ready", "true");
+  await expect(save).toHaveText("All changes saved");
+});
