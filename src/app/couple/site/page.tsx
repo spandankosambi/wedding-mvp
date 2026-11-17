@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { sideNamesOf, type SideNames } from "@/lib/side-names";
 import { EventSideField } from "./EventSideField";
 import { EventIconField } from "./EventIconField";
 import { asFamilySide, getLooks, hasPart, namesFor, otherSide, samePart, sideName, type FamilySide, type Look, type LookPart } from "@/lib/looks";
@@ -45,14 +46,14 @@ const Field = ({ label, hint, children, className = "" }: { label: string; hint?
   </label>
 );
 
-/** "Same as the groom's family" — offered once the other family has filled this part in. */
-function SameAsPartner({ part, family, partner, mine, hidden }: { part: LookPart; family: FamilySide; partner: Look; mine: Look; hidden: React.ReactNode }) {
+/** "Same as Spandan's family" — offered once the other family has filled this part in. */
+function SameAsPartner({ part, family, partner, mine, hidden, names }: { part: LookPart; family: FamilySide; partner: Look; mine: Look; hidden: React.ReactNode; names: SideNames }) {
   if (!hasPart(partner, part) || samePart(partner, mine, part)) return null;
   return (
     <form action={copyPartAction}>
       {hidden}
       <input type="hidden" name="part" value={part} />
-      <button type="submit" className="portal-button-secondary">Same as the {otherSide(family)}&apos;s family</button>
+      <button type="submit" className="portal-button-secondary">Same as {names[otherSide(family)]}&apos;s family</button>
     </form>
   );
 }
@@ -78,7 +79,8 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
   // this family's section: common events and its own
   const evs = (await db.select().from(events).where(eq(events.weddingId, weddingId)).orderBy(events.sortOrder, events.startsAt))
     .filter((e) => e.side === "both" || e.side === family);
-  const coupleNames = namesFor(w, family).couple; // this family's name order
+  const coupleNames = namesFor(w, family).couple;
+  const sn: SideNames = sideNamesOf(w); // "Pooja", "Spandan" // this family's name order
   const hidden = evs.filter((e) => !e.isPublished).length;
   const wid = (
     <>
@@ -89,14 +91,14 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
   const gal = galleryOf(look);
   const uploadsOn = photoStorageConfigured();
   const adminQ = staff.role === "admin" ? `wedding=${weddingId}&` : "";
-  const same = (part: LookPart) => !seesSide(staff.access, otherSide(family)) ? null : <SameAsPartner part={part} family={family} partner={partner} mine={look} hidden={wid} />;
+  const same = (part: LookPart) => !seesSide(staff.access, otherSide(family)) ? null : <SameAsPartner part={part} family={family} partner={partner} mine={look} hidden={wid} names={sn} />;
 
   return (
     <main className="portal-page">
-      <PortalNav names={coupleNames} current={family} page="site" weddingId={weddingId} admin={!!adminQ} access={staff.access} />
+      <PortalNav sideNames={sn} names={coupleNames} current={family} page="site" weddingId={weddingId} admin={!!adminQ} access={staff.access} />
       <PortalFrame
         jump={[["theme", "Look"], ["decor", "Design touches"], ["wording", "Invitation wording"], ["words", "Tagline & story"], ["events", "Celebrations"], ["travel", "Travel & stay"], ["gallery", "Photos"], ["know", "Things to know"], ["music", "Music"]]}
-        right={<Checklist title={`${family === "bride" ? "Bride" : "Groom"}'s side: what's done`} items={checklist} />}
+        right={<Checklist title={`${sn[family]}'s side: what's done`} items={checklist} />}
       >
         {readOnly && (
           <p className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status" data-testid="view-only">
@@ -107,7 +109,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
         <fieldset disabled={readOnly} className="portal-fieldset">
         <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div className="max-w-2xl">
-            <h1 className="portal-heading">Edit the {family === "bride" ? "bride" : "groom"}&apos;s family&apos;s site</h1>
+            <h1 className="portal-heading">Edit {sn[family]}&apos;s family&apos;s site</h1>
             <p className="portal-subheading mt-3">
               What the {family}&apos;s guests see: your look, words, celebrations, travel and photos. The names, date
               and city are shared — change them on the <Link href={`/couple${adminQ ? `?${adminQ.slice(0, -1)}` : ""}`} className="underline">dashboard</Link>.
@@ -130,7 +132,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
         <div className="space-y-8">
           {/* ── Theme ───────────────────────────────────────────── */}
           <div id="theme">
-            <ThemeSwitcher weddingId={weddingId} current={look.theme} slug={w.slug} previewHref={sharePath(w.slug, family, look.shareKey)} coupleNames={coupleNames} family={family} partnerTheme={partner.theme} />
+            <ThemeSwitcher weddingId={weddingId} current={look.theme} slug={w.slug} previewHref={sharePath(w.slug, family, look.shareKey)} coupleNames={coupleNames} family={family} partnerTheme={partner.theme} names={sn} />
           </div>
 
           {/* ── Design touches ─────────────────────────────────── */}
@@ -310,7 +312,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                         <Field label="Map link" hint="Google Maps share link"><input name="mapUrl" type="url" defaultValue={e.mapUrl ?? ""} maxLength={500} placeholder="https://maps.app.goo.gl/…" className="portal-input" /></Field>
                         <Field label="Dress code"><input name="dressCode" defaultValue={e.dressCode ?? ""} maxLength={80} placeholder="Yellows / Traditional / Cocktail" className="portal-input" /></Field>
                         <Field label="A line about it" className="md:col-span-2"><input name="description" defaultValue={e.description ?? ""} maxLength={400} className="portal-input" /></Field>
-                        <EventSideField initial={e.side} eventName={e.name} family={family} />
+                        <EventSideField initial={e.side} eventName={e.name} family={family} names={sn} />
                         <EventIconField initial={e.icon} initialImage={e.iconImage} eventName={e.name} enabled={decor.icons} />
                         <label className="flex items-center gap-2 text-sm md:col-span-2">
                           <input type="checkbox" name="isPublished" defaultChecked={e.isPublished} className="h-4 w-4" />
@@ -359,7 +361,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
             </div>
             <form action={saveTravel} data-save-part="travel" className="mt-5 space-y-4">
               {wid}
-              <StaysEditor initial={look.travel?.stays ?? []} family={family} max={MAX_STAYS} />
+              <StaysEditor initial={look.travel?.stays ?? []} family={family} max={MAX_STAYS} names={sn} />
               <Field label="Getting there" hint="airport, distances, shuttles">
                 <textarea name="gettingThere" defaultValue={look.travel?.gettingThere ?? ""} maxLength={1200} rows={3} className="portal-input resize-y" placeholder="Fly into Mumbai (BOM). Both hotels are 20–40 minutes from the terminals…" />
               </Field>

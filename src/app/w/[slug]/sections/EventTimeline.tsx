@@ -1,6 +1,7 @@
 import { SectionHeader } from "./SectionHeader";
 import { fmtEventDate, fmtEventTime } from "@/lib/format";
 import { sideLabel, type Side } from "@/lib/sides";
+import type { SideNames } from "@/lib/side-names";
 import { icon, iconOf } from "@/lib/invitation/decor";
 import { MotifSvg } from "@/components/MotifSvg";
 import { iconPng } from "@/lib/icon-png";
@@ -27,7 +28,7 @@ type EventRow = {
   side?: Side;
 };
 
-export function EventTimeline({ theme: _theme, events, no = "02", icons = false }: { theme: string; events: EventRow[]; no?: string; icons?: boolean }) {
+export function EventTimeline({ theme: _theme, events, no = "02", icons = false, names }: { theme: string; events: EventRow[]; no?: string; icons?: boolean; names?: SideNames }) {
   return (
     <section className="mx-auto max-w-5xl px-6 py-24 md:py-32">
       <SectionHeader no={no} title="The Celebrations" />
@@ -49,8 +50,8 @@ export function EventTimeline({ theme: _theme, events, no = "02", icons = false 
             </span>
             <div className="md:col-span-6">
               <h3 className="font-display text-4xl tracking-tight md:text-5xl">{e.name}</h3>
-              {e.side && sideLabel(e.side) && (
-                <p className="kicker mt-3" style={{ color: "var(--accent)" }}>{sideLabel(e.side)}</p>
+              {e.side && sideLabel(e.side, names) && (
+                <p className="kicker mt-3" style={{ color: "var(--accent)" }}>{sideLabel(e.side, names)}</p>
               )}
               <p className="kicker mt-4">
                 {fmtEventDate(e.startsAt)} · {fmtEventTime(e.startsAt)}

@@ -54,13 +54,13 @@ test("the couple give a friend view-only access to one side, widen it, then remo
   await signIn(theirs, friend);
   await expect(theirs).toHaveURL(/\/couple$/);
   const sections = theirs.getByRole("navigation", { name: "Sections" });
-  await expect(sections.getByRole("link", { name: "Bride's side" })).toBeVisible();
-  await expect(sections.getByRole("link", { name: "Groom's side" })).toHaveCount(0);
+  await expect(sections.getByRole("link", { name: "Karishma's side" })).toBeVisible();
+  await expect(sections.getByRole("link", { name: "Gaurav's side" })).toHaveCount(0);
   await expect(theirs.getByRole("link", { name: "People", exact: true })).toHaveCount(0);
-  await expect(theirs.getByRole("region", { name: "Groom's family" })).toHaveCount(0);
+  await expect(theirs.getByRole("region", { name: "Gaurav's family" })).toHaveCount(0);
   await expect(theirs.getByRole("heading", { name: "Names, date, city, parents" })).toHaveCount(0);
-  await sections.getByRole("link", { name: "Bride's side" }).click();
-  const pages = theirs.getByRole("navigation", { name: "Bride's side pages" });
+  await sections.getByRole("link", { name: "Karishma's side" }).click();
+  const pages = theirs.getByRole("navigation", { name: "Karishma's side pages" });
   await expect(pages.getByRole("link")).toHaveText(["Overview", "Edit your site"]);
   await pages.getByRole("link", { name: "Edit your site" }).click();
   await expect(theirs.getByTestId("view-only")).toBeVisible();
@@ -84,7 +84,7 @@ test("the couple give a friend view-only access to one side, widen it, then remo
   await page.getByTestId("floating-save").click();
   await expect(page.locator("p[role=status]")).toContainText("Saved.");
   await theirs.goto("/committee?family=groom");
-  await expect(theirs.getByRole("heading", { name: /Groom's family's guest list/ })).toBeVisible();
+  await expect(theirs.getByRole("heading", { name: /Gaurav's family's guest list/ })).toBeVisible();
   await expect(theirs.getByRole("button", { name: "Add family" })).toBeEnabled();
 
   // ── view-only guest list: look, search, but change nothing ──
@@ -121,10 +121,10 @@ test("every page shares one layout: On this page and About us on the left, what'
   // the dashboard: both families in one table, a step per row and a column each
   await page.goto("/couple");
   const both = page.getByRole("region", { name: "Both sides: what's done" });
-  await expect(both.getByRole("columnheader", { name: /Bride/ })).toBeVisible();
-  await expect(both.getByRole("columnheader", { name: /Groom/ })).toBeVisible();
+  await expect(both.getByRole("columnheader", { name: /Karishma/ })).toBeVisible();
+  await expect(both.getByRole("columnheader", { name: /Gaurav/ })).toBeVisible();
   await expect(both.locator("tbody tr")).toHaveCount(10);
-  await expect(page.getByRole("region", { name: /^(Bride|Groom)'s side: what's done$/ })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: /^(Karishma|Gaurav)'s side: what's done$/ })).toHaveCount(0);
   // our logo leads every signed-in page's top bar, ahead of the couple's names
   for (const url of ["/couple", "/couple/groom", "/committee?family=groom", "/couple/people"]) {
     await page.goto(url);
@@ -134,7 +134,7 @@ test("every page shares one layout: On this page and About us on the left, what'
   }
   // the checklist's open steps link to where they are done
   await page.goto("/couple/groom");
-  const list = page.getByRole("region", { name: "Groom's side: what's done" });
+  const list = page.getByRole("region", { name: "Gaurav's side: what's done" });
   await expect(list).toContainText(/\d+ of 10 done/);
   if (shots) await page.screenshot({ path: `${shots}/layout-overview.png` });
 });

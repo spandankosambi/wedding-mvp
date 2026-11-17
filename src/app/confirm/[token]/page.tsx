@@ -40,7 +40,7 @@ export default async function ConfirmPage({ params, searchParams }: {
         "All gallery photos",
         "Every login for this wedding, including yours (" + a.email + ")",
       ]
-    : a.scope ? resetItems(a.scope) : [];
+    : a.scope ? resetItems(a.scope, a.sideNames) : [];
 
   return (
     <main data-theme="ivory-editorial" className="themed flex min-h-svh flex-col items-center justify-center px-6 py-16">

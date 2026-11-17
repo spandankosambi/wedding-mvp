@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { sideNamesOf } from "@/lib/side-names";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings } from "@/db/schema";
@@ -56,6 +57,7 @@ export default async function CouplePage({
     Promise.all(mySides.map((s) => getChecklist(weddingId!, s, staff.role === "admin"))),
   ]);
   const bySide = { bride, groom };
+  const sn = sideNamesOf(wedding); // "Pooja", "Spandan"
   const all = one ? bySide[one] : both;
   const coupleNames = `${wedding.brideName} & ${wedding.groomName}`;
   const adminQ = staff.role === "admin" ? `?wedding=${weddingId}` : "";
@@ -64,12 +66,12 @@ export default async function CouplePage({
 
   return (
     <main className="portal-page">
-      <PortalNav names={coupleNames} current="dashboard" weddingId={weddingId} admin={staff.role === "admin"} access={staff.access} />
+      <PortalNav sideNames={sn} names={coupleNames} current="dashboard" weddingId={weddingId} admin={staff.role === "admin"} access={staff.access} />
       <PortalFrame
         jump={[["numbers", "The numbers"], ["families", one ? "Your section" : "The two families"], ...(staff.access.manage ? [["details", "Shared details"], ["people", "People & access"]] as [string, string][] : [])]}
         right={mySides.length > 1
-          ? <ChecklistTable sides={mySides.map((side, i) => ({ side, items: lists[i] }))} />
-          : <>{mySides.map((s, i) => <Checklist key={s} title={`${s === "bride" ? "Bride" : "Groom"}'s side: what's done`} items={lists[i]} />)}</>}
+          ? <ChecklistTable names={sn} sides={mySides.map((side, i) => ({ side, items: lists[i] }))} />
+          : <>{mySides.map((s, i) => <Checklist key={s} title={`${sn[s]}'s side: what's done`} items={lists[i]} />)}</>}
       >
       <header className="mb-8">
         <h1 className="portal-heading">Your wedding at a glance</h1>
@@ -89,8 +91,8 @@ export default async function CouplePage({
 
       {/* ── key numbers ─────────────────────────────────────────── */}
       <div id="numbers" className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="Families invited" value={all.families.length} sub={one ? undefined : `${bride.families.length} bride's · ${groom.families.length} groom's`} />
-        <Stat label="Guests" value={attending} sub={one ? undefined : `${bride.guests.length} bride's · ${groom.guests.length} groom's`} />
+        <Stat label="Families invited" value={all.families.length} sub={one ? undefined : `${bride.families.length} ${sn.bride}'s · ${groom.families.length} ${sn.groom}'s`} />
+        <Stat label="Guests" value={attending} sub={one ? undefined : `${bride.guests.length} ${sn.bride}'s · ${groom.guests.length} ${sn.groom}'s`} />
         <Stat label="Response rate" value={`${all.responseRate}%`} sub={`${all.respondedCount} of ${all.families.length} families`} />
         <Stat label="Peak attendance" value={all.peak} sub="largest single event" />
       </div>
@@ -105,11 +107,11 @@ export default async function CouplePage({
           const st = bySide[side];
           const meta = THEME_META[looks[side].theme];
           return (
-            <section key={side} className="overflow-hidden rounded-xl border border-neutral-200 bg-white" aria-label={sideName(side)}>
+            <section key={side} className="overflow-hidden rounded-xl border border-neutral-200 bg-white" aria-label={sideName(side, sn)}>
               <div className="flex items-center justify-between gap-3 px-6 py-4" style={{ background: meta.bg, color: meta.ink }}>
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.25em] opacity-70">{meta.label}</p>
-                  <h2 className="mt-1 text-lg font-semibold">{sideName(side)}</h2>
+                  <h2 className="mt-1 text-lg font-semibold">{sideName(side, sn)}</h2>
                 </div>
                 <div className="flex gap-1.5">
                   {meta.dots.map((c) => <span key={c} className="h-3.5 w-3.5 rounded-full border border-black/10" style={{ background: c }} />)}
@@ -122,7 +124,7 @@ export default async function CouplePage({
                   <div><dt className="text-xs text-neutral-500">Replied</dt><dd className="mt-1 text-xl font-semibold tabular-nums">{st.responseRate}%</dd></div>
                 </dl>
                 <div className="mt-5 flex flex-wrap gap-2">
-                  <Link href={`/couple/${side}${adminQ}`} className="portal-button">Open {side === "bride" ? "bride" : "groom"}&apos;s section →</Link>
+                  <Link href={`/couple/${side}${adminQ}`} className="portal-button">Open {sn[side]}&apos;s section →</Link>
                   <a href={sharePath(wedding.slug, side, looks[side].shareKey)} target="_blank" rel="noreferrer" className="portal-button-secondary">View site ↗</a>
                 </div>
               </div>
@@ -154,7 +156,7 @@ export default async function CouplePage({
         <p className="portal-eyebrow">People &amp; access</p>
         <h2 className="mt-1 font-semibold">Who can sign in, and what they can do</h2>
         <p className="mt-2 max-w-2xl text-sm text-neutral-600">
-          Give family and friends their own sign-in, on the bride&apos;s side, the groom&apos;s side or both, and choose what each may see or change.
+          Give family and friends their own sign-in, on {sn.bride}&apos;s side, {sn.groom}&apos;s side or both, and choose what each may see or change.
         </p>
         <Link href={`/couple/people${adminQ}`} className="portal-button mt-4">Manage people</Link>
       </section>

@@ -1,5 +1,6 @@
 "use client";
 
+import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
 import { useState } from "react";
 import type { Side } from "@/lib/sides";
 
@@ -9,9 +10,9 @@ import type { Side } from "@/lib/sides";
  * family's section and site, and only their households can be invited to it.
  * Posts as `side` with the event form.
  */
-export function EventSideField({ initial, eventName, family }: { initial: Side; eventName: string; family: "bride" | "groom" }) {
+export function EventSideField({ initial, eventName, family, names = DEFAULT_SIDE_NAMES }: { initial: Side; eventName: string; family: "bride" | "groom"; names?: SideNames }) {
   const [common, setCommon] = useState(initial === "both");
-  const own = family === "bride" ? "the bride's family's" : "the groom's family's";
+  const own = `${names[family]}'s family's`;
   return (
     <div className="md:col-span-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
       <input type="hidden" name="side" value={common ? "both" : family} />

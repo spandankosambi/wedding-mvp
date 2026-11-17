@@ -29,7 +29,7 @@ test("a couple signs up, edits their site, and a guest RSVPs from the shared lin
   await page.goto(signInUrl(email));
   await expect(page).toHaveURL(/\/couple\/site/);
   // (the bride's family's section, to start)
-  await expect(page.getByRole("heading", { name: /edit the bride's family's site/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /edit Sanya's family's site/i })).toBeVisible();
   // a new wedding starts with only the wedding day…
   await expect(page.getByText("1 event", { exact: true })).toBeVisible();
   // …and the couple adds the rest of the week from the picker
@@ -82,8 +82,8 @@ test("a couple signs up, edits their site, and a guest RSVPs from the shared lin
 
   // ── the dashboard counts them; the bride's section lists them ──
   await page.goto("/couple");
-  await expect(page.getByRole("region", { name: "Bride's family" })).toContainText("Families1");
-  await page.getByRole("link", { name: "Open bride's section →" }).click();
+  await expect(page.getByRole("region", { name: "Sanya's family" })).toContainText("Families1");
+  await page.getByRole("link", { name: "Open Sanya's section →" }).click();
   await expect(page.getByText(/of 1 families/)).toBeVisible(); // the household is counted here; its name is in the guest list
 
   // the link the bride's family is told to share must point at the host they are on —

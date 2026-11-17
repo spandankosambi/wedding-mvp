@@ -1,5 +1,6 @@
 "use client";
 
+import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
 import { useState } from "react";
 
 type Stay = { name: string; note: string; url?: string; common?: boolean };
@@ -10,14 +11,14 @@ type Row = Stay & { key: number };
  * either common for both families or this family's own. Posts as
  * stay{i}name / note / url / common with the travel form.
  */
-export function StaysEditor({ initial, family, max }: { initial: Stay[]; family: "bride" | "groom"; max: number }) {
+export function StaysEditor({ initial, family, max, names = DEFAULT_SIDE_NAMES }: { initial: Stay[]; family: "bride" | "groom"; max: number; names?: SideNames }) {
   let next = 0;
   const [rows, setRows] = useState<Row[]>(() =>
     (initial.length ? initial : [{ name: "", note: "", url: "", common: true }]).map((s) => ({ ...s, key: next++ })),
   );
   const [counter, setCounter] = useState(rows.length);
-  const own = family === "bride" ? "the bride's family's" : "the groom's family's";
-  const other = family === "bride" ? "groom's" : "bride's";
+  const own = `${names[family]}'s family's`;
+  const other = `${names[family === "bride" ? "groom" : "bride"]}'s`;
 
   const update = (key: number, patch: Partial<Stay>) => setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
 
@@ -62,7 +63,7 @@ export function StaysEditor({ initial, family, max }: { initial: Stay[]; family:
                   Common for both families
                   <span className="block text-xs text-neutral-500">
                     {s.common
-                      ? `Also shown on the ${other} family's site, and they can edit it too.`
+                      ? `Also shown on ${other} family's site, and they can edit it too.`
                       : `Only on ${own} site.`}
                   </span>
                 </span>

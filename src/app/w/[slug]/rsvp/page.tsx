@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { sideNamesOf } from "@/lib/side-names";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPublicWedding, rsvpWindow } from "@/lib/open-rsvp";
@@ -63,6 +64,7 @@ export default async function OpenRsvpPage({ params, searchParams }: { params: P
         {window.open && events.length > 0 && (
           <OpenRsvpForm
             slug={slug}
+            names={sideNamesOf(data.wedding)}
             initialSide={side}
             shareKey={look.shareKey}
             events={events.map((e) => ({

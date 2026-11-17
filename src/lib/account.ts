@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FAMILY_SIDES, getLooks, otherSide, photoInUse, sideName, updateLook, type FamilySide, type LookPatch } from "@/lib/looks";
+import { FAMILY_SIDES, getLooks, otherSide, photoInUse, sideName, sideNamesOf, updateLook, type FamilySide, type LookPatch, type SideNames } from "@/lib/looks";
 import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
@@ -40,11 +40,11 @@ export const SIDE_RESET_LABELS: Record<Exclude<keyof ResetScope, "side" | "commi
   content: "This family's site text and look — story, tagline, travel, hashtag, contact, theme, RSVP settings",
 };
 
-/** What a reset request will erase, in the couple's words. */
-export function resetItems(scope: ResetScope): string[] {
+/** What a reset request will erase, in the couple's words ("Pooja's family: …"). */
+export function resetItems(scope: ResetScope, names?: SideNames): string[] {
   if (scope.side) {
     const keys = Object.keys(SIDE_RESET_LABELS) as (keyof typeof SIDE_RESET_LABELS)[];
-    return keys.filter((k) => scope[k]).map((k) => `${sideName(scope.side!)}: ${SIDE_RESET_LABELS[k]}`);
+    return keys.filter((k) => scope[k]).map((k) => `${sideName(scope.side!, names)}: ${SIDE_RESET_LABELS[k]}`);
   }
   const keys = Object.keys(RESET_LABELS) as (keyof typeof RESET_LABELS)[];
   return keys.filter((k) => scope[k]).map((k) => RESET_LABELS[k]);
@@ -63,7 +63,7 @@ export async function createAction(
 
 export type PendingAction = {
   id: string; kind: "delete" | "reset"; scope: ResetScope | null; weddingId: string; userId: string;
-  coupleNames: string; slug: string; email: string;
+  coupleNames: string; slug: string; email: string; sideNames: SideNames;
 };
 
 /** A valid, unused, unexpired request for this token — or why not. */
@@ -80,7 +80,7 @@ export async function findAction(token: string): Promise<{ ok: true; action: Pen
     ok: true,
     action: {
       id: a.id, kind: a.kind, scope: a.scope ?? null, weddingId: w.id, userId: u.id,
-      coupleNames: `${w.brideName} & ${w.groomName}`, slug: w.slug, email: u.email,
+      coupleNames: `${w.brideName} & ${w.groomName}`, slug: w.slug, email: u.email, sideNames: sideNamesOf(w),
     },
   };
 }

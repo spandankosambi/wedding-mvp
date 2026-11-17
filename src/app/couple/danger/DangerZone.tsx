@@ -1,5 +1,6 @@
 "use client";
 
+import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
 import { useState, useTransition } from "react";
 import type { ResetScope } from "@/db/schema";
 import { requestDeleteWedding, requestResetWedding } from "./actions";
@@ -23,9 +24,9 @@ type Sent = { email: string; minutes: number; kind: "delete" | "reset" };
  * With `family`: that family's Reset (in its section). Without: Delete the
  * whole wedding website (on the dashboard).
  */
-export function DangerZone({ coupleNames, family }: { coupleNames: string; family?: "bride" | "groom" }) {
+export function DangerZone({ coupleNames, family, names = DEFAULT_SIDE_NAMES }: { coupleNames: string; family?: "bride" | "groom"; names?: SideNames }) {
   const [scope, setScope] = useState<ResetScope>({ ...NONE, ...(family && { side: family }) });
-  const whose = family === "groom" ? "the groom's family's" : "the bride's family's";
+  const whose = `${names[family ?? "bride"]}'s family's`;
   const [confirming, setConfirming] = useState<"reset" | "delete" | null>(null);
   const [understood, setUnderstood] = useState(false);
   const [sent, setSent] = useState<Sent | null>(null);

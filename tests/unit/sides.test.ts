@@ -19,6 +19,7 @@ describe("sides", () => {
   });
   it("labels one-side events so two Haldis can be told apart", () => {
     expect(eventLabel({ name: "Haldi", side: "bride" })).toBe("Haldi · Bride");
+    expect(eventLabel({ name: "Haldi", side: "bride" }, { bride: "Pooja", groom: "Spandan" })).toBe("Haldi · Pooja");
     expect(eventLabel({ name: "Haldi", side: "groom" })).toBe("Haldi · Groom");
     expect(eventLabel({ name: "Wedding", side: "both" })).toBe("Wedding");
     expect(sideLabel("groom")).toBe("Groom's side");
@@ -67,7 +68,7 @@ describe("splitting an event by side", () => {
     expect((await db.select().from(rsvps).where(eq(rsvps.familyId, groom.id)))).toHaveLength(0);
     expect((await db.select().from(rsvps).where(eq(rsvps.familyId, bride.id)))).toHaveLength(1);
     // the dashboards can tell the two Haldis apart
-    expect((await getRsvpSummary(weddingId)).map((s) => s.eventName)).toEqual(["Haldi · Bride", "Wedding"]);
+    expect((await getRsvpSummary(weddingId)).map((s) => s.eventName)).toEqual(["Haldi · Pooja", "Wedding"]);
   });
 
   it("a groom-side household invited to everything open to them gets Travel & Stay automatically", async () => {

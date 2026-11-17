@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ChecklistItem } from "@/lib/checklist";
 import { JumpNav } from "./JumpNav";
 import { CONTACT_EMAIL } from "@/lib/brand";
+import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
 
 /* Edit these three to change what the "About us" box says on every page. */
 export const ABOUT = {
@@ -57,9 +58,9 @@ export function Checklist({ title, items }: { title: string; items: ChecklistIte
  * family (the steps are the same for both). An unfinished step links to that
  * family's page for it.
  */
-export function ChecklistTable({ sides }: { sides: { side: "bride" | "groom"; items: ChecklistItem[] }[] }) {
+export function ChecklistTable({ sides, names = DEFAULT_SIDE_NAMES }: { sides: { side: "bride" | "groom"; items: ChecklistItem[] }[]; names?: SideNames }) {
   const rows = sides[0]?.items ?? [];
-  const label = (s: "bride" | "groom") => (s === "bride" ? "Bride" : "Groom");
+  const label = (s: "bride" | "groom") => names[s];
   return (
     <section className="portal-checklist portal-checklist-table" aria-label="Both sides: what's done">
       <p className="portal-jump-label">What&apos;s done</p>

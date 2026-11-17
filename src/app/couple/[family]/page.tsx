@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { sideNamesOf } from "@/lib/side-names";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
@@ -51,19 +52,20 @@ export default async function FamilySection({
   const admin = staff.role === "admin";
   const q = (extra: string) => (admin ? `?wedding=${weddingId}&${extra}` : `?${extra}`);
   const meta = THEME_META[look.theme];
-  const who = family === "bride" ? "bride" : "groom";
+  const sn = sideNamesOf(wedding); // "Pooja", "Spandan"
+  const who = sn[family];
 
   return (
     <main className="portal-page">
-      <PortalNav names={coupleNames} current={family} page="overview" weddingId={weddingId} admin={admin} access={staff.access} />
+      <PortalNav sideNames={sn} names={coupleNames} current={family} page="overview" weddingId={weddingId} admin={admin} access={staff.access} />
       <PortalFrame
         jump={[["share", "Link to share"], ["numbers", "Replies so far"], ["rsvp", "RSVP settings"], ...(staff.role === "couple" ? [["reset", "Reset"] as [string, string]] : [])]}
-        right={<Checklist title={`${who === "bride" ? "Bride" : "Groom"}'s side: what's done`} items={checklist} />}
+        right={<Checklist title={`${who}'s side: what's done`} items={checklist} />}
       >
       <header className="mb-6">
-        <h1 className="portal-heading">{sideName(family)}</h1>
+        <h1 className="portal-heading">{sideName(family, sn)}</h1>
         <p className="portal-subheading mt-3">
-          The link to share, replies so far and RSVP settings for the {who}&apos;s side — in the{" "}
+          The link to share, replies so far and RSVP settings for {who}&apos;s side — in the{" "}
           <span className="font-medium text-neutral-700">{meta.label}</span> look. Use the bar above to edit the site, work the guest list or print cards.
         </p>
       </header>
@@ -106,7 +108,7 @@ export default async function FamilySection({
 
       <section id="rsvp" className="portal-panel p-6">
         <p className="portal-eyebrow">RSVP</p>
-        <h2 className="mt-1 font-semibold">Who can reply to the {who}&apos;s side, and until when</h2>
+        <h2 className="mt-1 font-semibold">Who can reply to {who}&apos;s side, and until when</h2>
         <p className="mt-1 text-sm text-neutral-500">Families on your guest list always reply from their personal invitation links, until the reply-by date.</p>
         <form action={saveRsvpSettings} data-save-part="rsvp" className="mt-5 space-y-4">
           <fieldset disabled={!canRsvp} className="portal-fieldset space-y-4">
@@ -116,7 +118,7 @@ export default async function FamilySection({
             <input type="checkbox" name="rsvpOpen" defaultChecked={look.rsvpOpen} className="mt-0.5 h-4 w-4" />
             <span>
               <span className="font-medium">Accept replies from people who are not on the guest list</span>
-              <span className="block text-xs text-neutral-500">Off (the default): only families you invited from the guest list can reply, from their personal links. On: anyone who opens the {who}&apos;s shared link or QR can reply, and is added to the guest list marked &ldquo;via link&rdquo;.</span>
+              <span className="block text-xs text-neutral-500">Off (the default): only families you invited from the guest list can reply, from their personal links. On: anyone who opens {who}&apos;s shared link or QR can reply, and is added to the guest list marked &ldquo;via link&rdquo;.</span>
             </span>
           </label>
           <label className="block">
@@ -132,12 +134,12 @@ export default async function FamilySection({
       </section>
 
       {/* only the couple themselves can reset; admins have their own tools */}
-      {staff.role === "couple" && <div className="mt-6" id="reset"><DangerZone coupleNames={coupleNames} family={family} /></div>}
+      {staff.role === "couple" && <div className="mt-6" id="reset"><DangerZone coupleNames={coupleNames} family={family} names={sn} /></div>}
 
       {seesSide(staff.access, otherSide(family)) && (
       <p className="mt-8 text-center text-xs text-neutral-400">
-        Looking for the other side? Open the{" "}
-        <Link href={`/couple/${otherSide(family)}${admin ? `?wedding=${weddingId}` : ""}`} className="underline">{sideName(otherSide(family)).toLowerCase()}&apos;s section</Link>.
+        Looking for the other side? Open{" "}
+        <Link href={`/couple/${otherSide(family)}${admin ? `?wedding=${weddingId}` : ""}`} className="underline">{sn[otherSide(family)]}&apos;s section</Link>.
       </p>
       )}
       </PortalFrame>

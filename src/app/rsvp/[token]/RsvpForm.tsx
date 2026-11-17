@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { submitRsvpAction } from "../actions";
 import { fmtEventDate, fmtEventTime } from "@/lib/format";
 import { sideLabel, type Side } from "@/lib/sides";
+import type { SideNames } from "@/lib/side-names";
 
 type EventProp = {
   id: string;
@@ -22,10 +23,13 @@ export function RsvpForm({
   token,
   members,
   events,
+  names,
 }: {
   token: string;
   members: { id: string; fullName: string }[];
   events: EventProp[];
+  /** the two families' first names, for "Pooja's side" */
+  names?: SideNames;
 }) {
   const everyone = members.map((m) => m.id);
   const [statuses, setStatuses] = useState<Record<string, Status>>(
@@ -99,8 +103,8 @@ export function RsvpForm({
                   {fmtEventDate(startsAt)} · {fmtEventTime(startsAt)}
                 </p>
               </div>
-              {sideLabel(e.side) && (
-                <p className="kicker mt-2" style={{ color: "var(--accent)", letterSpacing: "0.18em" }}>{sideLabel(e.side)}</p>
+              {sideLabel(e.side, names) && (
+                <p className="kicker mt-2" style={{ color: "var(--accent)", letterSpacing: "0.18em" }}>{sideLabel(e.side, names)}</p>
               )}
               <p className="mt-2 text-sm" style={{ color: "var(--ink-soft)" }}>
                 {e.venueName} — {e.address}

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { ImageGuard } from "@/components/ImageGuard";
+import { sideNamesOf } from "@/lib/side-names";
 import type { Metadata } from "next";
 import { getPublicWedding } from "@/lib/open-rsvp";
 import { fixShortMapLinks } from "@/lib/maplinks";
@@ -145,7 +146,7 @@ export default async function WeddingPage({
       <Hero wedding={wedding} side={side} city={weddingCity(wedding.city, events)} decor={wedding.decor} />
       <Marquee items={[...shown.map((e) => e.name), fmtWeddingDate(wedding.weddingDate)]} />
       <Story theme={wedding.theme} story={wedding.story} no={storyNo} divider={wedding.decor.divider} />
-      <EventTimeline theme={wedding.theme} events={shown} no={eventsNo} icons={wedding.decor.icons} />
+      <EventTimeline theme={wedding.theme} events={shown} no={eventsNo} icons={wedding.decor.icons} names={sideNamesOf(wedding)} />
       {hasTravel && <TravelStay travel={wedding.travel} no={travelNo} />}
       {gallery.enabled && <Gallery theme={wedding.theme} no={galleryNo} photos={gallery.photos} />}
       <ThingsToKnow items={wedding.know} no={knowNo} />

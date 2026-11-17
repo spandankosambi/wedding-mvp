@@ -72,10 +72,10 @@ test("setup and design — with the live preview on every page — then download
   await signIn(page, "couple@example.com");
   // each family prints its own cards, from its section
   await page.goto("/couple/groom");
-  await page.getByRole("navigation", { name: "Groom's side pages" }).getByRole("link", { name: "Print cards" }).click();
+  await page.getByRole("navigation", { name: "Arjun's side pages" }).getByRole("link", { name: "Print cards" }).click();
   // printing is a page of its own, under the family's "Print cards" tab
   await expect(page).toHaveURL(/\/couple\/groom\/print$/);
-  await expect(page.getByRole("navigation", { name: "Groom's side pages" }).getByRole("link", { name: "Print cards" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("navigation", { name: "Arjun's side pages" }).getByRole("link", { name: "Print cards" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   const dialog = page.getByTestId("print-page");
   await expect(dialog).toBeVisible();
@@ -87,7 +87,7 @@ test("setup and design — with the live preview on every page — then download
   await expect(dialog.getByRole("button", { name: /Wording/ })).toHaveCount(0);
 
   // ── 1 · setup ──
-  await expect(dialog.getByText(/family.s card — hosted by their parents/)).toContainText("groom's family's");
+  await expect(dialog.getByText(/family.s card — hosted by their parents/)).toContainText("Arjun's family's");
   const words = dialog.getByTestId("card-wording");
   await expect(words).toContainText("॥ श्री गणेशाय नमः ॥");
   await expect(words).toContainText("Vikram Mehta  +91 98200 11111");

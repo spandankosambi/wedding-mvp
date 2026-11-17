@@ -4,6 +4,7 @@ import { weddings, weddingSides, type GalleryInfo, type KnowItem, type SiteMusic
 import { decorOf, type Decor } from "@/lib/site-decor";
 import { contactLine, contactsOf, type RsvpPerson } from "@/lib/contacts";
 import { newShareKey } from "@/lib/share";
+import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
 
 /**
  * The bride's family and the groom's each have their own look for the one
@@ -15,7 +16,9 @@ export const FAMILY_SIDES: readonly FamilySide[] = ["bride", "groom"];
 export type Look = typeof weddingSides.$inferSelect;
 
 export const otherSide = (s: FamilySide): FamilySide => (s === "bride" ? "groom" : "bride");
-export const sideName = (s: FamilySide) => (s === "bride" ? "Bride's family" : "Groom's family");
+/** "Pooja's family" */
+export const sideName = (s: FamilySide, names: SideNames = DEFAULT_SIDE_NAMES) => `${names[s]}'s family`;
+export { sideNamesOf, firstName, DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
 export function asFamilySide(v: unknown): FamilySide | null {
   return v === "bride" || v === "groom" ? v : null;
 }

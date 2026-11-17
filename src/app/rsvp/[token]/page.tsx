@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { sideNamesOf } from "@/lib/side-names";
 import { getFamilyByToken } from "@/lib/rsvp";
 import { fmtWeddingDate } from "@/lib/format";
 import { Ornament } from "@/themes/ornaments";
@@ -67,6 +68,7 @@ export default async function RsvpPage({
 
         <RsvpForm
           token={token}
+          names={sideNamesOf(wedding)}
           members={members.map((m) => ({ id: m.id, fullName: m.fullName }))}
           events={events.map((e) => ({
             id: e.id,

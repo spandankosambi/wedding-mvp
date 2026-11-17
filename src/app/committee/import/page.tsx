@@ -1,4 +1,6 @@
+import { SideNamesProvider } from "@/components/SideNames";
 import { PortalNav } from "../../couple/PortalNav";
+import { sideNamesOf } from "@/lib/side-names";
 import { namesFor } from "@/lib/looks";
 import Link from "next/link";
 import { eq } from "drizzle-orm";
@@ -40,7 +42,7 @@ export default async function ImportPage({
 
   return (
     <main className="portal-page">
-      <PortalNav names={namesFor(wedding, family).couple} current={family} page="guests" weddingId={weddingId} admin={staff.role === "admin"} access={staff.access} />
+      <PortalNav sideNames={sideNamesOf(wedding)} names={namesFor(wedding, family).couple} current={family} page="guests" weddingId={weddingId} admin={staff.role === "admin"} access={staff.access} />
       <PortalFrame>
         <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3">
           <div className="max-w-2xl">
@@ -52,6 +54,7 @@ export default async function ImportPage({
           <Link href={backHref} className="portal-button-secondary">← Back to guest list</Link>
         </header>
 
+        <SideNamesProvider names={sideNamesOf(wedding)}>
         <ImportWizard
           weddingId={weddingId}
           events={evs}
@@ -60,6 +63,7 @@ export default async function ImportPage({
           aiConfigured={aiConfigured()}
           family={family}
         />
+        </SideNamesProvider>
       </PortalFrame>
     </main>
   );

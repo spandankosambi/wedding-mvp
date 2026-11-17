@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import { AREA_LABELS, LEVEL_LABELS, REACH_LABELS, accessFor, type Grant } from "@/lib/access";
+import type { SideNames } from "@/lib/side-names";
 
 /* The people who can sign in to one wedding. The couple add family and
    friends, put each on a side and choose what they may do. Rules:
@@ -43,12 +44,13 @@ export async function listPeople(weddingId: string): Promise<Person[]> {
     .sort((a, b) => Number(b.isOwner) - Number(a.isOwner) || Number(b.role === "couple") - Number(a.role === "couple") || a.email.localeCompare(b.email));
 }
 
-/** A sentence for the email and the list: "the bride's side — Guest list: full access". */
-export function describe(p: Pick<Person, "role" | "side" | "site" | "guests" | "print">): string {
+/** A sentence for the email and the list: "Pooja's side: the dashboard and overview, Guest list (full access)". */
+export function describe(p: Pick<Person, "role" | "side" | "site" | "guests" | "print">, names?: SideNames): string {
   if (p.role === "couple") return "everything, on both sides";
   const parts = (["site", "guests", "print"] as const).filter((a) => p[a] !== "none")
     .map((a) => `${AREA_LABELS[a]} (${a === "print" ? "can print" : LEVEL_LABELS[p[a]].toLowerCase()})`);
-  return `${REACH_LABELS[p.side]}: the dashboard and overview${parts.length ? `, ${parts.join(", ")}` : ""}`;
+  const reach = names && p.side !== "both" ? `${names[p.side]}'s side` : REACH_LABELS[p.side];
+  return `${reach}: the dashboard and overview${parts.length ? `, ${parts.join(", ")}` : ""}`;
 }
 
 const row = (d: PersonInput) =>

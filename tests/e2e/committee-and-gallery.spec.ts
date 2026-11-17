@@ -125,21 +125,21 @@ test("the couple can get from the guest list back to their dashboard", async ({ 
   await page.goto("/committee?family=groom");
   // no separate "back" line: the bar's page tabs lead back to the family's overview
   await expect(page.getByRole("link", { name: /Back to groom/ })).toHaveCount(0);
-  await page.getByRole("navigation", { name: "Groom's side pages" }).getByRole("link", { name: "Overview" }).click();
+  await page.getByRole("navigation", { name: "Arjun's side pages" }).getByRole("link", { name: "Overview" }).click();
   await expect(page).toHaveURL(/\/couple\/groom$/);
   // the bar across the top is the same on every screen, in this family's name order
   const bar = page.getByRole("navigation", { name: "Sections" });
   await expect(page.locator(".portal-nav-brand")).toHaveText("Arjun & Ananya");
-  await expect(bar.getByRole("link", { name: "Groom's side" })).toHaveAttribute("aria-current", "page");
+  await expect(bar.getByRole("link", { name: "Arjun's side" })).toHaveAttribute("aria-current", "page");
   // everything sits on one line; the couple's names lead to the dashboard
   expect((await page.locator(".portal-nav").boundingBox())!.height).toBeLessThan(64);
   await page.locator("a.portal-nav-brand").click();
   await expect(page).toHaveURL(/\/couple$/);
   await expect(page.getByRole("heading", { name: "Your wedding at a glance" })).toBeVisible();
-  await bar.getByRole("link", { name: "Bride's side" }).click();
+  await bar.getByRole("link", { name: "Ananya's side" }).click();
   await expect(page).toHaveURL(/\/couple\/bride$/);
   // inside a family the same bar carries its pages — no second breadcrumb line
-  const pages = page.getByRole("navigation", { name: "Bride's side pages" });
+  const pages = page.getByRole("navigation", { name: "Ananya's side pages" });
   await expect(pages.getByRole("link", { name: "Overview" })).toHaveAttribute("aria-current", "page");
   await pages.getByRole("link", { name: "Guest list" }).click();
   await expect(page).toHaveURL(/\/committee\?family=bride$/);
@@ -148,7 +148,7 @@ test("the couple can get from the guest list back to their dashboard", async ({ 
   await expect(page.getByRole("navigation", { name: "Jump to" }).getByRole("link", { name: "Celebrations" })).toBeVisible();
   await expect(page.locator(".portal-nav")).toHaveCount(1);
   await pages.getByRole("link", { name: "Print cards" }).click();
-  await expect(page).toHaveURL(/\/couple\/bride\/print$/);
+  await expect(page).toHaveURL(/\/couple\/bride\/print$/, { timeout: 20_000 }); // a heavy page: slow the first time on a dev server
   await expect(page.getByTestId("print-page")).toBeVisible();
   // …and it signs you out
   await page.getByRole("button", { name: "Sign out" }).click();
@@ -225,7 +225,7 @@ test("Travel & Stay is one tick per household, from either view, and follows the
   await page.goto("/committee?family=groom&view=guests");
   await expect(page.getByLabel("Show Travel & Stay to Rohit Mehta")).toBeChecked();
   // …the bride's Office Gang to 3 of 5
-  await page.getByRole("navigation", { name: "Sections" }).getByRole("link", { name: "Bride's side" }).click();
+  await page.getByRole("navigation", { name: "Sections" }).getByRole("link", { name: "Ananya's side" }).click();
   await expect(page).toHaveURL(/family=bride/);
   await page.getByRole("navigation", { name: "View" }).getByRole("link", { name: /Guests ·/ }).click();
   await expect(page).toHaveURL(/view=guests/);
@@ -283,10 +283,10 @@ test("the guest list: find a family, see who is still waiting, frozen titles, an
   await page.goto("/couple/groom");
   await expect(page.getByRole("link", { name: "Print invitation cards" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Still waiting on" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: /Who can reply to the groom's side/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Who can reply to Arjun's side/ })).toBeVisible();
   // switching family from the bar keeps you on the same kind of page
   await page.goto("/committee?family=groom");
-  await expect(page.getByRole("navigation", { name: "Sections" }).getByRole("link", { name: "Bride's side" })).toHaveAttribute("href", "/committee?family=bride");
+  await expect(page.getByRole("navigation", { name: "Sections" }).getByRole("link", { name: "Ananya's side" })).toHaveAttribute("href", "/committee?family=bride");
 
   const rows = page.locator("tbody tr");
   const all = await rows.count();

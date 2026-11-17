@@ -1,5 +1,6 @@
 "use client";
 
+import { useSideNames } from "@/components/SideNames";
 import { useState, useTransition } from "react";
 import { upsertFamily, deleteFamilyAction } from "./actions";
 import { invitesAll } from "@/lib/travel";
@@ -58,6 +59,7 @@ export function FamilyForm({
   focusGuestId?: string;
   onClose: (saved: boolean) => void;
 }) {
+  const names = useSideNames(); // "Pooja", "Spandan"
   const [form, setForm] = useState<FamilyDraft>(draft ?? { ...EMPTY, side: family });
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -167,8 +169,8 @@ export function FamilyForm({
                 className="portal-input mt-1"
                 aria-label="Side"
               >
-                <option value="bride">Bride&apos;s family</option>
-                <option value="groom">Groom&apos;s family</option>
+                <option value="bride">{names.bride}&apos;s family</option>
+                <option value="groom">{names.groom}&apos;s family</option>
               </select>
             </label>
             <label className="block">
@@ -299,7 +301,7 @@ export function FamilyForm({
             <legend className="text-xs font-medium uppercase tracking-wide text-neutral-500">Invited to</legend>
             {events.some((e) => e.side !== "both") && (
               <p className="mt-1 text-xs text-neutral-500">
-                Showing common and {form.side === "bride" ? "bride" : "groom"}&apos;s-side events.
+                Showing common events and {form.side === "groom" ? names.groom : names.bride}&apos;s own.
               </p>
             )}
             <div className="mt-1 flex flex-wrap gap-2">

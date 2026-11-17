@@ -1,5 +1,6 @@
 "use client";
 
+import { sideNamesOf } from "@/lib/side-names";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adoptCardWordingAction, savePrintConfigAction } from "./actions";
@@ -251,6 +252,7 @@ function PdfPages({ pdf }: { pdf: Blob | null }) {
 
 /** The print page: the questions, the design, a live preview, the PDF. */
 export function PrintInvitation(props: Props) {
+  const names = sideNamesOf(props); // "Pooja", "Spandan"
   const [step, setStep] = useState<Step>(1);
   const [symbolError, setSymbolError] = useState<string | null>(null);
   const [form, setForm] = useState<Form>(() => initial(props));
@@ -469,11 +471,11 @@ export function PrintInvitation(props: Props) {
               <>
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white px-3 py-2.5 text-xs ring-1 ring-neutral-200">
                   <p className="text-neutral-600">
-                    The <span className="font-medium text-neutral-800">{props.family === "bride" ? "bride" : "groom"}&apos;s family&apos;s</span> card — hosted by their parents, with the common events and their own.
+                    <span className="font-medium text-neutral-800">{names[props.family]}&apos;s family&apos;s</span> card — hosted by their parents, with the common events and their own.
                   </p>
                   {partnerSaved && (
                     <button type="button" onClick={copyPartner} className="portal-button-secondary">
-                      Same as the {props.family === "bride" ? "groom" : "bride"}&apos;s family&apos;s card
+                      Same as {names[props.family === "bride" ? "groom" : "bride"]}&apos;s family&apos;s card
                     </button>
                   )}
                 </div>

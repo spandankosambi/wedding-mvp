@@ -87,6 +87,28 @@ test("names keep their spaces; the person who signed up is named alone and can r
     expect(gap, name).toBeGreaterThan(3);
   }
 
+  // each family is called by its child's first name, not "bride" / "groom"
+  await page.goto("/couple");
+  const bar = page.getByRole("navigation", { name: "Sections" });
+  await expect(bar.getByRole("link", { name: "Pooja's side" })).toBeVisible();
+  await expect(bar.getByRole("link", { name: "Spandan's side" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Pooja's family" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open Spandan's section →" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Both sides: what's done" }).getByRole("columnheader", { name: /Pooja/ })).toBeVisible();
+  await page.goto("/couple/site?family=groom");
+  await expect(page.getByRole("heading", { name: "Edit Spandan's family's site" })).toBeVisible();
+  // a celebration only Pooja's family hosts reads "Pooja's side" on their invitation
+  const first = page.locator("details[id^=event-]").first();
+  await page.goto("/couple/site?family=bride");
+  await page.locator("details[id^=event-]").first().locator("summary").click();
+  await page.locator("details[id^=event-]").first().getByLabel(/is common for both families/).click();
+  await expect(page.locator("details[id^=event-]").first()).toContainText("Only Pooja's family's event");
+  await page.getByTestId("floating-save").click();
+  await expect(page).toHaveURL(/saved=/);
+  await page.goto("/couple/people");
+  await expect(page.getByTestId("person").first().getByLabel(/^Side for/).locator("option")).toHaveText(["Pooja's side", "Spandan's side", "Both sides"]);
+  void first;
+
   // People & access: the groom signed up, so it's his name, not both
   await page.goto("/couple/people");
   const me = page.getByTestId("person").first();
@@ -103,6 +125,7 @@ test("names keep their spaces; the person who signed up is named alone and can r
 
 test("guest-page photos: no save menu, no dragging", async ({ page }) => {
   await page.goto("/w/gaurav-weds-karishma?side=bride&k=sample");
+  await page.waitForLoadState("networkidle"); // the guard switches on once the page is live
   const img = page.locator("main img").first();
   await expect(img).toBeAttached();
   const blocked = await img.evaluate((el) => {

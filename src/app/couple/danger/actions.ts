@@ -1,5 +1,6 @@
 "use server";
 
+import { sideNamesOf } from "@/lib/side-names";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { del } from "@vercel/blob";
@@ -23,7 +24,7 @@ async function couple() {
   const [u] = await db.select().from(users).where(eq(users.id, staff.userId));
   const [w] = await db.select().from(weddings).where(eq(weddings.id, staff.weddingId));
   if (!u || !w) return null;
-  return { userId: u.id, email: u.email, owner: staff.access.owner, weddingId: w.id, coupleNames: `${w.brideName} & ${w.groomName}` };
+  return { userId: u.id, email: u.email, owner: staff.access.owner, weddingId: w.id, coupleNames: `${w.brideName} & ${w.groomName}`, sideNames: sideNamesOf(w) };
 }
 
 async function request(kind: "delete" | "reset", scope?: ResetScope): Promise<Requested> {
@@ -37,7 +38,7 @@ async function request(kind: "delete" | "reset", scope?: ResetScope): Promise<Re
   try {
     await sendConfirmEmail({
       to: c.email, kind, coupleNames: c.coupleNames, link, minutes: CONFIRM_MINUTES,
-      items: scope ? resetItems(scope) : undefined,
+      items: scope ? resetItems(scope, c.sideNames) : undefined,
     });
   } catch {
     return { ok: false, error: "We couldn't send the confirmation email. Try again in a minute." };

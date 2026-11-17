@@ -9,6 +9,7 @@ import { appOrigin } from "@/lib/origin";
 import { sendAccessEmail } from "@/lib/mailer";
 import { rateLimit } from "@/lib/ratelimit";
 import * as people from "@/lib/people";
+import { sideNamesOf } from "@/lib/side-names";
 
 type Out = { ok: true; note?: string } | { ok: false; error: string };
 
@@ -19,7 +20,7 @@ async function manager(requested: unknown) {
   if (!weddingId || !staff.access.manage) return null;
   const [w] = await db.select().from(weddings).where(eq(weddings.id, weddingId));
   if (!w) return null;
-  return { weddingId, coupleNames: `${w.brideName} & ${w.groomName}`, actor: { userId: staff.userId, owner: staff.access.owner } };
+  return { weddingId, coupleNames: `${w.brideName} & ${w.groomName}`, sideNames: sideNamesOf(w), actor: { userId: staff.userId, owner: staff.access.owner } };
 }
 
 export async function addPersonAction(input: { weddingId?: string; email: string } & Record<string, unknown>): Promise<Out> {
@@ -30,7 +31,7 @@ export async function addPersonAction(input: { weddingId?: string; email: string
   if (!r.ok) return r;
   revalidatePath("/couple/people");
   try {
-    await sendAccessEmail({ to: r.person!.email, coupleNames: m.coupleNames, link: `${await appOrigin()}/signin`, what: people.describe(r.person!) });
+    await sendAccessEmail({ to: r.person!.email, coupleNames: m.coupleNames, link: `${await appOrigin()}/signin`, what: people.describe(r.person!, m.sideNames) });
     return { ok: true, note: `Added. We emailed ${r.person!.email} how to sign in.` };
   } catch {
     return { ok: true, note: `Added, but the email to ${r.person!.email} didn't go out. Ask them to sign in at the sign-in page with that address.` };

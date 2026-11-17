@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { sideNamesOf } from "@/lib/side-names";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events } from "@/db/schema";
@@ -41,18 +42,19 @@ export default async function PrintCards({
   ]);
   const look = looks[family];
   const admin = staff.role === "admin";
-  const who = family === "bride" ? "bride" : "groom";
+  const sn = sideNamesOf(wedding); // "Pooja", "Spandan"
+  const who = sn[family];
 
   return (
     <main className="portal-page">
-      <PortalNav names={namesFor(wedding, family).couple} current={family} page="print" weddingId={weddingId} admin={admin} access={staff.access} />
+      <PortalNav sideNames={sn} names={namesFor(wedding, family).couple} current={family} page="print" weddingId={weddingId} admin={admin} access={staff.access} />
       <PortalFrame
         roomy
         jump={[["print-options", "Card options"], ["print-preview", "Preview & download"]]}
-        right={<Checklist title={`${who === "bride" ? "Bride" : "Groom"}'s side: what's done`} items={await getChecklist(weddingId, family, admin)} />}
+        right={<Checklist title={`${who}'s side: what's done`} items={await getChecklist(weddingId, family, admin)} />}
       >
         <header className="mb-6">
-          <h1 className="portal-heading">Print the {who}&apos;s family&apos;s invitation cards</h1>
+          <h1 className="portal-heading">Print {who}&apos;s family&apos;s invitation cards</h1>
           <p className="portal-subheading mt-3 max-w-2xl">
             The traditional card as a print-ready PDF, in the <span className="font-medium text-neutral-700">{THEME_META[look.theme].label}</span>{" "}
             look and this family&apos;s wording. Answer the questions, watch the preview, then download.
@@ -74,7 +76,7 @@ export default async function PrintCards({
           hasDeadline={!!look.rsvpDeadline}
           savedConfig={look.printConfig ?? null}
           partnerConfig={seesSide(staff.access, otherSide(family)) ? looks[otherSide(family)].printConfig ?? null : null}
-          events={evs.filter((e) => eventForSide(e.side, family)).map((e) => ({ id: e.id, label: eventLabel(e), side: e.side, isPublished: e.isPublished }))}
+          events={evs.filter((e) => eventForSide(e.side, family)).map((e) => ({ id: e.id, label: eventLabel(e, sn), side: e.side, isPublished: e.isPublished }))}
         />
       </PortalFrame>
     </main>

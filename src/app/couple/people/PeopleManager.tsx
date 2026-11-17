@@ -5,14 +5,15 @@ import { useRouter } from "next/navigation";
 import type { Person } from "@/lib/people";
 import { addPersonAction, removePersonAction, renameMeAction, updatePersonAction } from "./actions";
 import { SaveBar } from "@/components/FloatingSave";
+import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
 
 type Draft = Pick<Person, "name" | "role" | "side" | "site" | "guests" | "print">;
 const BLANK: Draft = { name: "", role: "committee", side: "bride", site: "none", guests: "full", print: "none" };
 const LEVELS = [["none", "No access"], ["view", "View only"], ["full", "Full access"]] as const;
 
 /** The selects for one person's role, side and access (used to add and to change). */
-function AccessFields({ d, set, who, canMakeCouple, disabled }: {
-  d: Draft; set: (patch: Partial<Draft>) => void; who: string; canMakeCouple: boolean; disabled?: boolean;
+function AccessFields({ d, set, who, canMakeCouple, disabled, names }: {
+  d: Draft; set: (patch: Partial<Draft>) => void; who: string; canMakeCouple: boolean; disabled?: boolean; names: SideNames;
 }) {
   const couple = d.role === "couple";
   const sel = "portal-input";
@@ -26,9 +27,9 @@ function AccessFields({ d, set, who, canMakeCouple, disabled }: {
       </td>
       <td>
         <select aria-label={`Side for ${who}`} className={sel} disabled={disabled || couple} value={couple ? "both" : d.side} onChange={(e) => set({ side: e.target.value as Draft["side"] })}>
-          <option value="bride">Bride</option>
-          <option value="groom">Groom</option>
-          <option value="both">Both</option>
+          <option value="bride">{names.bride}&apos;s side</option>
+          <option value="groom">{names.groom}&apos;s side</option>
+          <option value="both">Both sides</option>
         </select>
       </td>
       <td className="text-center text-neutral-500">Yes</td>
@@ -50,8 +51,10 @@ function AccessFields({ d, set, who, canMakeCouple, disabled }: {
   );
 }
 
-export function PeopleManager({ weddingId, admin, people, meId, owner }: {
+export function PeopleManager({ weddingId, admin, people, meId, owner, sideNames = DEFAULT_SIDE_NAMES }: {
   weddingId: string; admin: boolean; people: Person[]; meId: string; owner: boolean;
+  /** "Pooja", "Spandan" for the Side choices */
+  sideNames?: SideNames;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -125,7 +128,7 @@ export function PeopleManager({ weddingId, admin, people, meId, owner }: {
                 <tr>
                   <td><input aria-label="Name" className="portal-input" value={fresh.name} maxLength={80} placeholder="Meena aunty" onChange={(e) => setFresh({ ...fresh, name: e.target.value })} /></td>
                   <td><input aria-label="Email" type="email" required className="portal-input" value={email} placeholder="name@example.com" onChange={(e) => setEmail(e.target.value)} /></td>
-                  <AccessFields d={fresh} set={(p) => setFresh({ ...fresh, ...p })} who="the new person" canMakeCouple={owner} />
+                  <AccessFields names={sideNames} d={fresh} set={(p) => setFresh({ ...fresh, ...p })} who="the new person" canMakeCouple={owner} />
                   <td className="text-right"><button type="submit" disabled={pending || !email.trim()} className="portal-button">Add</button></td>
                 </tr>
               </tbody>
@@ -157,7 +160,7 @@ export function PeopleManager({ weddingId, admin, people, meId, owner }: {
                       </span>
                     </td>
                     <td className="break-all text-neutral-600">{p.email}</td>
-                    <AccessFields d={d} set={(patch) => setEdits({ ...edits, [p.id]: { ...d, ...patch } })} who={who} canMakeCouple={owner} disabled={locked} />
+                    <AccessFields names={sideNames} d={d} set={(patch) => setEdits({ ...edits, [p.id]: { ...d, ...patch } })} who={who} canMakeCouple={owner} disabled={locked} />
                     <td className="whitespace-nowrap text-right">
                       {!locked && (confirming === p.id ? (
                         <>

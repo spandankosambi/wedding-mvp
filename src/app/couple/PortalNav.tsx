@@ -3,6 +3,7 @@ import { signOut } from "@/auth";
 import { allows, seesSide, type Access } from "@/lib/access";
 import { BrandLogo, BrandSymbol } from "@/components/BrandLogo";
 import { BRAND } from "@/lib/brand";
+import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
 
 type Section = "dashboard" | "bride" | "groom" | "people";
 type Page = "overview" | "site" | "guests" | "print";
@@ -13,8 +14,10 @@ type Page = "overview" | "site" | "guests" | "print";
  * then — inside a family — its pages. Switching family keeps you on the same
  * kind of page. Only the families and pages this person has access to appear.
  */
-export function PortalNav({ names, current, page, weddingId, admin = false, access }: {
+export function PortalNav({ names, sideNames = DEFAULT_SIDE_NAMES, current, page, weddingId, admin = false, access }: {
   names: string; current?: Section; page?: Page;
+  /** each family by its child's first name: "Pooja's side" */
+  sideNames?: SideNames;
   weddingId?: string; admin?: boolean; access: Access;
 }) {
   const w = admin && weddingId ? `wedding=${weddingId}` : "";
@@ -46,14 +49,14 @@ export function PortalNav({ names, current, page, weddingId, admin = false, acce
               const p = family && page && open(f, page) ? page : "overview";
               return (
                 <Link key={f} href={href(f, p)} aria-current={current === f ? "page" : undefined}>
-                  {f === "bride" ? "Bride" : "Groom"}<span className="portal-nav-wide">&apos;s side</span>
+                  {sideNames[f]}<span className="portal-nav-wide">&apos;s side</span>
                 </Link>
               );
             })}
           </span>
         </nav>
         {family && (
-          <nav aria-label={family === "bride" ? "Bride's side pages" : "Groom's side pages"} className="portal-nav-pages">
+          <nav aria-label={`${sideNames[family]}'s side pages`} className="portal-nav-pages">
             {labels.filter(([id]) => open(family, id)).map(([id, label]) => (
               <Link key={id} href={href(family, id)} aria-current={page === id ? "page" : undefined}>{label}</Link>
             ))}

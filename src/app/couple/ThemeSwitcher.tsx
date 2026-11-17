@@ -1,5 +1,6 @@
 "use client";
 
+import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { setTheme, copyFromPartnerAction } from "./actions";
@@ -15,6 +16,7 @@ export function ThemeSwitcher({
   coupleNames,
   family,
   partnerTheme,
+  names = DEFAULT_SIDE_NAMES,
 }: {
   weddingId: string;
   current: Theme;
@@ -26,6 +28,8 @@ export function ThemeSwitcher({
   family: "bride" | "groom";
   /** the other family's theme, to offer "same as your partner" */
   partnerTheme: Theme;
+  /** the families' first names: "Pooja's family's look" */
+  names?: SideNames;
 }) {
   const router = useRouter();
   const [active, setActive] = useState<Theme>(current);
@@ -46,7 +50,7 @@ export function ThemeSwitcher({
     <section className="portal-panel p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
-          <h2 className="font-semibold">{family === "bride" ? "The bride's family's" : "The groom's family's"} look</h2>
+          <h2 className="font-semibold">{names[family]}&apos;s family&apos;s look</h2>
           <p className="mt-1 text-sm text-neutral-500">
             One click restyles the site your guests see — their emails and printed cards follow the same palette.
           </p>
@@ -62,7 +66,7 @@ export function ThemeSwitcher({
               })}
               className="portal-button-secondary"
             >
-              Same as the {family === "bride" ? "groom" : "bride"}&apos;s family ({THEME_META[partnerTheme].label})
+              Same as {names[family === "bride" ? "groom" : "bride"]}&apos;s family ({THEME_META[partnerTheme].label})
             </button>
           )}
           <a

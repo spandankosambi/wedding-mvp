@@ -1,4 +1,6 @@
+import { SideNamesProvider } from "@/components/SideNames";
 import { namesFor } from "@/lib/looks";
+import { sideNamesOf } from "@/lib/side-names";
 import { PortalNav } from "../couple/PortalNav";
 import { SummaryCards } from "../couple/SummaryCards";
 import Link from "next/link";
@@ -89,15 +91,16 @@ export default async function CommitteePage({
     })(),
   }));
 
+  const sn = sideNamesOf(wedding); // "Pooja", "Spandan"
   return (
     <main className="portal-page">
-      <PortalNav names={namesFor(wedding, family).couple} current={family} page="guests" weddingId={weddingId} admin={staff.role === "admin"} access={staff.access} />
+      <PortalNav sideNames={sn} names={namesFor(wedding, family).couple} current={family} page="guests" weddingId={weddingId} admin={staff.role === "admin"} access={staff.access} />
       <PortalFrame jump={[["replies", "Replies so far"], ["list", "The list"]]}>
       <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3">
         <div className="max-w-2xl">
-          <h1 className="portal-heading">{sideName(family)}&apos;s guest list</h1>
+          <h1 className="portal-heading">{sideName(family, sn)}&apos;s guest list</h1>
           <p className="portal-subheading mt-3">
-            The {family === "bride" ? "bride" : "groom"}&apos;s households, their invitations and event headcounts. Their invitations open the {family === "bride" ? "bride" : "groom"}&apos;s family&apos;s site.
+            {sn[family]}&apos;s households, their invitations and event headcounts. Their invitations open {sn[family]}&apos;s family&apos;s site.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -122,12 +125,13 @@ export default async function CommitteePage({
         })}
       </nav>
 
+      <SideNamesProvider names={sn}>
       {view === "families" ? (
         <FamilyTable
           weddingId={weddingId}
           family={family}
           importHref={`/committee/import?${new URLSearchParams({ ...(staff.role === "admin" ? { wedding: weddingId } : {}), family })}`}
-          events={evs.map((e) => ({ id: e.id, name: eventLabel(e), side: e.side }))}
+          events={evs.map((e) => ({ id: e.id, name: eventLabel(e, sn), side: e.side }))}
           rows={rows}
           readOnly={readOnly}
         />
@@ -135,12 +139,13 @@ export default async function CommitteePage({
         <GuestTable
           weddingId={weddingId}
           family={family}
-          events={evs.map((e) => ({ id: e.id, name: eventLabel(e), side: e.side }))}
+          events={evs.map((e) => ({ id: e.id, name: eventLabel(e, sn), side: e.side }))}
           rows={rows}
           columns={wedding.guestColumns ?? []}
           readOnly={readOnly}
         />
       )}
+      </SideNamesProvider>
       </PortalFrame>
     </main>
   );

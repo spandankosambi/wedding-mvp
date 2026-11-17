@@ -45,7 +45,7 @@ test("a family resets its own part after confirming by email", async ({ page }) 
   await expect(page.locator("#danger").getByRole("button", { name: "Reset selected…" })).toHaveCount(0);
   await page.goto("/couple/bride");
   const danger = page.locator("#danger");
-  await expect(danger.getByRole("heading", { name: "Reset the bride's family's section" })).toBeVisible();
+  await expect(danger.getByRole("heading", { name: "Reset Isha's family's section" })).toBeVisible();
   await expect(danger.getByRole("button", { name: "Delete wedding website…" })).toHaveCount(0);
   await danger.getByLabel(/This family's own celebrations/).check();
   await danger.getByRole("button", { name: "Reset selected…" }).click();
@@ -60,7 +60,7 @@ test("a family resets its own part after confirming by email", async ({ page }) 
   // the emailed link only shows a page; the button does the work
   await page.goto(latest(email, "confirmUrl"));
   await expect(page.getByRole("heading", { name: "Reset your wedding website?" })).toBeVisible();
-  await expect(page.getByText(/Bride's family: This family's own celebrations/)).toBeVisible();
+  await expect(page.getByText(/Isha's family: This family's own celebrations/)).toBeVisible();
   if (shots) await page.screenshot({ path: `${shots}/confirm-reset.png`, fullPage: true });
   const confirmUrl = page.url();
   await page.getByRole("button", { name: "Yes, reset these" }).click();

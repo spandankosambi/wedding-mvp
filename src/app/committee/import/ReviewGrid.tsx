@@ -1,5 +1,6 @@
 "use client";
 
+import { useSideNames } from "@/components/SideNames";
 import { useState } from "react";
 import type { EventRef } from "@/lib/import/mapping";
 import { parseMembersCell, type BuildStats, type ImportRow, type IssueCode, type Member } from "@/lib/import/normalize";
@@ -87,6 +88,7 @@ export function ReviewGrid({
   onBack: () => void;
   onCommit: () => void;
 }) {
+  const names = useSideNames(); // "Pooja", "Spandan"
   const [showText, setShowText] = useState(false);
   const [counter, setCounter] = useState(rows.length + 1);
 
@@ -187,8 +189,8 @@ export function ReviewGrid({
                   </td>
                   <td>
                     <select value={r.side} onChange={(e) => update(r.key, { side: e.target.value as ImportRow["side"] })} className="portal-input min-w-[6.5rem]" aria-label="Side">
-                      <option value="bride">Bride&apos;s family</option>
-                      <option value="groom">Groom&apos;s family</option>
+                      <option value="bride">{names.bride}&apos;s family</option>
+                      <option value="groom">{names.groom}&apos;s family</option>
                     </select>
                   </td>
                   <td>

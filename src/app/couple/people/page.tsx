@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { sideNamesOf } from "@/lib/side-names";
 import { db } from "@/db/client";
 import { weddings } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
@@ -24,16 +25,16 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
 
   return (
     <main className="portal-page">
-      <PortalNav names={`${w.brideName} & ${w.groomName}`} current="people" weddingId={weddingId} admin={staff.role === "admin"} access={staff.access} />
+      <PortalNav sideNames={sideNamesOf(w)} names={`${w.brideName} & ${w.groomName}`} current="people" weddingId={weddingId} admin={staff.role === "admin"} access={staff.access} />
       <PortalFrame jump={[["add", "Add a person"], ["list", "Everyone with access"], ["levels", "What the levels mean"]]}>
         <header className="mb-8">
           <h1 className="portal-heading">People &amp; access</h1>
           <p className="portal-subheading mt-3 max-w-2xl">
-            Give family and friends their own sign-in. Put each person on the bride&apos;s side, the groom&apos;s side or both,
+            Give family and friends their own sign-in. Put each person on {sideNamesOf(w).bride}&apos;s side, {sideNamesOf(w).groom}&apos;s side or both,
             and choose what they may see or change. Everyone signs in with their own email; there are no passwords to share.
           </p>
         </header>
-        <PeopleManager weddingId={weddingId} admin={staff.role === "admin"} people={people} meId={staff.userId} owner={staff.access.owner} />
+        <PeopleManager sideNames={sideNamesOf(w)} weddingId={weddingId} admin={staff.role === "admin"} people={people} meId={staff.userId} owner={staff.access.owner} />
         <section id="levels" className="portal-panel mt-6 p-6 text-sm text-neutral-600">
           <p className="portal-eyebrow">What the levels mean</p>
           <ul className="mt-3 space-y-2">

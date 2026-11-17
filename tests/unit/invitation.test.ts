@@ -69,7 +69,7 @@ describe("wording", () => {
   });
   it("events go on the back, or on a card each; an event from the other side says whose it is", () => {
     const back = buildInvitation(wedding, events, o({ version: "bride", eventIds: [events[1].id, events[2].id, events[3].id] }), "https://x/w/p");
-    expect(back.back.events.map((e) => [e.name, e.sideLabel])).toEqual([["Haldi", "Groom's side"], ["Sangeet", null], ["Wedding", null]]);
+    expect(back.back.events.map((e) => [e.name, e.sideLabel])).toEqual([["Haldi", "Spandan's side"], ["Sangeet", null], ["Wedding", null]]);
     expect(back.inserts).toEqual([]);
     const cards = buildInvitation(wedding, events, o({ version: "groom", eventLayout: "separate" }), "https://x/w/p");
     expect(cards.back.events).toEqual([]);
