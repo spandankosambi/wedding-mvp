@@ -113,3 +113,33 @@ test("guest-page photos: no save menu, no dragging", async ({ page }) => {
   expect(blocked.menu).toBe(true);
   expect(blocked.drag).toBe(true);
 });
+
+test("after saving, Save goes grey even for tick-boxes and lists the page manages itself", async ({ page }) => {
+  test.setTimeout(150_000);
+  await newCouple(page, "Meera Shah", "Arjun Rao");
+  await page.goto("/couple/site?family=groom");
+  const save = page.getByTestId("floating-save");
+  await page.waitForLoadState("networkidle");
+  // an event's "common for both families" tick, a new hotel row with its tick, a contact's WhatsApp tick
+  const ev = page.locator("details[id^=event-]").first();
+  await ev.locator("summary").click();
+  await ev.getByLabel(/is common for both families/).click();
+  await page.locator("#words input[name=hashtag]").fill("#MeeraArjun");
+  await expect(save).toHaveText("Save changes (2)");
+  await save.click();
+  await expect(page).toHaveURL(/saved=/);
+  await expect(page.getByRole("status").first()).toContainText("Saved");
+  await expect(save).toHaveText("All changes saved");
+  await expect(save).toBeDisabled();
+  // and again, once more, with the same two sections
+  await page.locator("details[id^=event-]").first().getByLabel(/is common for both families/).click();
+  await page.locator("#words input[name=hashtag]").fill("#MeeraArjun2027");
+  await expect(save).toHaveText("Save changes (2)");
+  await save.click();
+  await expect(page.getByRole("status").first()).toContainText("Saved");
+  await expect(save).toHaveText("All changes saved");
+  // a fresh visit agrees
+  await page.reload();
+  await expect(save).toHaveAttribute("data-ready", "true");
+  await expect(save).toHaveText("All changes saved");
+});

@@ -30,9 +30,13 @@ const forms = () => Array.from(document.querySelectorAll<HTMLFormElement>("form[
 
 const fmt = (k: string, v: FormDataEntryValue) => `${k}=${typeof v === "string" ? v : `${v.name}:${v.size}`}`;
 
+/* React adds a hidden "$ACTION_…" field to forms that comes and goes; it's
+   not something anyone edits */
+const ours = (name: string) => !name.startsWith("$ACTION");
+
 /** What the form holds now. */
 function snapshot(form: HTMLFormElement) {
-  return Array.from(new FormData(form).entries()).map(([k, v]) => fmt(k, v)).join("\n");
+  return Array.from(new FormData(form).entries()).filter(([k]) => ours(k)).map(([k, v]) => fmt(k, v)).join("\n");
 }
 
 /**
@@ -44,7 +48,7 @@ function original(form: HTMLFormElement) {
   const out: string[] = [];
   for (const el of Array.from(form.elements)) {
     const name = (el as HTMLInputElement).name;
-    if (!name || (el as HTMLInputElement).disabled) continue;
+    if (!name || !ours(name) || (el as HTMLInputElement).disabled) continue;
     if (el instanceof HTMLInputElement) {
       if (el.type === "file" || el.type === "submit" || el.type === "button" || el.type === "reset" || el.type === "image") continue;
       if (el.type === "checkbox" || el.type === "radio") { if (el.defaultChecked) out.push(fmt(name, el.value)); continue; }
@@ -61,10 +65,19 @@ function original(form: HTMLFormElement) {
   return out.join("\n");
 }
 
+/* The sections just saved, carried over the reload that follows a save.
+   Their new starting point is what they show once the page has settled: the
+   server may tidy a value (a hashtag loses its "#"), and fields the page
+   manages itself (tick-boxes in the event editor) keep their first-load
+   defaults, so neither what was sent nor the defaults can be trusted. */
+let justSaved: Set<string> | null = null;
+
 export function FloatingSave({ action, batch = false, failedPart, label = "Save changes" }: Props) {
   const base = useRef(new Map<HTMLFormElement, string>());
   const [dirty, setDirty] = useState<string[]>([]);
+  const [ready, setReady] = useState(false);
   const [pending, start] = useTransition();
+  const saving = useRef<Set<string> | null>(null);
 
   const recompute = useCallback(() => {
     const changed = forms()
@@ -78,11 +91,22 @@ export function FloatingSave({ action, batch = false, failedPart, label = "Save 
     setDirty((prev) => (prev.join() === changed.join() ? prev : changed));
   }, [failedPart]);
 
-  // starting point: what each form holds now; then watch for edits
+  // starting point: what each form held when the page arrived (or, for the
+  // sections just saved, exactly what was saved); then watch for edits
   useEffect(() => {
-    const take = () => { for (const f of forms()) if (!base.current.has(f)) base.current.set(f, original(f)); };
+    const saved = justSaved;
+    justSaved = null;
+    saved?.delete(failedPart ?? "");
+    const take = () => {
+      for (const f of forms()) {
+        if (base.current.has(f)) continue;
+        base.current.set(f, saved?.has(f.dataset.savePart!) ? snapshot(f) : original(f));
+      }
+    };
     take();
     recompute();
+    setReady(true);
+    const timers = saved?.size ? settle(saved) : [];
     const onEdit = () => { take(); recompute(); };
     document.addEventListener("input", onEdit, true);
     document.addEventListener("change", onEdit, true);
@@ -90,11 +114,31 @@ export function FloatingSave({ action, batch = false, failedPart, label = "Save 
     const mo = new MutationObserver(onEdit);
     mo.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["value", "checked"] });
     return () => {
+      timers.forEach(clearTimeout);
       document.removeEventListener("input", onEdit, true);
       document.removeEventListener("change", onEdit, true);
       mo.disconnect();
     };
-  }, [recompute]);
+  }, [recompute, failedPart]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* the sections just saved start again from what they show once the save's
+     reload has settled (looked at a few times, as the page redraws) */
+  function settle(parts: Set<string>) {
+    return [0, 300, 1000].map((ms) => setTimeout(() => {
+      for (const f of forms()) if (parts.has(f.dataset.savePart!)) base.current.set(f, snapshot(f));
+      recompute();
+    }, ms));
+  }
+
+  // a save that came back to the same address (no fresh start): settle here
+  useEffect(() => {
+    if (pending || !saving.current) return;
+    const parts = saving.current;
+    saving.current = null;
+    justSaved = null;
+    const timers = settle(parts);
+    return () => timers.forEach(clearTimeout);
+  }, [pending]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // leaving with unsaved changes asks first
   useEffect(() => {
@@ -130,7 +174,10 @@ export function FloatingSave({ action, batch = false, failedPart, label = "Save 
     } else {
       fd = new FormData(changed[0]);
     }
-    // what's being saved becomes the new starting point
+    // what's being saved becomes the new starting point, here and after the reload
+    const parts = new Set(changed.map((f) => f.dataset.savePart!));
+    justSaved = parts;
+    saving.current = parts;
     for (const f of changed) base.current.set(f, snapshot(f));
     start(async () => {
       await action(fd);
@@ -138,12 +185,12 @@ export function FloatingSave({ action, batch = false, failedPart, label = "Save 
     setDirty([]);
   };
 
-  return <SaveBar count={dirty.length} pending={pending} onSave={save} label={label} />;
+  return <SaveBar count={dirty.length} pending={pending} onSave={save} label={label} ready={ready} />;
 }
 
 /** The floating button itself: grey while nothing has changed, coral once something has. */
-export function SaveBar({ count, pending, onSave, label = "Save changes" }: {
-  count: number; pending: boolean; onSave: () => void; label?: string;
+export function SaveBar({ count, pending, onSave, label = "Save changes", ready = true }: {
+  count: number; pending: boolean; onSave: () => void; label?: string; ready?: boolean;
 }) {
   const active = count > 0 && !pending;
   const text = pending ? "Saving…" : count > 1 ? `${label} (${count})` : count ? label : "All changes saved";
@@ -156,6 +203,7 @@ export function SaveBar({ count, pending, onSave, label = "Save changes" }: {
         aria-live="polite"
         data-testid="floating-save"
         data-dirty={count ? "true" : "false"}
+        data-ready={ready ? "true" : "false"}
         className={
           "pointer-events-auto rounded-full px-6 py-3 text-sm font-semibold shadow-lg transition-colors duration-200 " +
           (active
