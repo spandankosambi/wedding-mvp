@@ -94,6 +94,14 @@ export async function updatePerson(weddingId: string, actor: Actor, userId: stri
   return { ok: true };
 }
 
+/** Anyone may change the name on their own login (and nothing else about it). */
+export async function renameSelf(weddingId: string, userId: string, input: unknown): Promise<Result> {
+  const parsed = z.string().trim().min(1).max(80).safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Please enter your name." };
+  await db.update(users).set({ name: parsed.data.replace(/\s+/g, " ") }).where(and(eq(users.id, userId), eq(users.weddingId, weddingId)));
+  return { ok: true };
+}
+
 /** Removes the login; they are signed out everywhere at once. */
 export async function removePerson(weddingId: string, actor: Actor, userId: string): Promise<Result> {
   const t = await target(weddingId, actor, userId);

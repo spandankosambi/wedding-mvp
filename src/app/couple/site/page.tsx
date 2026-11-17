@@ -10,7 +10,7 @@ import { istParts, MAX_STAYS, STORY_MAX } from "@/lib/editor";
 import { EVENT_PRESETS } from "@/lib/presets";
 import { fmtWeddingDate } from "@/lib/format";
 import { ThemeSwitcher } from "../ThemeSwitcher";
-import { SaveButton } from "./SaveButton";
+import { FloatingSave } from "@/components/FloatingSave";
 import { GalleryUploader } from "./GalleryUploader";
 import { StaysEditor } from "./StaysEditor";
 import { StoryField } from "./StoryField";
@@ -32,7 +32,7 @@ import { MusicUpload } from "./MediaFields";
 import { galleryOf, photoStorageConfigured, MAX_GALLERY_PHOTOS } from "@/lib/gallery";
 import {
   saveWords, saveWording, saveDecor, saveKnow, removeMusic, saveTravel, saveEvent, addPresetEvent, toggleEvent, removeEvent, moveEventAction, sortEvents,
-  saveGallerySettings, removeGalleryPhotoAction, moveGalleryPhotoAction, copyPartAction,
+  saveGallerySettings, removeGalleryPhotoAction, moveGalleryPhotoAction, copyPartAction, saveChanges,
 } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -143,7 +143,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
               </div>
               {same("decor")}
             </div>
-            <form action={saveDecor} className="mt-5 space-y-6">
+            <form action={saveDecor} data-save-part="decor" className="mt-5 space-y-6">
               {wid}
               <fieldset>
                 <legend className="text-sm font-medium">How much the site moves</legend>
@@ -198,7 +198,6 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                   <label className="flex items-start gap-2"><input type="checkbox" name="icons" defaultChecked={decor.icons} className="mt-0.5 h-4 w-4" /><span>Celebration icons <span className="text-xs text-neutral-500">— a small drawing beside each event, on your site and your printed cards. Choose each event&apos;s icon under <a href="#events" className="underline">Celebrations</a>.</span></span></label>
                 </div>
               </fieldset>
-              <SaveButton />
             </form>
           </section>
 
@@ -215,7 +214,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
               </div>
               {same("wording")}
             </div>
-            <form action={saveWording} className="mt-5 grid gap-4 md:grid-cols-2">
+            <form action={saveWording} data-save-part="wording" className="mt-5 grid gap-4 md:grid-cols-2">
               {wid}
               <Field label="Invocation at the top" hint="optional">
                 <input name="invocation" defaultValue={look.invocation ?? ""} maxLength={80} placeholder="|| Shree Ganeshaya Namah ||  or  ॥ श्री गणेशाय नमः ॥" className="portal-input" />
@@ -238,7 +237,6 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
               <p className="text-xs text-neutral-500 md:col-span-2">
                 Parents&apos; names are shared by both families — <Link href={`/couple${adminQ ? `?${adminQ.slice(0, -1)}` : ""}#details`} className="underline">change them on the dashboard</Link>.
               </p>
-              <div className="md:col-span-2"><SaveButton /></div>
             </form>
           </section>
 
@@ -251,14 +249,13 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
               </div>
               {same("words")}
             </div>
-            <form action={saveWords} className="mt-5 grid gap-4 md:grid-cols-2">
+            <form action={saveWords} data-save-part="words" className="mt-5 grid gap-4 md:grid-cols-2">
               {wid}
               <Field label="Tagline" hint="one line under your names" className="md:col-span-2"><input name="heroTagline" defaultValue={look.heroTagline ?? ""} maxLength={160} placeholder="Two families, five celebrations, one big yes." className="portal-input" /></Field>
               <Field label="Your story" hint="how you met, in about 150 words — leave blank to hide the section" className="md:col-span-2">
                 <StoryField initial={look.story ?? ""} max={STORY_MAX} />
               </Field>
               <Field label="Hashtag" hint="without the #" className="md:col-span-2"><input name="hashtag" defaultValue={look.hashtag ?? ""} maxLength={60} placeholder="AnanyaKaArjun" className="portal-input" /></Field>
-              <div className="md:col-span-2"><SaveButton /></div>
             </form>
           </section>
 
@@ -300,7 +297,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                       <span className="hidden text-xs text-neutral-400 group-open:inline">close ▴</span>
                     </summary>
                     <div className="border-t border-neutral-100 p-4">
-                      <form action={saveEvent} className="grid gap-4 md:grid-cols-2">
+                      <form action={saveEvent} data-save-part={`event-${e.id}`} className="grid gap-4 md:grid-cols-2">
                         {wid}
                         <input type="hidden" name="id" value={e.id} />
                         <Field label="Name"><input name="name" defaultValue={e.name} required maxLength={60} className="portal-input" /></Field>
@@ -319,7 +316,6 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                           <input type="checkbox" name="isPublished" defaultChecked={e.isPublished} className="h-4 w-4" />
                           Show this event on the site and RSVP form
                         </label>
-                        <div className="md:col-span-2"><SaveButton /></div>
                       </form>
                       <div className="mt-3 flex flex-wrap gap-2 border-t border-neutral-100 pt-3">
                         <form action={toggleEvent}>{wid}<input type="hidden" name="id" value={e.id} /><input type="hidden" name="isPublished" value={e.isPublished ? "false" : "true"} />
@@ -361,13 +357,12 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
               </div>
               {same("travel")}
             </div>
-            <form action={saveTravel} className="mt-5 space-y-4">
+            <form action={saveTravel} data-save-part="travel" className="mt-5 space-y-4">
               {wid}
               <StaysEditor initial={look.travel?.stays ?? []} family={family} max={MAX_STAYS} />
               <Field label="Getting there" hint="airport, distances, shuttles">
                 <textarea name="gettingThere" defaultValue={look.travel?.gettingThere ?? ""} maxLength={1200} rows={3} className="portal-input resize-y" placeholder="Fly into Mumbai (BOM). Both hotels are 20–40 minutes from the terminals…" />
               </Field>
-              <SaveButton />
             </form>
           </section>
 
@@ -386,7 +381,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                 : "Until you add photos, your site shows decorative illustrations here instead."}
             </p>
 
-            <form action={saveGallerySettings} className="mt-5 flex flex-wrap items-center gap-4">
+            <form action={saveGallerySettings} data-save-part="gallery" className="mt-5 flex flex-wrap items-center gap-4">
               {wid}
               <label className="flex items-start gap-3 text-sm">
                 <input type="checkbox" name="galleryEnabled" defaultChecked={gal.enabled} className="mt-0.5 h-4 w-4" />
@@ -395,7 +390,6 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                   <span className="block text-xs text-neutral-500">Off hides the whole section. Your photos stay saved here.</span>
                 </span>
               </label>
-              <SaveButton />
             </form>
 
             {gal.photos.length > 0 && (
@@ -430,10 +424,9 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
             <p className="portal-eyebrow">Things to know</p>
             <h2 className="mt-1 font-semibold">Short notes for your guests</h2>
             <p className="mt-1 max-w-2xl text-sm text-neutral-500">Parking, the weather, what to wear, gifts — up to {MAX_KNOW} notes, shown as their own section on your site. Leave it empty to leave the section out.</p>
-            <form action={saveKnow} className="mt-5 space-y-4">
+            <form action={saveKnow} data-save-part="know" className="mt-5 space-y-4">
               {wid}
               <KnowEditor initial={look.know ?? []} max={MAX_KNOW} suggestions={KNOW_SUGGESTIONS} />
-              <SaveButton />
             </form>
           </section>
 
@@ -464,6 +457,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
         </div>
         </fieldset>
       </PortalFrame>
+      {!readOnly && <FloatingSave key={JSON.stringify(sp)} action={saveChanges} batch failedPart={sp.error ? sp.section : undefined} />}
     </main>
   );
 }

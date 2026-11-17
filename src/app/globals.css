@@ -1425,3 +1425,18 @@ html.fx .themed[data-motion="lively"] .reveal.is-in { opacity: 1; transform: non
   html.fx .themed[data-motion="lively"] .reveal { filter: none; }
 }
 @media print { .scene, .music-btn { display: none !important; } }
+
+/* room under the last section so the floating Save never covers it */
+.portal-page:has(.floating-save) { padding-bottom: 6rem; }
+
+/* Guest pages: photos can't be dragged out, long-pressed for "Save image",
+   or right-clicked for "Copy image address" (see components/ImageGuard). The
+   image itself ignores the pointer, so the menu never targets it; taps land
+   on the tile around it. */
+.themed img {
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.photo-tile img, .lightbox-img { pointer-events: none; }

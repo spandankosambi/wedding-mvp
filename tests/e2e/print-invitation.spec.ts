@@ -34,7 +34,7 @@ test("the wording is typed once in Edit your site — the website opens with it,
   await wording.getByLabel("Kavita Mehta's number is on WhatsApp").uncheck();
   await wording.getByLabel(/With best compliments from/).fill("Mehta family\nand friends");
   await wording.getByLabel(/Closing line/).fill("Your blessings are our gifts");
-  await wording.getByRole("button", { name: "Save" }).click();
+  await page.getByTestId("floating-save").click();
   await expect(page).toHaveURL(/saved=wording/);
 
   // the groom's website opens the way his family's card does

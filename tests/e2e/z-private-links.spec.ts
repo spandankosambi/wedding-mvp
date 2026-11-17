@@ -46,7 +46,7 @@ test("replies from the shared link are off unless the family turns them on; a ne
   // off: guests with the link see the invitation but no reply button
   const open = page.getByRole("checkbox", { name: /Accept replies from people who are not on the guest list/ });
   await open.uncheck();
-  await page.locator("#rsvp").getByRole("button", { name: "Save" }).click();
+  await page.getByTestId("floating-save").click();
   await expect(page.locator("p[role=status]")).toContainText("Saved");
   await expect(share.getByRole("link", { name: /Open RSVP form/ })).toHaveCount(0);
   await page.goto(url);

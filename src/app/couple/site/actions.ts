@@ -33,6 +33,7 @@ async function scoped(formData: FormData, need: "site" | "guests" | "couple" = "
 }
 
 type Ctx = Awaited<ReturnType<typeof scoped>>;
+type Applied = { ok: boolean; error?: string };
 
 /** Back to the family's editor (or its section page, or for shared details the dashboard). */
 function done(ctx: Ctx, section: string, error?: string, page: "site" | "section" | "dashboard" = "site") {
@@ -43,7 +44,7 @@ function done(ctx: Ctx, section: string, error?: string, page: "site" | "section
   if (ctx.admin) q.set("wedding", ctx.weddingId);
   if (page === "site") q.set("family", ctx.family);
   const path = page === "site" ? "/couple/site" : page === "section" ? `/couple/${ctx.family}` : "/couple";
-  redirect(`${path}?${q}#${section}`);
+  redirect(`${path}?${q}#${section.split(",")[0]}`);
 }
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "");
@@ -60,18 +61,19 @@ export async function saveDetails(formData: FormData) {
 }
 
 /** One family's tagline, story, hashtag and contact. */
-export async function saveWords(formData: FormData) {
-  const ctx = await scoped(formData);
-  const r = await editor.updateWords(ctx.weddingId, ctx.family, {
+const applyWords = (ctx: Ctx, formData: FormData): Promise<Applied> =>
+  editor.updateWords(ctx.weddingId, ctx.family, {
     heroTagline: str(formData, "heroTagline"), story: str(formData, "story"),
     hashtag: str(formData, "hashtag"),
   });
+export async function saveWords(formData: FormData) {
+  const ctx = await scoped(formData);
+  const r = await applyWords(ctx, formData);
   done(ctx, "words", r.ok ? undefined : r.error);
 }
 
-export async function saveWording(formData: FormData) {
-  const ctx = await scoped(formData);
-  const r = await editor.updateWording(ctx.weddingId, ctx.family, {
+const applyWording = (ctx: Ctx, formData: FormData): Promise<Applied> =>
+  editor.updateWording(ctx.weddingId, ctx.family, {
     invocation: str(formData, "invocation"), shloka: str(formData, "shloka"),
     // up to two RSVP contacts; a row without a number is left out
     contacts: [0, 1].map((i) => ({
@@ -79,16 +81,21 @@ export async function saveWording(formData: FormData) {
     })).filter((c) => c.phone),
     compliments: str(formData, "compliments"), closingLine: str(formData, "closingLine"),
   });
+export async function saveWording(formData: FormData) {
+  const ctx = await scoped(formData);
+  const r = await applyWording(ctx, formData);
   done(ctx, "wording", r.ok ? undefined : r.error);
 }
 
-export async function saveDecor(formData: FormData) {
-  const ctx = await scoped(formData);
-  const r = await editor.updateDecor(ctx.weddingId, ctx.family, {
+const applyDecor = (ctx: Ctx, formData: FormData): Promise<Applied> =>
+  editor.updateDecor(ctx.weddingId, ctx.family, {
     motion: str(formData, "motion") || undefined, scene: str(formData, "scene") || undefined,
     reveal: str(formData, "reveal") || undefined, falling: str(formData, "falling") || undefined, divider: str(formData, "divider") || undefined,
     toran: formData.get("toran") === "on", corners: formData.get("corners") === "on", icons: formData.get("icons") === "on",
   });
+export async function saveDecor(formData: FormData) {
+  const ctx = await scoped(formData);
+  const r = await applyDecor(ctx, formData);
   done(ctx, "decor", r.ok ? undefined : r.error);
 }
 
@@ -110,22 +117,23 @@ export async function copyPartAction(formData: FormData) {
   done(ctx, part, r.ok ? undefined : r.error);
 }
 
-export async function saveTravel(formData: FormData) {
-  const ctx = await scoped(formData);
+function applyTravel(ctx: Ctx, formData: FormData): Promise<Applied> {
   const stays = [];
   for (let i = 0; i < editor.MAX_STAYS; i++) {
     const name = str(formData, `stay${i}name`).trim();
     if (name) stays.push({ name, note: str(formData, `stay${i}note`), url: str(formData, `stay${i}url`), common: formData.get(`stay${i}common`) === "on" });
   }
-  const r = await editor.updateTravel(ctx.weddingId, ctx.family, { stays, gettingThere: str(formData, "gettingThere") });
+  return editor.updateTravel(ctx.weddingId, ctx.family, { stays, gettingThere: str(formData, "gettingThere") });
+}
+export async function saveTravel(formData: FormData) {
+  const ctx = await scoped(formData);
+  const r = await applyTravel(ctx, formData);
   done(ctx, "travel", r.ok ? undefined : r.error);
 }
 
-export async function saveEvent(formData: FormData) {
-  const ctx = await scoped(formData);
-  const id = str(formData, "id") || undefined;
-  const r = await editor.upsertEvent(ctx.weddingId, {
-    id, name: str(formData, "name"), date: str(formData, "date"), time: str(formData, "time"),
+const applyEvent = (ctx: Ctx, formData: FormData): Promise<Applied> =>
+  editor.upsertEvent(ctx.weddingId, {
+    id: str(formData, "id") || undefined, name: str(formData, "name"), date: str(formData, "date"), time: str(formData, "time"),
     venueName: str(formData, "venueName"), address: str(formData, "address"), mapUrl: str(formData, "mapUrl"),
     dressCode: str(formData, "dressCode"), description: str(formData, "description"),
     isPublished: formData.get("isPublished") === "on",
@@ -133,6 +141,10 @@ export async function saveEvent(formData: FormData) {
     side: str(formData, "side") === "both" ? "both" : ctx.family,
     icon: str(formData, "icon"), iconImage: str(formData, "iconImage"),
   });
+export async function saveEvent(formData: FormData) {
+  const ctx = await scoped(formData);
+  const id = str(formData, "id") || undefined;
+  const r = await applyEvent(ctx, formData);
   done(ctx, id ? `event-${id}` : "events", r.ok ? undefined : r.error);
 }
 
@@ -177,9 +189,11 @@ export async function sortEvents(formData: FormData) {
 
 /* ── Gallery ──────────────────────────────────────────────────────── */
 
+const applyGallery = (ctx: Ctx, formData: FormData): Promise<Applied> =>
+  gallery.setGalleryEnabled(ctx.weddingId, ctx.family, formData.get("galleryEnabled") === "on");
 export async function saveGallerySettings(formData: FormData) {
   const ctx = await scoped(formData);
-  const r = await gallery.setGalleryEnabled(ctx.weddingId, ctx.family, formData.get("galleryEnabled") === "on");
+  const r = await applyGallery(ctx, formData);
   done(ctx, "gallery", r.ok ? undefined : r.error);
 }
 
@@ -226,12 +240,46 @@ export async function uploadGalleryPhoto(formData: FormData): Promise<{ ok: bool
 }
 
 /** "Things to know": short notes for guests. */
-export async function saveKnow(formData: FormData) {
-  const ctx = await scoped(formData);
+function applyKnow(ctx: Ctx, formData: FormData): Promise<Applied> {
   const rows = [];
   for (let i = 0; i < MAX_KNOW; i++) rows.push({ title: str(formData, `know${i}title`), text: str(formData, `know${i}text`) });
-  const r = await editor.updateKnow(ctx.weddingId, ctx.family, rows);
+  return editor.updateKnow(ctx.weddingId, ctx.family, rows);
+}
+export async function saveKnow(formData: FormData) {
+  const ctx = await scoped(formData);
+  const r = await applyKnow(ctx, formData);
   done(ctx, "know", r.ok ? undefined : r.error);
+}
+
+/* ── One Save for the whole editor ────────────────────────────────── */
+
+const APPLY: Record<string, (ctx: Ctx, fd: FormData) => Promise<Applied>> = {
+  decor: applyDecor, wording: applyWording, words: applyWords, travel: applyTravel,
+  gallery: applyGallery, know: applyKnow, event: applyEvent,
+};
+
+/**
+ * The editor's floating Save: every section with changes, in one go. Each
+ * section's fields arrive prefixed with its position ("0.story", "1.motion")
+ * and "__parts" lists them in order ("words,event-abc"). Sections save one by
+ * one; on the first that fails we stop and point at it (those before it are
+ * already saved), otherwise we come back once with all of them noted.
+ */
+export async function saveChanges(formData: FormData) {
+  const ctx = await scoped(formData);
+  const parts = String(formData.get("__parts") ?? "").split(",").filter(Boolean).slice(0, 60);
+  const saved: string[] = [];
+  for (const [i, part] of parts.entries()) {
+    const apply = APPLY[part.startsWith("event-") ? "event" : part];
+    if (!apply) return done(ctx, part, "invalid input");
+    const fd = new FormData();
+    const prefix = `${i}.`;
+    for (const [k, v] of formData.entries()) if (k.startsWith(prefix)) fd.append(k.slice(prefix.length), v);
+    const r = await apply(ctx, fd);
+    if (!r.ok) return done(ctx, part, r.error ?? "invalid input");
+    saved.push(part);
+  }
+  done(ctx, saved.join(",") || "site");
 }
 
 function refresh(ctx: Ctx) {

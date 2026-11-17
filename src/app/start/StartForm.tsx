@@ -32,6 +32,19 @@ export function StartForm({ initialTheme }: { initialTheme?: string }) {
             <span className="text-xs" style={{ color: "var(--ink-soft)" }}>City</span>
             <input name="city" defaultValue={v.city} required maxLength={80} placeholder="Mumbai" className="mt-1.5 w-full px-4 py-3 text-sm outline-none" style={field} />
           </label>
+          <fieldset className="md:col-span-2">
+            <legend className="text-xs" style={{ color: "var(--ink-soft)" }}>You are</legend>
+            <div className="mt-1.5 flex gap-3">
+              {(["bride", "groom"] as const).map((s) => (
+                <label key={s} className="cursor-pointer">
+                  <input type="radio" name="you" value={s} required defaultChecked={v.you === s} className="peer sr-only" />
+                  <span className="block px-5 py-2.5 text-sm transition-all peer-checked:font-semibold peer-checked:shadow-[0_0_0_2px_var(--ink)] peer-focus-visible:shadow-[0_0_0_2px_var(--accent)]" style={{ ...field }}>
+                    {s === "bride" ? "The bride" : "The groom"}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
           <label className="block md:col-span-2">
             <span className="text-xs" style={{ color: "var(--ink-soft)" }}>Your email — we&apos;ll send a sign-in link, no password</span>
             <input name="email" type="email" defaultValue={v.email} required maxLength={254} placeholder="you@gmail.com" className="mt-1.5 w-full px-4 py-3 text-sm outline-none" style={field} />

@@ -13,7 +13,7 @@ import { THEME_META } from "@/themes/catalog";
 import { ShareCard } from "../ShareCard";
 import { SummaryCards } from "../SummaryCards";
 import { Stat, weddingStats } from "../stats";
-import { SaveButton } from "../site/SaveButton";
+import { FloatingSave } from "@/components/FloatingSave";
 import { saveRsvpSettings, renewShareLink } from "../site/actions";
 import { PortalNav } from "../PortalNav";
 import { DangerZone } from "../danger/DangerZone";
@@ -108,7 +108,7 @@ export default async function FamilySection({
         <p className="portal-eyebrow">RSVP</p>
         <h2 className="mt-1 font-semibold">Who can reply to the {who}&apos;s side, and until when</h2>
         <p className="mt-1 text-sm text-neutral-500">Families on your guest list always reply from their personal invitation links, until the reply-by date.</p>
-        <form action={saveRsvpSettings} className="mt-5 space-y-4">
+        <form action={saveRsvpSettings} data-save-part="rsvp" className="mt-5 space-y-4">
           <fieldset disabled={!canRsvp} className="portal-fieldset space-y-4">
           {admin && <input type="hidden" name="weddingId" value={weddingId} />}
           <input type="hidden" name="family" value={family} />
@@ -126,7 +126,7 @@ export default async function FamilySection({
               <input name="rsvpDeadline" type="date" defaultValue={look.rsvpDeadline ? istParts(look.rsvpDeadline).date : ""} className="portal-input md:max-w-xs" />
             </div>
           </label>
-          {canRsvp ? <SaveButton /> : <p className="text-xs text-neutral-500">Only people with full access to this guest list can change these.</p>}
+          {canRsvp ? null : <p className="text-xs text-neutral-500">Only people with full access to this guest list can change these.</p>}
           </fieldset>
         </form>
       </section>
@@ -141,6 +141,7 @@ export default async function FamilySection({
       </p>
       )}
       </PortalFrame>
+      {canRsvp && <FloatingSave key={JSON.stringify(sp)} action={saveRsvpSettings} failedPart={sp.error ? "rsvp" : undefined} />}
     </main>
   );
 }

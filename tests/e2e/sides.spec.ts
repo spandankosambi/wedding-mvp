@@ -35,7 +35,7 @@ test("an event can be one family's own; each family's section, list and site fol
   await common.uncheck();
   await expect(mehendi.getByText("Only the bride's family's event")).toBeVisible();
   if (shots) await mehendi.screenshot({ path: `${shots}/event-side.png` });
-  await mehendi.getByRole("button", { name: "Save" }).click();
+  await page.getByTestId("floating-save").click();
   await expect(page.getByText("Saved. Your site is up to date.")).toBeVisible();
   await expect(mehendi.locator("summary").getByText("This family only")).toBeVisible();
 
@@ -91,7 +91,7 @@ test("hotels can be common or one family's own, and you can add as many as neede
   await stays.last().getByLabel("Bride Side Inn is common for both families").uncheck();
   await expect(stays).toHaveCount(before + 2);
   if (shots) await travel.screenshot({ path: `${shots}/stays-editor.png` });
-  await travel.getByRole("button", { name: "Save" }).click();
+  await page.getByTestId("floating-save").click();
   await expect(page).toHaveURL(/saved=travel/);
 
   // the groom's family sees the shared one (and can edit it), not the bride's own
@@ -110,7 +110,7 @@ test("hotels can be common or one family's own, and you can add as many as neede
   // a hotel can be removed
   await page.goto("/couple/site?family=bride");
   await page.locator("#travel").getByRole("button", { name: "Remove Bride Side Inn" }).click();
-  await page.locator("#travel").getByRole("button", { name: "Save" }).click();
+  await page.getByTestId("floating-save").click();
   await expect(page).toHaveURL(/saved=travel/);
   await page.goto("/w/gaurav-weds-karishma?side=bride&k=sample");
   await expect(stay("Bride Side Inn")).toHaveCount(0);
@@ -144,7 +144,7 @@ test("design touches: an opening screen, what falls, decorations and celebration
   await decor.getByLabel(/Toran across the top/).check();
   await decor.getByLabel(/Corner motifs/).check();
   await decor.getByLabel(/Celebration icons/).check();
-  await decor.getByRole("button", { name: "Save" }).click();
+  await page.getByTestId("floating-save").click();
   await expect(page).toHaveURL(/saved=decor/);
 
   // guests first see the closed doors; one tap opens the invitation
@@ -164,7 +164,7 @@ test("design touches: an opening screen, what falls, decorations and celebration
   const icons = sangeet.getByRole("radiogroup", { name: "Icon for Sangeet" });
   await expect(icons.getByRole("radio", { name: "Automatic (Music)" })).toHaveAttribute("aria-checked", "true");
   await icons.getByRole("radio", { name: "Dhol" }).click();
-  await sangeet.getByRole("button", { name: "Save" }).click();
+  await page.getByTestId("floating-save").click();
   await expect(page.getByText("Saved. Your site is up to date.")).toBeVisible();
   await expect(sangeet.locator("input[name=icon]")).toHaveValue("drum");
   // PRO: the family's own icon, uploaded as an SVG and redrawn in the theme's colour
@@ -175,7 +175,7 @@ test("design touches: an opening screen, what falls, decorations and celebration
     buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><script>window.bad=1</script><path fill="#f00" d="M12 2l3 7h7l-5.5 4.5 2 7.5-6.5-4.5L5.5 21l2-7.5L2 9h7z"/></svg>'),
   });
   await expect(icons.getByRole("radio", { name: "Your own icon" })).toHaveAttribute("aria-checked", "true");
-  await sangeet.getByRole("button", { name: "Save" }).click();
+  await page.getByTestId("floating-save").click();
   await expect(page.getByText("Saved. Your site is up to date.")).toBeVisible();
   await expect(sangeet.locator("input[name=icon]")).toHaveValue("custom");
   await page.goto("/w/gaurav-weds-karishma?side=groom&k=sample");

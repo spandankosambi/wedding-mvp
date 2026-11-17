@@ -13,7 +13,7 @@ import { THEME_META } from "@/themes/catalog";
 import { SummaryCards } from "./SummaryCards";
 import { PortalNav } from "./PortalNav";
 import { DangerZone } from "./danger/DangerZone";
-import { SaveButton } from "./site/SaveButton";
+import { FloatingSave } from "@/components/FloatingSave";
 import { saveDetails } from "./site/actions";
 import { Stat, weddingStats } from "./stats";
 
@@ -135,7 +135,7 @@ export default async function CouplePage({
         <section id="details" className="portal-panel p-6">
           <p className="portal-eyebrow">Shared by both families</p>
           <h2 className="mt-1 font-semibold">Names, date, city, parents</h2>
-          <form action={saveDetails} className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <form action={saveDetails} data-save-part="details" className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {wid}
             <Field label="Bride's name"><input name="brideName" defaultValue={wedding.brideName} required maxLength={60} className="portal-input" /></Field>
             <Field label="Groom's name"><input name="groomName" defaultValue={wedding.groomName} required maxLength={60} className="portal-input" /></Field>
@@ -143,7 +143,6 @@ export default async function CouplePage({
             <Field label="City"><input name="city" defaultValue={wedding.city ?? ""} maxLength={80} placeholder="Mumbai" className="portal-input" /></Field>
             <Field label="Bride's parents" hint="on cards and the site"><input name="brideParents" defaultValue={wedding.brideParents ?? ""} maxLength={160} placeholder="Sunita & Rajesh Sharma" className="portal-input" /></Field>
             <Field label="Groom's parents"><input name="groomParents" defaultValue={wedding.groomParents ?? ""} maxLength={160} placeholder="Kavita & Vikram Mehta" className="portal-input" /></Field>
-            <div className="sm:col-span-2 lg:col-span-3"><SaveButton /></div>
           </form>
         </section>
 
@@ -162,6 +161,7 @@ export default async function CouplePage({
       {/* only the couple themselves can delete; each family resets its own part in its section */}
       {staff.role === "couple" && staff.access.owner && <div className="mt-8"><DangerZone coupleNames={coupleNames} /></div>}
       </PortalFrame>
+      {staff.access.manage && <FloatingSave key={JSON.stringify(sp)} action={saveDetails} failedPart={sp.error ? "details" : undefined} />}
     </main>
   );
 }

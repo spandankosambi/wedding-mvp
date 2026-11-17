@@ -16,6 +16,7 @@ async function newCouple(page: Page, bride: string, groom: string) {
   await page.goto("/start");
   await page.fill("input[name=brideName]", bride);
   await page.fill("input[name=groomName]", groom);
+  await page.locator("label:has(input[name=you][value=bride])").click();
   await page.fill("input[name=weddingDate]", "2027-03-03");
   await page.fill("input[name=city]", "Pune");
   await page.fill("input[name=email]", email);
@@ -36,7 +37,7 @@ test("a family resets its own part after confirming by email", async ({ page }) 
   const haldi = page.locator("details", { has: page.locator("input[name=name][value=Haldi]") });
   await haldi.evaluate((d) => { (d as HTMLDetailsElement).open = true; }); // a new event may already be open
   await haldi.getByLabel("Haldi is common for both families").uncheck();
-  await haldi.getByRole("button", { name: "Save" }).click();
+  await page.getByTestId("floating-save").click();
   await expect(haldi.locator("summary").getByText("This family only")).toBeVisible();
 
   // the dashboard only deletes; each family resets in its own section

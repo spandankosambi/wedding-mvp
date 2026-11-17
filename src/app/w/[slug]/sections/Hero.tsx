@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { Ornament } from "@/themes/ornaments";
 import { fmtWeddingDate } from "@/lib/format";
 import { Petals } from "./Petals";
@@ -24,15 +25,36 @@ type HeroWedding = {
   shloka?: string | null;
 };
 
+/* Words of a name and where each starts, so the letter count runs on
+   across the gap between first and last name. */
+function words(text: string) {
+  let start = 0;
+  return text.trim().split(/\s+/).map((word) => {
+    const w = { word, start };
+    start += word.length + 1;
+    return w;
+  });
+}
+
 /* Letter-by-letter reveal; --i continues across both names so the cascade
    reads as one gesture. The intact word stays available to screen readers. */
 function Letters({ text, from }: { text: string; from: number }) {
   return (
     <span aria-label={text} role="text">
-      {text.split("").map((ch, i) => (
-        <span key={i} aria-hidden className="ltr" style={{ "--i": from + i } as React.CSSProperties}>
-          {ch}
-        </span>
+      {words(text).map(({ word, start }, w) => (
+        /* Each letter is its own inline block, and a block holding only a
+           space collapses to nothing, so words are grouped and a real space
+           sits between them (which also lets a long name wrap there). */
+        <Fragment key={w}>
+          {w > 0 && " "}
+          <span aria-hidden className="whitespace-nowrap">
+            {word.split("").map((ch, i) => (
+              <span key={i} className="ltr" style={{ "--i": from + start + i } as React.CSSProperties}>
+                {ch}
+              </span>
+            ))}
+          </span>
+        </Fragment>
       ))}
     </span>
   );

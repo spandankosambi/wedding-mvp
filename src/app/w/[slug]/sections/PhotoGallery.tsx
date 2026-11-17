@@ -100,6 +100,7 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
                 width={p.width}
                 height={p.height}
                 loading="lazy"
+                draggable={false}
                 style={h ? { height: `${h}px` } : { aspectRatio: `${p.width} / ${p.height}` }}
               />
             </button>
@@ -122,7 +123,7 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
             if (Math.abs(dx) > 50) step(dx < 0 ? 1 : -1);
           }}
         >
-          <img key={current.pathname} src={current.url} alt="" className="lightbox-img" width={current.width} height={current.height} />
+          <img key={current.pathname} src={current.url} alt="" className="lightbox-img" width={current.width} height={current.height} draggable={false} />
           <button ref={closeBtn} type="button" className="lightbox-btn lightbox-close" onClick={close} aria-label="Close">×</button>
           {n > 1 && (
             <>

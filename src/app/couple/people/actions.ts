@@ -45,6 +45,15 @@ export async function updatePersonAction(input: { weddingId?: string; userId: st
   return r.ok ? { ok: true, note: "Saved." } : r;
 }
 
+/** The signed-in person's own name (their access stays as it is). */
+export async function renameMeAction(input: { weddingId?: string; name: string }): Promise<Out> {
+  const m = await manager(input?.weddingId);
+  if (!m) return { ok: false, error: "forbidden" };
+  const r = await people.renameSelf(m.weddingId, m.actor.userId, input?.name);
+  revalidatePath("/couple/people");
+  return r.ok ? { ok: true, note: "Saved." } : r;
+}
+
 export async function removePersonAction(input: { weddingId?: string; userId: string }): Promise<Out> {
   const m = await manager(input?.weddingId);
   if (!m) return { ok: false, error: "forbidden" };

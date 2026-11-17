@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { ImageGuard } from "@/components/ImageGuard";
 import type { Metadata } from "next";
 import { getPublicWedding } from "@/lib/open-rsvp";
 import { fixShortMapLinks } from "@/lib/maplinks";
@@ -132,6 +133,7 @@ export default async function WeddingPage({
 
   return (
     <main data-theme={wedding.theme} data-motion={motion} className="themed flex-1">
+      <ImageGuard />
       {/* arm scroll-fx before below-fold sections paint (no reveal flash);
           ScrollFx then drives the observers after hydration */}
       {motion !== "none" && <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('fx')" }} />}

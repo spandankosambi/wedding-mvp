@@ -64,7 +64,7 @@ test("the couple give a friend view-only access to one side, widen it, then remo
   await pages.getByRole("link", { name: "Edit your site" }).click();
   await expect(theirs.getByTestId("view-only")).toBeVisible();
   await expect(theirs.locator("#words textarea[name=story]")).toBeDisabled();
-  await expect(theirs.locator("#words").getByRole("button", { name: "Save" })).toBeDisabled();
+  await expect(theirs.getByTestId("floating-save")).toHaveCount(0);
   if (shots) await theirs.screenshot({ path: `${shots}/view-only.png` });
   // doors that aren't theirs lead back to the dashboard
   for (const url of ["/couple/site?family=groom", "/couple/groom", "/committee?family=bride", "/committee/import?family=bride", "/couple/bride/print", "/couple/people"]) {
@@ -78,7 +78,7 @@ test("the couple give a friend view-only access to one side, widen it, then remo
   // ── the couple widen it: full guest list on both sides ──
   await row.getByLabel("Side for Friend of the bride").selectOption("both");
   await row.getByLabel("Guest list for Friend of the bride").selectOption("full");
-  await row.getByRole("button", { name: "Save Friend of the bride" }).click();
+  await page.getByTestId("floating-save").click();
   await expect(page.locator("p[role=status]")).toContainText("Saved.");
   await theirs.goto("/committee?family=groom");
   await expect(theirs.getByRole("heading", { name: /Groom's family's guest list/ })).toBeVisible();
@@ -86,7 +86,7 @@ test("the couple give a friend view-only access to one side, widen it, then remo
 
   // ── view-only guest list: look, search, but change nothing ──
   await row.getByLabel("Guest list for Friend of the bride").selectOption("view");
-  await row.getByRole("button", { name: "Save Friend of the bride" }).click();
+  await page.getByTestId("floating-save").click();
   await expect(page.locator("p[role=status]")).toContainText("Saved.");
   await theirs.reload();
   await expect(theirs.getByRole("button", { name: "Add family" })).toHaveCount(0);

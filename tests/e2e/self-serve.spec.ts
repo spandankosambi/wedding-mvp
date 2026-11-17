@@ -18,6 +18,7 @@ test("a couple signs up, edits their site, and a guest RSVPs from the shared lin
   await page.goto("/start");
   await page.fill("input[name=brideName]", "Sanya");
   await page.fill("input[name=groomName]", "Kabir");
+  await page.locator("label:has(input[name=you][value=bride])").click();
   await page.fill("input[name=weddingDate]", "2027-04-18");
   await page.fill("input[name=city]", "Udaipur");
   await page.fill("input[name=email]", email);
@@ -57,7 +58,7 @@ test("a couple signs up, edits their site, and a guest RSVPs from the shared lin
   await expect(page.getByRole("link", { name: /Confirm your attendance/ })).toHaveCount(0);
   await page.goto("/couple/bride");
   await page.locator("#rsvp input[name=rsvpOpen]").check();
-  await page.locator("#rsvp button[type=submit]").click();
+  await page.getByTestId("floating-save").click();
   await expect(page).toHaveURL(/\/couple\/bride\?saved=rsvp/);
 
   // ── a guest RSVPs from the shared link, no account ─────────
@@ -96,6 +97,7 @@ test("each family decides whether people who are not on its guest list can reply
   await page.goto("/start");
   await page.fill("input[name=brideName]", "Riya");
   await page.fill("input[name=groomName]", "Veer");
+  await page.locator("label:has(input[name=you][value=bride])").click();
   await page.fill("input[name=weddingDate]", "2027-06-06");
   await page.fill("input[name=city]", "Goa");
   await page.fill("input[name=email]", email);
@@ -107,7 +109,7 @@ test("each family decides whether people who are not on its guest list can reply
   // the bride's family's RSVP contact, on its site…
   await page.getByLabel("Contact 1 name").fill("Riya's dad");
   await page.getByLabel("Contact 1 number").fill("+91 90000 12345");
-  await page.locator("#wording button[type=submit]").click();
+  await page.getByTestId("floating-save").click();
   await expect(page).toHaveURL(/saved=wording/);
 
   // …and its own RSVP settings, in its section
@@ -118,7 +120,7 @@ test("each family decides whether people who are not on its guest list can reply
   await page.goto("/couple/groom");
   const groom = new URL(await page.locator("#share input[readonly]").inputValue());
   await page.locator("#rsvp input[name=rsvpOpen]").check();
-  await page.locator("#rsvp button[type=submit]").click();
+  await page.getByTestId("floating-save").click();
   await expect(page).toHaveURL(/\/couple\/groom\?saved=rsvp/);
 
   await page.goto(`/w/riya-weds-veer/rsvp${bride.search}`);

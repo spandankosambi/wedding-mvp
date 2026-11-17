@@ -29,19 +29,20 @@ test("motion, a scene, the curtain and things to know reach the guest site", asy
   await decor.getByText("Lively", { exact: true }).click();
   await decor.getByText("Night sky", { exact: true }).click();
   await decor.getByText("Paper-cut curtain", { exact: true }).click();
-  await decor.getByRole("button", { name: "Save" }).click();
+  await page.getByTestId("floating-save").click();
   await expect(page).toHaveURL(/saved=decor/);
 
   // things to know: a suggestion fills the title; a half-filled note is refused
   const know = page.locator("#know");
   await know.getByRole("button", { name: "+ Parking" }).click();
-  await know.getByRole("button", { name: "Save" }).click();
+  await page.getByTestId("floating-save").click();
   await expect(page.locator("p[role=alert]")).toContainText("Each note needs a title and a few words");
-  await page.locator("#know").getByRole("button", { name: "+ Parking" }).click();
+  // the half-filled note is still there to finish, and Save stays lit for it
+  await expect(page.getByTestId("floating-save")).toBeEnabled();
   await page.locator("#know").getByLabel("What guests should know about Parking").fill("Valet at the main gate.");
   await page.locator("#know").getByRole("button", { name: "+ Weather" }).click();
   await page.locator("#know").getByLabel("What guests should know about Weather").fill("Cool evenings; bring a shawl.");
-  await page.locator("#know").getByRole("button", { name: "Save" }).click();
+  await page.getByTestId("floating-save").click();
   await expect(page).toHaveURL(/saved=know/);
   // music needs file storage, which this test site doesn't have
   await expect(page.locator("#music")).toContainText("up to 4 MB");
@@ -76,7 +77,7 @@ test("motion, a scene, the curtain and things to know reach the guest site", asy
     await page.goto("/couple/site?family=bride");
     await page.locator("#decor").getByText(label, { exact: true }).click();
     await page.locator("#decor").getByText("Straight to the site", { exact: true }).click();
-    await page.locator("#decor").getByRole("button", { name: "Save" }).click();
+    await page.getByTestId("floating-save").click();
     await expect(page).toHaveURL(/saved=decor/);
     await page.goto("/w/gaurav-weds-karishma?side=bride&k=sample");
     await expect(page.getByTestId("scene")).toHaveAttribute("data-scene", scene);
@@ -86,7 +87,7 @@ test("motion, a scene, the curtain and things to know reach the guest site", asy
   await page.goto("/couple/site?family=bride");
   await page.locator("#decor").getByText("Still", { exact: true }).click();
   await page.locator("#decor").getByText("No scene", { exact: true }).click();
-  await page.locator("#decor").getByRole("button", { name: "Save" }).click();
+  await page.getByTestId("floating-save").click();
   await expect(page).toHaveURL(/saved=decor/);
   await page.goto("/w/gaurav-weds-karishma?side=bride&k=sample");
   await expect(page.locator("main")).toHaveAttribute("data-motion", "none");

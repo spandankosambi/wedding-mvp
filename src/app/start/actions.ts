@@ -10,7 +10,7 @@ export type StartState = { error?: string; values?: Record<string, string> };
 
 export async function startWedding(_prev: StartState, formData: FormData): Promise<StartState> {
   const values = Object.fromEntries(
-    ["brideName", "groomName", "weddingDate", "city", "email", "theme"].map((k) => [k, String(formData.get(k) ?? "").trim()]),
+    ["brideName", "groomName", "you", "weddingDate", "city", "email", "theme"].map((k) => [k, String(formData.get(k) ?? "").trim()]),
   );
   const ip = ((await headers()).get("x-forwarded-for") ?? "local").split(",")[0].trim();
   if (!rateLimit(`start:${ip}`, { max: 5, windowMs: 10 * 60_000 })) {

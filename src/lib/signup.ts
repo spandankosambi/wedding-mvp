@@ -13,6 +13,8 @@ export const signupSchema = z.object({
   city: z.string().trim().min(1).max(80),
   email: z.string().trim().toLowerCase().email().max(254),
   theme: z.enum(THEMES).optional(),
+  /** which of the two is filling the form in: their own login carries their own name */
+  you: z.enum(["bride", "groom"]).optional(),
 });
 export type SignupInput = z.input<typeof signupSchema>;
 
@@ -47,6 +49,6 @@ export async function createWeddingForCouple(input: unknown): Promise<SignupResu
     heroTagline: "Two families, one big yes.",
   }).returning();
   await db.insert(events).values(starterEvents(weddingDate, d.city).map((e) => ({ ...e, weddingId: w.id })));
-  await db.insert(users).values({ email: d.email, name: `${d.brideName} & ${d.groomName}`, role: "couple", weddingId: w.id, isOwner: true });
+  await db.insert(users).values({ email: d.email, name: d.you === "groom" ? d.groomName : d.brideName, role: "couple", weddingId: w.id, isOwner: true });
   return { ok: true, created: true, slug, weddingId: w.id, email: d.email };
 }

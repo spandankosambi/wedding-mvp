@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Person } from "@/lib/people";
-import { addPersonAction, removePersonAction, updatePersonAction } from "./actions";
+import { addPersonAction, removePersonAction, renameMeAction, updatePersonAction } from "./actions";
+import { SaveBar } from "@/components/FloatingSave";
 
 type Draft = Pick<Person, "name" | "role" | "side" | "site" | "guests" | "print">;
 const BLANK: Draft = { name: "", role: "committee", side: "bride", site: "none", guests: "full", print: "none" };
@@ -69,6 +70,23 @@ export function PeopleManager({ weddingId, admin, people, meId, owner }: {
       if (r.ok) { after?.(); router.refresh(); }
     });
 
+  /* one Save for every row that was changed: your own name, others' access */
+  const saveAll = () =>
+    start(async () => {
+      setFlash(null);
+      const failed: string[] = [];
+      const left: Record<string, Draft> = {};
+      for (const [id, d] of Object.entries(edits)) {
+        const r = id === meId
+          ? await renameMeAction({ ...wid, name: d.name })
+          : await updatePersonAction({ ...wid, userId: id, ...d });
+        if (!r.ok) { failed.push(r.error === "forbidden" ? "You're not allowed to do that." : r.error); left[id] = d; }
+      }
+      setEdits(left);
+      setFlash(failed.length ? { ok: false, text: failed[0] } : { ok: true, text: "Saved." });
+      router.refresh();
+    });
+
   const head = (
     <thead>
       <tr>
@@ -128,11 +146,10 @@ export function PeopleManager({ weddingId, admin, people, meId, owner }: {
                 const me = p.id === meId;
                 const locked = me || p.isOwner || (p.role === "couple" && !owner);
                 const d = edits[p.id] ?? p;
-                const dirty = !!edits[p.id];
                 return (
                   <tr key={p.id} data-testid="person">
                     <td>
-                      {locked
+                      {locked && !me
                         ? <span className="font-medium">{p.name || "—"}</span>
                         : <input aria-label={`Name for ${who}`} className="portal-input" maxLength={80} value={d.name} onChange={(e) => setEdits({ ...edits, [p.id]: { ...d, name: e.target.value } })} />}
                       <span className="mt-1 block text-xs text-neutral-500">
@@ -149,7 +166,6 @@ export function PeopleManager({ weddingId, admin, people, meId, owner }: {
                         </>
                       ) : (
                         <>
-                          {dirty && <button type="button" disabled={pending} className="portal-button mr-3" aria-label={`Save ${who}`} onClick={() => run(() => updatePersonAction({ ...wid, userId: p.id, ...d }), () => setEdits(({ [p.id]: _, ...rest }) => rest))}>Save</button>}
                           <button type="button" className="portal-link" aria-label={`Remove ${who}`} onClick={() => setConfirming(p.id)}>Remove</button>
                         </>
                       ))}
@@ -161,6 +177,7 @@ export function PeopleManager({ weddingId, admin, people, meId, owner }: {
           </table>
         </div>
       </section>
+      <SaveBar count={Object.keys(edits).length} pending={pending} onSave={saveAll} />
     </>
   );
 }
