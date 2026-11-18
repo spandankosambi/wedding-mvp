@@ -33,6 +33,7 @@ export function GuestTable({
   events,
   rows,
   columns,
+  hotels = [],
   family,
   readOnly = false,
 }: {
@@ -42,6 +43,8 @@ export function GuestTable({
   events: { id: string; name: string; side: Side }[];
   rows: Row[];
   columns: GuestColumn[];
+  /** the hotels listed in Travel & stay on this family's site */
+  hotels?: string[];
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -136,7 +139,7 @@ export function GuestTable({
       <fieldset disabled={readOnly} className="portal-fieldset">
       {/* with several extra columns the table scrolls sideways instead of freezing its titles */}
       <div className="portal-panel guest-table" data-freeze={columns.length <= 2}>
-        <table className="portal-table w-full text-left text-sm" style={{ minWidth: `${48 + columns.length * 10}rem` }}>
+        <table className="portal-table w-full text-left text-sm" style={{ minWidth: `${66 + columns.length * 10}rem` }}>
           <thead>
             <tr>
               <th className="p-3">
@@ -152,6 +155,8 @@ export function GuestTable({
               <th className="p-3">Family</th>
               <th className="p-3">RSVP by event</th>
               <th className="p-3" title="Set per household: ticking one guest ticks their whole family">Travel &amp; Stay</th>
+              <th className="p-3" title="For guests shown Travel & Stay: one of the hotels on your site">Hotel</th>
+              <th className="p-3" title="For guests shown Travel & Stay">Room No.</th>
               {columns.map((c) => (
                 <th key={c.id} className="p-3">
                   <span className="inline-flex items-center gap-1 whitespace-nowrap">
@@ -218,6 +223,16 @@ export function GuestTable({
                       className="h-4 w-4"
                     />
                   </td>
+                  <td>
+                    {travel.shows(f)
+                      ? <HotelCell weddingId={weddingId} guestId={g.id} hotels={hotels} initial={g.details.hotel ?? ""} guestName={g.fullName} />
+                      : <span className="px-2 text-neutral-300" title="Tick Travel & Stay to choose a hotel">—</span>}
+                  </td>
+                  <td>
+                    {travel.shows(f)
+                      ? <DetailCell weddingId={weddingId} guestId={g.id} column={ROOM} initial={g.details.room ?? ""} guestName={g.fullName} />
+                      : <span className="px-2 text-neutral-300" title="Tick Travel & Stay to add a room">—</span>}
+                  </td>
                   {columns.map((c) => (
                     <td key={c.id}>
                       <DetailCell weddingId={weddingId} guestId={g.id} column={c} initial={g.details[c.id] ?? ""} guestName={g.fullName} />
@@ -250,7 +265,7 @@ export function GuestTable({
             })}
             {shown.length === 0 && (
               <tr>
-                <td colSpan={7 + columns.length} className="p-10 text-center text-sm text-neutral-400">
+                <td colSpan={9 + columns.length} className="p-10 text-center text-sm text-neutral-400">
                   {guests.length ? "No guest matches that search." : "No guests yet — add a family in the Families view."}
                 </td>
               </tr>
@@ -289,6 +304,43 @@ export function GuestTable({
         />
       )}
     </section>
+  );
+}
+
+const ROOM: GuestColumn = { id: "room", label: "Room No." };
+
+/**
+ * Which hotel this guest stays in: one of the hotels on the family's site.
+ * With only one hotel listed, that one is chosen for everyone by default.
+ */
+function HotelCell({ weddingId, guestId, hotels, initial, guestName }: {
+  weddingId: string; guestId: string; hotels: string[]; initial: string; guestName: string;
+}) {
+  const fallback = hotels.length === 1 ? hotels[0] : "";
+  const [value, setValue] = useState(initial || fallback);
+  const [state, setState] = useState<"idle" | "saving" | "error">("idle");
+  // a hotel since removed from the site still shows for the guests who have it
+  const options = initial && !hotels.includes(initial) ? [...hotels, initial] : hotels;
+
+  async function choose(v: string) {
+    setValue(v);
+    setState("saving");
+    const r = await setGuestDetailAction({ weddingId, guestId, columnId: "hotel", value: v });
+    setState(r.ok ? "idle" : "error");
+  }
+
+  if (!options.length) return <span className="px-2 text-xs text-neutral-400" title="Add hotels in Edit your site → Travel & stay">No hotels yet</span>;
+  return (
+    <select
+      value={value}
+      onChange={(e) => choose(e.target.value)}
+      aria-label={`Hotel for ${guestName}`}
+      className="w-full rounded-md border bg-transparent px-1.5 py-1 text-sm"
+      style={{ borderColor: state === "error" ? "#dc2626" : "#e4e1db", minWidth: "9rem", opacity: state === "saving" ? 0.6 : 1 }}
+    >
+      {hotels.length !== 1 && <option value="">—</option>}
+      {options.map((h) => <option key={h} value={h}>{h}</option>)}
+    </select>
   );
 }
 

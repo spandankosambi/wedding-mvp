@@ -61,6 +61,15 @@ a.portal-nav-brand:hover { color: #7a5f2f; }
 .portal-about p + p { margin-top: 0.5rem; }
 .portal-about a { color: #7a5f2f; text-decoration: underline; text-underline-offset: 2px; }
 .portal-about-help { font-weight: 650; color: #3b3832; }
+.portal-about-helpbox { margin-top: 0.9rem; border-radius: 0.75rem; background: #fff; border: 1px solid #e4e1db; padding: 0.75rem 0.85rem; }
+.portal-about-helpbox p + p { margin-top: 0.2rem; }
+.portal-help-button { margin-top: 0.6rem; width: 100%; border-radius: 0.6rem; background: #272624; color: #fff; padding: 0.5rem 0.7rem; font-size: 0.8125rem; font-weight: 600; text-align: center; }
+.portal-help-button:hover { background: #E2553B; }
+/* centred on screen (the base styles zero every margin, which pins a dialog to the top-left) */
+.portal-help-dialog { margin: auto; max-height: calc(100dvh - 2rem); overflow-y: auto; width: min(32rem, calc(100vw - 2rem)); border-radius: 1rem; border: 1px solid #e4e1db; padding: 0; color: #272624; box-shadow: 0 30px 80px -20px rgba(39, 38, 36, 0.35); }
+.portal-help-dialog::backdrop { background: rgba(39, 38, 36, 0.35); backdrop-filter: blur(2px); }
+.portal-jump-icon { flex: none; color: #a8a299; transition: color 0.15s; }
+.portal-jump-menu a { display: flex; align-items: center; gap: 0.6rem; }
 .portal-checklist { border: 1px solid #e4e1db; border-radius: 1rem; background: rgba(255, 255, 255, 0.86); padding: 1rem 1.1rem; font-size: 0.8125rem; color: #57524a; }
 .portal-checklist + .portal-checklist { margin-top: 1rem; }
 .portal-checklist-count strong { font-size: 1.25rem; color: #272624; }
@@ -87,12 +96,16 @@ a.portal-checklist-tick:hover { border-color: #E2553B; background: #fff1ee; }
 .portal-checklist a:hover { text-decoration-color: #9d7a3e; }
 @media (min-width: 1024px) {
   .portal-frame { display: grid; grid-template-columns: 11.5rem minmax(0, 1fr); gap: 2.5rem; align-items: start; }
-  .portal-left { display: block; position: sticky; top: calc(var(--nav-h) + 2.25rem); max-height: calc(100vh - var(--nav-h) - 3rem); overflow-y: auto; }
+  /* the left column fills the screen's height: On this page at the top, About us and Need help? at the foot */
+  .portal-left { display: flex; flex-direction: column; position: sticky; top: calc(var(--nav-h) + 2rem); height: calc(100vh - var(--nav-h) - 3rem); }
+  .portal-left .portal-jump { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
+  .portal-left .portal-about { margin-top: auto; padding-top: 1.25rem; border-top: 1px solid #e4e1db; }
   .portal-jump-menu { display: none; }
   .portal-jump { display: grid; gap: 0.1rem; font-size: 0.875rem; margin-bottom: 2rem; }
   .portal-jump .portal-jump-label { padding-left: 0.7rem; }
-  .portal-jump a { border-left: 2px solid #e4e1db; padding: 0.4rem 0.7rem; color: #625c54; }
-  .portal-jump a:hover { border-color: #9d7a3e; color: #272624; }
+  .portal-jump a { display: flex; align-items: center; gap: 0.6rem; border-left: 2px solid #e4e1db; padding: 0.42rem 0.7rem; color: #625c54; }
+  .portal-jump a:hover { border-color: #E2553B; color: #272624; }
+  .portal-jump a:hover .portal-jump-icon { color: #E2553B; }
   .portal-about { margin-top: 0; }
   .portal-frame[data-right] .portal-right { grid-column: 2; margin-top: 0; }
 }
@@ -1459,3 +1472,17 @@ html.fx .themed[data-motion="lively"] .reveal.is-in { opacity: 1; transform: non
   -webkit-touch-callout: none;
 }
 .photo-tile img, .lightbox-img { pointer-events: none; }
+
+/* ── page loading: the ripple, rings spreading from the dot ───────────── */
+.page-loading { min-height: 70vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.9rem; color: #8d877d; }
+.page-loading-dot { fill: #E2553B; transform-origin: 60px 60px; animation: page-loading-tap 1.4s ease-in-out infinite; }
+.page-loading-ring { fill: none; stroke: #E2553B; stroke-width: 6; transform-origin: 60px 60px; opacity: 0; animation: page-loading-ripple 1.4s ease-out infinite; }
+.page-loading-ring.r2 { animation-delay: 0.18s; }
+.page-loading-ring.r3 { animation-delay: 0.36s; }
+.page-loading-text { font-size: 0.8125rem; letter-spacing: 0.02em; }
+@keyframes page-loading-tap { 0%, 100% { transform: scale(1); } 15% { transform: scale(0.8); } 35% { transform: scale(1.05); } }
+@keyframes page-loading-ripple { 0% { opacity: 0; transform: scale(0.6); } 20% { opacity: 0.9; } 100% { opacity: 0; transform: scale(1.15); } }
+@media (prefers-reduced-motion: reduce) {
+  .page-loading-dot, .page-loading-ring { animation: none; opacity: 1; }
+  .page-loading-ring.r2 { opacity: 0.6; } .page-loading-ring.r3 { opacity: 0.3; }
+}

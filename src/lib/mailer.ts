@@ -5,7 +5,7 @@ import { render } from "@react-email/components";
 import { db } from "@/db/client";
 import { emailLog, outbox } from "@/db/schema";
 import { InviteEmail } from "@/emails/InviteEmail";
-import { BRAND, SITE_URL } from "@/lib/brand";
+import { BRAND, CONTACT_EMAIL, SITE_URL } from "@/lib/brand";
 
 type SendArgs = {
   familyId: string; to: string; familyName: string; coupleNames: string;
@@ -42,7 +42,7 @@ export function fromHeader(displayName?: string): string | undefined {
  * the local outbox file that dev tooling and tests read.
  */
 export async function recordOutbox(m: {
-  to: string; subject: string; kind: "signin" | "invite" | "confirm" | "access"; link?: string; html?: string;
+  to: string; subject: string; kind: "signin" | "invite" | "confirm" | "access" | "help"; link?: string; html?: string;
 }) {
   await db.insert(outbox).values({ to: m.to, subject: m.subject, kind: m.kind, link: m.link ?? null });
   try {
@@ -52,6 +52,7 @@ export async function recordOutbox(m: {
     const line = m.kind === "signin" ? { to: m.to, subject: m.subject, signInUrl: m.link, at }
       : m.kind === "confirm" ? { to: m.to, subject: m.subject, confirmUrl: m.link, at }
       : m.kind === "access" ? { to: m.to, subject: m.subject, accessUrl: m.link, at }
+      : m.kind === "help" ? { to: m.to, subject: m.subject, html: m.html, at }
       : { to: m.to, subject: m.subject, html: m.html, rsvpUrl: m.link, at };
     fs.appendFileSync(path.join(dir, "mail.jsonl"), JSON.stringify(line) + "\n");
   } catch {
@@ -127,5 +128,24 @@ ${emailLogo()}
     await smtpTransport().sendMail({ from: process.env.EMAIL_FROM, to: args.to, subject, html });
   } else {
     await recordOutbox({ to: args.to, subject, kind: "access", link: args.link, html });
+  }
+}
+
+/** A "Need help?" message from the site, to our own inbox; replying goes straight to the person who wrote. */
+export async function sendHelpRequest(args: {
+  name: string; email: string; topic: string; message: string; page: string; wedding?: string | null; signedInAs?: string | null;
+}) {
+  const subject = `Help request: ${args.topic} — ${args.name}`;
+  const row = (k: string, v?: string | null) => (v ? `<tr><td style="padding:2px 12px 2px 0;color:#6b6760">${k}</td><td>${escapeHtml(v)}</td></tr>` : "");
+  const html = `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.55;color:#22201c;max-width:560px">
+${emailLogo()}
+<table style="font-size:14px;margin-bottom:14px">${row("From", `${args.name} <${args.email}>`)}${row("Topic", args.topic)}${row("Wedding", args.wedding)}${row("Signed in as", args.signedInAs)}${row("Page", args.page)}</table>
+<p style="white-space:pre-wrap;margin:0;padding:12px 14px;background:#f6f4ef;border-radius:8px">${escapeHtml(args.message)}</p>
+</div>`;
+  const to = CONTACT_EMAIL;
+  if (smtpConfigured()) {
+    await smtpTransport().sendMail({ from: process.env.EMAIL_FROM, to, replyTo: `${args.name} <${args.email}>`, subject, html });
+  } else {
+    await recordOutbox({ to, subject, kind: "help", html });
   }
 }

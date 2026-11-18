@@ -1,3 +1,4 @@
+import { SheetTools } from "./SheetTools";
 import { SideNamesProvider } from "@/components/SideNames";
 import { namesFor } from "@/lib/looks";
 import { sideNamesOf } from "@/lib/side-names";
@@ -91,6 +92,9 @@ export default async function CommitteePage({
     })(),
   }));
 
+  // the hotels on this family's site (its own and the common ones), for the Guests view's Hotel column
+  const look = await getLook(weddingId, family);
+  const hotels = [...new Set((look.travel?.stays ?? []).map((s) => s.name.trim()).filter(Boolean))];
   const sn = sideNamesOf(wedding); // "Pooja", "Spandan"
   return (
     <main className="portal-page">
@@ -103,8 +107,9 @@ export default async function CommitteePage({
             {sn[family]}&apos;s households, their invitations and event headcounts. Their invitations open {sn[family]}&apos;s family&apos;s site.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <a href={sharePath(wedding.slug, family, (await getLook(weddingId, family)).shareKey)} className="portal-button-secondary" target="_blank" rel="noreferrer">
+        <div className="flex flex-wrap items-start gap-2">
+          <SheetTools weddingId={weddingId} admin={staff.role === "admin"} family={family} canEdit={!readOnly} />
+          <a href={sharePath(wedding.slug, family, look.shareKey)} className="portal-button-secondary" target="_blank" rel="noreferrer">
             View wedding site ↗
           </a>
         </div>
@@ -142,6 +147,7 @@ export default async function CommitteePage({
           events={evs.map((e) => ({ id: e.id, name: eventLabel(e, sn), side: e.side }))}
           rows={rows}
           columns={wedding.guestColumns ?? []}
+          hotels={hotels}
           readOnly={readOnly}
         />
       )}

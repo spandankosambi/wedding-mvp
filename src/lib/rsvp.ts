@@ -98,29 +98,37 @@ export async function submitRsvp(input: unknown, clientKey = "local"):
 }
 
 /** Per event: families invited, families who answered, heads coming. With a
-    `side`, only that family's events (common + its own) and its households. */
+    `side`, only that family's events (common + its own) and its households.
+    A handful of queries in all (counted per event by the database), not two
+    per event — this runs on every dashboard and section page. */
 export async function getRsvpSummary(weddingId: string, side?: "bride" | "groom") {
-  const evs = (await db.select().from(events).where(eq(events.weddingId, weddingId)).orderBy(events.sortOrder))
-    .filter((e) => !side || eventForSide(e.side, side));
-  // a one-family event reads "Haldi · Pooja"
-  const [w] = await db.select({ brideName: weddings.brideName, groomName: weddings.groomName }).from(weddings).where(eq(weddings.id, weddingId));
+  const [allEvents, [w], sideFams] = await Promise.all([
+    db.select().from(events).where(eq(events.weddingId, weddingId)).orderBy(events.sortOrder),
+    // a one-family event reads "Haldi · Pooja"
+    db.select({ brideName: weddings.brideName, groomName: weddings.groomName }).from(weddings).where(eq(weddings.id, weddingId)),
+    side ? db.select({ id: families.id }).from(families).where(and(eq(families.weddingId, weddingId), eq(families.side, side))) : Promise.resolve(null),
+  ]);
+  const evs = allEvents.filter((e) => !side || eventForSide(e.side, side));
   const names = w ? sideNamesOf(w) : undefined;
-  const sideIds = side
-    ? (await db.select({ id: families.id }).from(families).where(and(eq(families.weddingId, weddingId), eq(families.side, side)))).map((f) => f.id)
-    : null;
-  const out = [];
-  for (const e of evs) {
-    if (sideIds && !sideIds.length) {
-      out.push({ eventId: e.id, eventName: eventLabel(e, names), invitedFamilies: 0, responded: 0, attendingHeadcount: 0 });
-      continue;
-    }
-    const invited = await db.select({ n: sql<number>`count(*)::int` }).from(eventInvites)
-      .where(sideIds ? and(eq(eventInvites.eventId, e.id), inArray(eventInvites.familyId, sideIds)) : eq(eventInvites.eventId, e.id));
-    const resp = await db.select({
+  const sideIds = sideFams ? sideFams.map((f) => f.id) : null;
+  const blank = (e: (typeof evs)[number]) => ({ eventId: e.id, eventName: eventLabel(e, names), invitedFamilies: 0, responded: 0, attendingHeadcount: 0 });
+  if (!evs.length || (sideIds && !sideIds.length)) return evs.map(blank);
+  const evIds = evs.map((e) => e.id);
+  const [invited, answered] = await Promise.all([
+    db.select({ eventId: eventInvites.eventId, n: sql<number>`count(*)::int` }).from(eventInvites)
+      .where(and(inArray(eventInvites.eventId, evIds), sideIds ? inArray(eventInvites.familyId, sideIds) : undefined))
+      .groupBy(eventInvites.eventId),
+    db.select({
+      eventId: rsvps.eventId,
       n: sql<number>`count(*)::int`,
       heads: sql<number>`coalesce(sum(case when status = 'attending' then headcount else 0 end), 0)::int`,
-    }).from(rsvps).where(sideIds ? and(eq(rsvps.eventId, e.id), inArray(rsvps.familyId, sideIds)) : eq(rsvps.eventId, e.id));
-    out.push({ eventId: e.id, eventName: eventLabel(e, names), invitedFamilies: invited[0].n, responded: resp[0].n, attendingHeadcount: resp[0].heads });
-  }
-  return out;
+    }).from(rsvps)
+      .where(and(inArray(rsvps.eventId, evIds), sideIds ? inArray(rsvps.familyId, sideIds) : undefined))
+      .groupBy(rsvps.eventId),
+  ]);
+  return evs.map((e) => {
+    const inv = invited.find((r) => r.eventId === e.id);
+    const ans = answered.find((r) => r.eventId === e.id);
+    return { ...blank(e), invitedFamilies: Number(inv?.n ?? 0), responded: Number(ans?.n ?? 0), attendingHeadcount: Number(ans?.heads ?? 0) };
+  });
 }

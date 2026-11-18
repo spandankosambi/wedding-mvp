@@ -120,15 +120,24 @@ describe("answers per guest", () => {
 
 describe("custom guest columns", () => {
   it("add, fill, and remove a column (its values go too)", async () => {
-    const c = await addGuestColumn(weddingId, "Room no.");
+    const c = await addGuestColumn(weddingId, "Table no.");
     expect(c.ok).toBe(true);
     if (!c.ok) return;
-    expect((await addGuestColumn(weddingId, "room NO.")).ok).toBe(false); // no duplicates
+    expect((await addGuestColumn(weddingId, "table NO.")).ok).toBe(false); // no duplicates
+    // Hotel and Room No. are built in, so they can't be added again
+    expect((await addGuestColumn(weddingId, "Room No.")).ok).toBe(false);
+    expect((await addGuestColumn(weddingId, "hotel")).ok).toBe(false);
     expect(await setGuestDetail(weddingId, a, c.column.id, " 204 ")).toEqual({ ok: true });
     expect((await db.select().from(guests).where(eq(guests.id, a)))[0].details).toEqual({ [c.column.id]: "204" });
     expect((await setGuestDetail(otherWeddingId, a, c.column.id, "x")).ok).toBe(false);
     await removeGuestColumn(weddingId, c.column.id);
     expect((await db.select().from(guests).where(eq(guests.id, a)))[0].details).toEqual({});
+  });
+  it("Hotel and Room No. are always there to fill in", async () => {
+    expect(await setGuestDetail(weddingId, a, "hotel", "Grand Hyatt")).toEqual({ ok: true });
+    expect(await setGuestDetail(weddingId, a, "room", "1207")).toEqual({ ok: true });
+    expect((await db.select().from(guests).where(eq(guests.id, a)))[0].details).toEqual({ hotel: "Grand Hyatt", room: "1207" });
+    expect((await setGuestDetail(otherWeddingId, a, "room", "x")).ok).toBe(false);
   });
 });
 

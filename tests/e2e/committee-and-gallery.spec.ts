@@ -65,10 +65,10 @@ test("committee adds a family by name, records their RSVP, then deletes them", a
   await expect(nikhil.getByText("Sangeet ✓")).toBeVisible();
   await expect(page.getByRole("row", { name: /Asha Desai/ }).getByText("Sangeet ✗")).toBeVisible();
   await page.getByRole("button", { name: "+ Add column" }).click();
-  await page.getByLabel("New column name").fill("Room no.");
+  await page.getByLabel("New column name").fill("Table no.");
   await page.getByRole("button", { name: "Add", exact: true }).click();
-  await expect(page.getByRole("columnheader", { name: /Room no\./ })).toBeVisible();
-  const room = page.getByLabel("Room no. for Nikhil Desai");
+  await expect(page.getByRole("columnheader", { name: /Table no\./ })).toBeVisible();
+  const room = page.getByLabel("Table no. for Nikhil Desai");
   await room.fill("204");
   await room.press("Enter");
   await expect(room).toHaveCSS("opacity", "1"); // save finished
@@ -82,7 +82,7 @@ test("committee adds a family by name, records their RSVP, then deletes them", a
   await expect(page.getByText("RSVP marked for 2 guests")).toBeVisible();
   await expect(page.getByRole("row", { name: /Asha Desai/ }).getByText("Sangeet ✓")).toBeVisible();
   await page.reload();
-  await expect(page.getByLabel("Room no. for Nikhil Desai")).toHaveValue("204");
+  await expect(page.getByLabel("Table no. for Nikhil Desai")).toHaveValue("204");
   if (shots) await page.screenshot({ path: `${shots}/guest-view.png`, fullPage: true });
   await page.getByRole("link", { name: /^Families/ }).click();
   await expect(row.getByText("Sangeet ✓3")).toBeVisible();

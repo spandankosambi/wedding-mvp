@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ChecklistItem } from "@/lib/checklist";
 import { JumpNav } from "./JumpNav";
+import { HelpForm } from "./HelpForm";
 import { CONTACT_EMAIL } from "@/lib/brand";
 import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
 
@@ -13,22 +14,20 @@ export const ABOUT = {
   contactWhatsApp: "",
 };
 
+/* About us and Need help?, at the foot of the left column. Help is a short
+   form that emails us (see HelpForm), with WhatsApp alongside when set. */
 function AboutCard() {
   const wa = ABOUT.contactWhatsApp.replace(/\D/g, "");
   return (
     <section className="portal-about" aria-label={ABOUT.heading}>
       <p className="portal-jump-label">{ABOUT.heading}</p>
       <p>{ABOUT.text}</p>
-      <p className="portal-about-help">Need help?</p>
-      {ABOUT.contactEmail || wa ? (
-        <p>
-          {ABOUT.contactEmail && <a href={`mailto:${ABOUT.contactEmail}`}>{ABOUT.contactEmail}</a>}
-          {ABOUT.contactEmail && wa && <br />}
-          {wa && <a href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer">WhatsApp us</a>}
-        </p>
-      ) : (
-        <p>Contact details coming soon.</p>
-      )}
+      <div className="portal-about-helpbox">
+        <p className="portal-about-help">Need help?</p>
+        <p>Send us a message and we&apos;ll get back to you by email.</p>
+        <HelpForm />
+        {wa && <p><a href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer">or WhatsApp us</a></p>}
+      </div>
     </section>
   );
 }

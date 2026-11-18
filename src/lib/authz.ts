@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
@@ -24,10 +25,16 @@ export async function isProvisionedStaff(email: string | null | undefined): Prom
 
 type SessionUser = { id: string; role?: Role; weddingId?: string | null; side?: string | null; access?: unknown; isOwner?: boolean };
 
-export async function requireRole(allowed: Role[]) {
+/* Who's signed in, looked up once per page load however many parts of the
+   page ask (React's per-request cache; outside a page render it simply runs). */
+const currentSession = cache(async () => {
   // Lazy import keeps this module loadable in vitest without pulling in NextAuth
   const { auth } = await import("@/auth");
-  const session = await auth();
+  return auth();
+});
+
+export async function requireRole(allowed: Role[]) {
+  const session = await currentSession();
   const u = session?.user as SessionUser | undefined;
   if (!u?.role) redirect("/signin");
   // Signed in but wrong area (e.g. couple opening /admin): bounce to their own

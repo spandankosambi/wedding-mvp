@@ -29,7 +29,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return isProvisionedStaff(user.email);
     },
     async session({ session, user }) {
-      const [row] = await db.select().from(users).where(eq(users.id, user.id));
+      // the adapter's session lookup already brings the whole user row (role,
+      // wedding, access…); only ask the database again if it somehow didn't
+      const row = (user as Partial<typeof users.$inferSelect>).role
+        ? (user as typeof users.$inferSelect)
+        : (await db.select().from(users).where(eq(users.id, user.id)))[0];
       (session.user as any).role = row?.role;
       (session.user as any).weddingId = row?.weddingId ?? null;
       (session.user as any).side = row?.side ?? "both";

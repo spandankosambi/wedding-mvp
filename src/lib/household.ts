@@ -189,6 +189,19 @@ export async function pruneAttendees(familyId: string) {
 
 export const MAX_GUEST_COLUMNS = 8;
 
+/** Built into every guest list (not counted above): where each guest stays,
+    for households shown Travel & Stay. Kept in the guest's details like the
+    custom columns, under these fixed ids. */
+export const STAY_COLUMNS: GuestColumn[] = [{ id: "hotel", label: "Hotel" }, { id: "room", label: "Room No." }];
+
+/** A guest's hotel: the one chosen for them, or — when the family's site lists
+    just one hotel — that one by default. Empty when their household isn't shown
+    Travel & Stay. */
+export function guestHotel(details: Record<string, string> | null | undefined, travelShown: boolean, hotels: string[]): string {
+  if (!travelShown) return "";
+  return details?.hotel?.trim() || (hotels.length === 1 ? hotels[0] : "");
+}
+
 async function columnsOf(weddingId: string): Promise<GuestColumn[] | null> {
   const [w] = await db.select({ c: weddings.guestColumns }).from(weddings).where(eq(weddings.id, weddingId));
   return w ? w.c ?? [] : null;
@@ -201,6 +214,8 @@ export async function addGuestColumn(weddingId: string, label: string): Promise<
   if (!cols) return { ok: false, error: "wedding not found" };
   if (cols.length >= MAX_GUEST_COLUMNS) return { ok: false, error: `up to ${MAX_GUEST_COLUMNS} extra columns` };
   if (cols.some((c) => c.label.toLowerCase() === name.toLowerCase())) return { ok: false, error: "there's already a column with that name" };
+  const key = name.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  if (["hotel", "room", "roomno", "roomnumber", "hotelroom"].includes(key)) return { ok: false, error: "Hotel and Room No. are already columns (they show for households with Travel & Stay)" };
   const column = { id: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, label: name };
   await db.update(weddings).set({ guestColumns: [...cols, column] }).where(eq(weddings.id, weddingId));
   return { ok: true, column };
@@ -224,7 +239,8 @@ export async function removeGuestColumn(weddingId: string, columnId: string): Pr
 
 export async function setGuestDetail(weddingId: string, guestId: string, columnId: string, value: string): Promise<Result> {
   const cols = await columnsOf(weddingId);
-  if (!cols?.some((c) => c.id === columnId)) return { ok: false, error: "column not found" };
+  if (!cols) return { ok: false, error: "column not found" };
+  if (![...STAY_COLUMNS, ...cols].some((c) => c.id === columnId)) return { ok: false, error: "column not found" };
   if (!z.string().uuid().safeParse(guestId).success) return { ok: false, error: "invalid input" };
   const [g] = await db.select({ id: guests.id, details: guests.details }).from(guests)
     .innerJoin(families, eq(guests.familyId, families.id))
