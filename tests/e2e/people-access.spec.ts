@@ -105,18 +105,18 @@ test("the couple give a friend view-only access to one side, widen it, then remo
   await ctx.close();
 });
 
-test("every page shares one layout: On this page and About us on the left, what's done on the right", async ({ page }) => {
+test("every page shares one layout: On this page and Need help? on the left, what's done on the right", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await signIn(page, "couple2@example.com");
   for (const url of ["/couple", "/couple/groom", "/couple/site?family=groom", "/couple/groom/print"]) {
     await page.goto(url);
     await expect(page.getByRole("navigation", { name: "Jump to" }), url).toBeVisible();
-    await expect(page.getByRole("region", { name: "About us" }), url).toBeVisible();
+    await expect(page.getByRole("region", { name: "Need help?" }), url).toBeVisible();
     await expect(page.getByRole("region", { name: /what's done/ }).first(), url).toBeVisible();
   }
   // the guest list keeps the left column but gives the table the rest
   await page.goto("/committee?family=groom");
-  await expect(page.getByRole("region", { name: "About us" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Need help?" })).toBeVisible();
   await expect(page.getByRole("region", { name: /what's done/ })).toHaveCount(0);
   // the dashboard: both families in one table, a step per row and a column each
   await page.goto("/couple");

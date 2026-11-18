@@ -1479,10 +1479,11 @@ html.fx .themed[data-motion="lively"] .reveal.is-in { opacity: 1; transform: non
 .page-loading-ring { fill: none; stroke: #E2553B; stroke-width: 6; transform-origin: 60px 60px; opacity: 0; animation: page-loading-ripple 1.4s ease-out infinite; }
 .page-loading-ring.r2 { animation-delay: 0.18s; }
 .page-loading-ring.r3 { animation-delay: 0.36s; }
-.page-loading-text { font-size: 0.8125rem; letter-spacing: 0.02em; }
+.page-loading-text { font-size: 0.9375rem; letter-spacing: 0.01em; color: #57524a; animation: page-loading-line 1.8s ease both; }
+@keyframes page-loading-line { 0% { opacity: 0; transform: translateY(4px); } 15%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
 @keyframes page-loading-tap { 0%, 100% { transform: scale(1); } 15% { transform: scale(0.8); } 35% { transform: scale(1.05); } }
 @keyframes page-loading-ripple { 0% { opacity: 0; transform: scale(0.6); } 20% { opacity: 0.9; } 100% { opacity: 0; transform: scale(1.15); } }
 @media (prefers-reduced-motion: reduce) {
-  .page-loading-dot, .page-loading-ring { animation: none; opacity: 1; }
+  .page-loading-dot, .page-loading-ring, .page-loading-text { animation: none; opacity: 1; }
   .page-loading-ring.r2 { opacity: 0.6; } .page-loading-ring.r3 { opacity: 0.3; }
 }

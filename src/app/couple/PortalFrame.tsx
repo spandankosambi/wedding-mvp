@@ -2,26 +2,20 @@ import Link from "next/link";
 import type { ChecklistItem } from "@/lib/checklist";
 import { JumpNav } from "./JumpNav";
 import { HelpForm } from "./HelpForm";
-import { CONTACT_EMAIL } from "@/lib/brand";
 import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
 
-/* Edit these three to change what the "About us" box says on every page. */
-export const ABOUT = {
-  heading: "About us",
-  text: "One Tap Invites puts a wedding's invitation website, guest list, RSVPs and printed cards in one place, with a section for each family.",
-  /** shown under "Need help?" when filled in, e.g. "hello@example.com" or "+91 98200 00000" */
-  contactEmail: CONTACT_EMAIL,
+/* "Need help?" at the foot of the left column. */
+export const HELP = {
+  /** a WhatsApp number to offer alongside the form, e.g. "+91 98200 00000" */
   contactWhatsApp: "",
 };
 
-/* About us and Need help?, at the foot of the left column. Help is a short
-   form that emails us (see HelpForm), with WhatsApp alongside when set. */
+/* Need help?, at the foot of the left column: a short form that emails us
+   (see HelpForm), with WhatsApp alongside when set. */
 function AboutCard() {
-  const wa = ABOUT.contactWhatsApp.replace(/\D/g, "");
+  const wa = HELP.contactWhatsApp.replace(/\D/g, "");
   return (
-    <section className="portal-about" aria-label={ABOUT.heading}>
-      <p className="portal-jump-label">{ABOUT.heading}</p>
-      <p>{ABOUT.text}</p>
+    <section className="portal-about" aria-label="Need help?">
       <div className="portal-about-helpbox">
         <p className="portal-about-help">Need help?</p>
         <p>Send us a message and we&apos;ll get back to you by email.</p>

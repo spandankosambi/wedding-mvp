@@ -6,10 +6,13 @@ export function UploadStep({
   pending,
   onFile,
   onBack,
+  templateHref,
 }: {
   pending: boolean;
   onFile: (file: File) => void;
   onBack: () => void;
+  /** our blank guest list, e.g. /committee/export?family=bride&template=1 */
+  templateHref?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [picked, setPicked] = useState<File | null>(null);
@@ -27,6 +30,19 @@ export function UploadStep({
       <p className="mt-2 max-w-xl text-sm leading-relaxed text-neutral-500">
         Excel (.xlsx, .xls) or CSV. Any column names, any order, one person or one household per row — you&apos;ll confirm what each column means next.
       </p>
+
+      {templateHref && (
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-stone-50 px-4 py-3 text-sm" data-testid="template-box">
+          <div>
+            <p className="font-medium text-stone-800">Starting from scratch?</p>
+            <p className="text-neutral-500">Download our template, fill one row per guest, and upload it here. Phone numbers, hotels and rooms come in too.</p>
+          </div>
+          <div className="flex gap-2">
+            <a href={`${templateHref}&format=xlsx`} download className="portal-button-secondary">Template (Excel)</a>
+            <a href={`${templateHref}&format=csv`} download className="portal-button-secondary">CSV</a>
+          </div>
+        </div>
+      )}
 
       <label
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}

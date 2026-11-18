@@ -62,6 +62,7 @@ export default async function ImportPage({
           initialMode={params.mode === "direct" ? "direct" : params.mode === "scan" ? "scan" : null}
           aiConfigured={aiConfigured()}
           family={family}
+          admin={staff.role === "admin"}
         />
         </SideNamesProvider>
       </PortalFrame>

@@ -34,7 +34,7 @@ test("Guests view: Hotel and Room No. for households shown Travel & Stay", async
   const row = page.locator("tbody tr").filter({ has: page.locator("input[aria-label^='Show Travel & Stay']:checked") }).first();
   const name = (await row.locator("td").nth(1).locator("p").first().textContent())!.trim();
   const hotel = row.getByLabel(`Hotel for ${name}`);
-  await expect(hotel.locator("option")).toContainText(["—", "Taj Lands End, Bandra", "Grand Hyatt, Santacruz"]);
+  await expect(hotel.locator("option")).toContainText(["Choose…", "Taj Lands End, Bandra", "Grand Hyatt, Santacruz"]);
   await hotel.selectOption("Grand Hyatt, Santacruz");
   await row.getByLabel(`Room No. for ${name}`).fill("1207");
   await row.getByLabel(`Room No. for ${name}`).press("Enter");
@@ -103,15 +103,16 @@ test("download the guest list, edit it, upload it: only the change is applied", 
   await expect(page.getByRole("status").filter({ hasText: "Saved 1 change" })).toBeVisible();
 });
 
-test("left panel: icons on each section, About us and a help form at the foot", async ({ page }) => {
+test("left panel: icons on each section and a help form at the foot", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await signIn(page, "couple@example.com");
   await page.goto("/couple/site?family=bride");
   const jump = page.getByRole("navigation", { name: "Jump to" }).first();
   await expect(jump.locator(".portal-jump-icon")).toHaveCount(await jump.getByRole("link").count());
-  // About us sits at the bottom of the column, below the list
+  // Need help? sits at the bottom of the column, below the list; About us is gone
+  await expect(page.getByText("About us")).toHaveCount(0);
   const listBox = (await jump.boundingBox())!;
-  const about = (await page.getByRole("region", { name: "About us" }).boundingBox())!;
+  const about = (await page.getByRole("region", { name: "Need help?" }).boundingBox())!;
   expect(about.y).toBeGreaterThan(listBox.y + listBox.height);
   expect(about.y + about.height).toBeGreaterThan(900 * 0.75);
 

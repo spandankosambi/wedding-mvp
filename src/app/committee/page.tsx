@@ -16,9 +16,10 @@ import { redirect } from "next/navigation";
 import { PortalFrame } from "../couple/PortalFrame";
 import { getRsvpSummary } from "@/lib/rsvp";
 import { showsTravel } from "@/lib/travel";
-import { eventForSide, eventLabel } from "@/lib/sides";
+import { eventForSide } from "@/lib/sides";
 import { asFamilySide, sideName, type FamilySide } from "@/lib/looks";
 import { FamilyTable } from "./FamilyTable";
+import { StayView } from "./StayView";
 import { GuestTable } from "./GuestTable";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +32,7 @@ export default async function CommitteePage({
   const staff = await requireRole(["committee", "couple", "admin"]);
   const sp = await searchParams;
   const requested = sp.wedding;
-  const view = sp.view === "guests" ? "guests" : "families";
+  const view = sp.view === "guests" ? "guests" : sp.view === "stay" ? "stay" : "families";
   // each family keeps its own guest list
   const family: FamilySide = asFamilySide(sp.family) ?? homeSide(staff.access);
   if (!allows(staff.access, "guests", family)) redirect("/couple");
@@ -52,9 +53,9 @@ export default async function CommitteePage({
   const summary = await getRsvpSummary(weddingId, family);
   const fams = await db.select().from(families)
     .where(and(eq(families.weddingId, weddingId), eq(families.side, family))).orderBy(families.createdAt);
-  const link = (over: { family?: FamilySide; view?: "families" | "guests" }) => {
+  const link = (over: { family?: FamilySide; view?: "families" | "guests" | "stay" }) => {
     const v = over.view ?? view, f = over.family ?? family;
-    const q = new URLSearchParams({ ...(staff.role === "admin" ? { wedding: weddingId } : {}), family: f, ...(v === "guests" ? { view: "guests" } : {}) });
+    const q = new URLSearchParams({ ...(staff.role === "admin" ? { wedding: weddingId } : {}), family: f, ...(v !== "families" ? { view: v } : {}) });
     return `/committee?${q}`;
   };
   const famIds = fams.map((f) => f.id);
@@ -120,11 +121,11 @@ export default async function CommitteePage({
 
       {/* Families ⇄ Guests: same data, two ways to work through it */}
       <nav id="list" className="mb-4 inline-flex rounded-lg border border-neutral-200 bg-white p-1 text-sm" aria-label="View">
-        {(["families", "guests"] as const).map((v) => {
+        {(["families", "guests", "stay"] as const).map((v) => {
           return (
             <Link key={v} href={link({ view: v })} aria-current={view === v ? "page" : undefined}
               className={`rounded-md px-4 py-1.5 font-medium ${view === v ? "bg-stone-800 text-white" : "text-neutral-600 hover:text-neutral-900"}`}>
-              {v === "families" ? `Families · ${rows.length}` : `Guests · ${allGuests.length}`}
+              {v === "families" ? `Families · ${rows.length}` : v === "guests" ? `Guests · ${allGuests.length}` : "Hotels & rooms"}
             </Link>
           );
         })}
@@ -136,15 +137,24 @@ export default async function CommitteePage({
           weddingId={weddingId}
           family={family}
           importHref={`/committee/import?${new URLSearchParams({ ...(staff.role === "admin" ? { wedding: weddingId } : {}), family })}`}
-          events={evs.map((e) => ({ id: e.id, name: eventLabel(e, sn), side: e.side }))}
+          events={evs.map((e) => ({ id: e.id, name: e.name, side: e.side }))}
           rows={rows}
+          readOnly={readOnly}
+        />
+      ) : view === "stay" ? (
+        <StayView
+          weddingId={weddingId}
+          family={family}
+          rows={rows}
+          stays={(look.travel?.stays ?? []).map((s) => ({ name: s.name, note: s.note, url: s.url }))}
+          guestListHref={link({ view: "guests" })}
           readOnly={readOnly}
         />
       ) : (
         <GuestTable
           weddingId={weddingId}
           family={family}
-          events={evs.map((e) => ({ id: e.id, name: eventLabel(e, sn), side: e.side }))}
+          events={evs.map((e) => ({ id: e.id, name: e.name, side: e.side }))}
           rows={rows}
           columns={wedding.guestColumns ?? []}
           hotels={hotels}

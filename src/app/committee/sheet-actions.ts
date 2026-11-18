@@ -5,11 +5,15 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/authz";
 import { allows } from "@/lib/access";
 import { asFamilySide } from "@/lib/looks";
-import { updateFromSheet, type SheetPlan } from "@/lib/guest-sheet";
+import { isOurSheet, updateFromSheet, type SheetPlan } from "@/lib/guest-sheet";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
-export type SheetUpdateResult = { ok: true; plan: SheetPlan; applied: boolean } | { ok: false; error: string };
+export type SheetUpdateResult =
+  | { ok: true; plan: SheetPlan; applied: boolean }
+  /** with "onlyOurs": the file isn't one of our sheets, so the import screen reads it its usual way */
+  | { ok: true; ours: false }
+  | { ok: false; error: string };
 
 /**
  * "Update from spreadsheet": the file is read and compared with the list.
@@ -36,6 +40,7 @@ export async function sheetUpdateAction(formData: FormData): Promise<SheetUpdate
   } catch {
     return { ok: false, error: "We couldn't read that file. Save it as .xlsx or .csv and try again." };
   }
+  if (formData.get("onlyOurs") === "1" && !isOurSheet(table)) return { ok: true, ours: false };
   const apply = formData.get("apply") === "1";
   const plan = await updateFromSheet(weddingId, family, table, apply);
   const applied = apply && !plan.errors.length && plan.count > 0;

@@ -27,7 +27,7 @@ export async function getFamilyByToken(token: string) {
 
   return {
     family: {
-      id: family.id, name: family.name, side: family.side, relation: family.relation,
+      id: family.id, name: family.name, side: family.side, relation: family.relation, email: family.email,
       showTravel: showsTravel(family.showTravel, eventIds, allEvents.filter((e) => eventForSide(e.side, family.side)).map((e) => e.id)),
     },
     // the household's family's look ("both" from before the split → the bride's)

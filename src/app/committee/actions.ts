@@ -11,6 +11,7 @@ import { issueInvites, whatsappInvite } from "@/lib/invites";
 import * as household from "@/lib/household";
 import { syncHousehold } from "@/lib/primary";
 import { eventForSide } from "@/lib/sides";
+import { sendStayDetails } from "@/lib/stay";
 
 /* Admin may act on any wedding (passes it explicitly); everyone else is pinned
    to their own. Every action re-resolves this server-side — never trust input.
@@ -241,4 +242,16 @@ export async function setTravelAction(input: unknown): Promise<{ ok: boolean; er
   if (!done.length) return { ok: false, error: "family not found" };
   revalidatePath("/committee");
   return { ok: true };
+}
+
+/** A household's hotel and rooms, for their primary contact: a WhatsApp message (opened for the sender) or an email. */
+export async function stayDetailsAction(input: { weddingId: string; familyId: string; via: "whatsapp" | "email" }) {
+  const weddingId = await scopedFrom(input);
+  if (!weddingId) return { ok: false as const, error: "forbidden" };
+  if (!z.string().uuid().safeParse(input.familyId).success || !["whatsapp", "email"].includes(input.via)) return { ok: false as const, error: "invalid input" };
+  try {
+    return await sendStayDetails(weddingId, input.familyId, input.via);
+  } catch {
+    return { ok: false as const, error: "Couldn't send it just now. Try again in a minute." };
+  }
 }

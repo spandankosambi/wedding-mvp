@@ -42,7 +42,7 @@ export function fromHeader(displayName?: string): string | undefined {
  * the local outbox file that dev tooling and tests read.
  */
 export async function recordOutbox(m: {
-  to: string; subject: string; kind: "signin" | "invite" | "confirm" | "access" | "help"; link?: string; html?: string;
+  to: string; subject: string; kind: "signin" | "invite" | "confirm" | "access" | "help" | "calendar" | "stay"; link?: string; html?: string; attachment?: string;
 }) {
   await db.insert(outbox).values({ to: m.to, subject: m.subject, kind: m.kind, link: m.link ?? null });
   try {
@@ -53,6 +53,8 @@ export async function recordOutbox(m: {
       : m.kind === "confirm" ? { to: m.to, subject: m.subject, confirmUrl: m.link, at }
       : m.kind === "access" ? { to: m.to, subject: m.subject, accessUrl: m.link, at }
       : m.kind === "help" ? { to: m.to, subject: m.subject, html: m.html, at }
+      : m.kind === "calendar" ? { to: m.to, subject: m.subject, html: m.html, rsvpUrl: m.link, ics: m.attachment, at }
+      : m.kind === "stay" ? { to: m.to, subject: m.subject, html: m.html, stay: true, at }
       : { to: m.to, subject: m.subject, html: m.html, rsvpUrl: m.link, at };
     fs.appendFileSync(path.join(dir, "mail.jsonl"), JSON.stringify(line) + "\n");
   } catch {
@@ -147,5 +149,56 @@ ${emailLogo()}
     await smtpTransport().sendMail({ from: process.env.EMAIL_FROM, to, replyTo: `${args.name} <${args.email}>`, subject, html });
   } else {
     await recordOutbox({ to, subject, kind: "help", html });
+  }
+}
+
+/** After an RSVP: the celebrations they're coming to, as a calendar file they
+    can open to add them all at once. Sent from the couple's name. */
+export async function sendCalendarEmail(args: {
+  to: string; familyName: string; coupleNames: string; rsvpUrl: string; ics: string;
+  events: { name: string; when: string; where: string; google: string }[];
+}) {
+  const subject = `${args.coupleNames}: your celebrations, ready for your calendar`;
+  const rows = args.events.map((e) => `<tr><td style="padding:8px 0;border-top:1px solid #eee"><b>${escapeHtml(e.name)}</b><br><span style="color:#6b6760">${escapeHtml(e.when)} · ${escapeHtml(e.where)}</span><br><a href="${e.google}" style="font-size:13px;color:#b23a26">Add to Google Calendar</a></td></tr>`).join("");
+  const html = `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.55;color:#22201c;max-width:520px">
+<p>Dear ${escapeHtml(args.familyName)},</p>
+<p>Thank you for your RSVP. Here ${args.events.length === 1 ? "is the celebration" : "are the celebrations"} you&rsquo;re coming to:</p>
+<table style="width:100%;border-collapse:collapse;font-size:14px">${rows}</table>
+<p>The attached file <b>wedding.ics</b> adds ${args.events.length === 1 ? "it" : "them all"} to your calendar: open it on your phone or computer.</p>
+<p style="color:#6b6760;font-size:13px">Plans change? <a href="${args.rsvpUrl}">Update your RSVP</a> from the same link.</p>
+</div>`;
+  if (smtpConfigured()) {
+    await smtpTransport().sendMail({
+      from: fromHeader(args.coupleNames), to: args.to, subject, html,
+      attachments: [{ filename: "wedding.ics", content: args.ics, contentType: "text/calendar; charset=utf-8; method=PUBLISH" }],
+    });
+  } else {
+    await recordOutbox({ to: args.to, subject, kind: "calendar", link: args.rsvpUrl, html, attachment: args.ics });
+  }
+}
+
+/** A household's hotel, rooms and map links, from the couple. */
+export async function sendStayEmail(args: {
+  to: string; familyName: string; coupleNames: string; gettingThere: string;
+  groups: { hotel: string; note: string; map: string | null; rooms: { room: string; names: string[] }[] }[];
+}) {
+  const subject = `${args.coupleNames}: where you're staying`;
+  const block = (g: (typeof args.groups)[number]) => `<div style="margin:14px 0;padding:14px 16px;border:1px solid #eee;border-radius:10px">
+<p style="margin:0;font-weight:600;font-size:16px">${escapeHtml(g.hotel)}</p>
+${g.note ? `<p style="margin:4px 0 0;color:#6b6760;white-space:pre-wrap">${escapeHtml(g.note)}</p>` : ""}
+<table style="margin-top:10px;font-size:14px;border-collapse:collapse">${g.rooms.map((r) => `<tr><td style="padding:3px 14px 3px 0;color:#6b6760;white-space:nowrap">${r.room ? `Room ${escapeHtml(r.room)}` : "Room to be confirmed"}</td><td>${escapeHtml(r.names.join(", "))}</td></tr>`).join("")}</table>
+${g.map ? `<p style="margin:10px 0 0"><a href="${escapeHtml(g.map)}" style="color:#b23a26;font-weight:600">Open in Maps</a></p>` : ""}
+</div>`;
+  const html = `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.55;color:#22201c;max-width:520px">
+<p>Dear ${escapeHtml(args.familyName)},</p>
+<p>Here&rsquo;s where you&rsquo;re staying for the wedding:</p>
+${args.groups.map(block).join("")}
+${args.gettingThere.trim() ? `<p style="margin-top:18px;font-weight:600">Getting there</p><p style="white-space:pre-wrap;margin-top:4px">${escapeHtml(args.gettingThere.trim())}</p>` : ""}
+<p>See you soon!</p>
+</div>`;
+  if (smtpConfigured()) {
+    await smtpTransport().sendMail({ from: fromHeader(args.coupleNames), to: args.to, subject, html });
+  } else {
+    await recordOutbox({ to: args.to, subject, kind: "stay", html });
   }
 }

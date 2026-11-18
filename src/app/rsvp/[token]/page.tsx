@@ -69,6 +69,7 @@ export default async function RsvpPage({
         <RsvpForm
           token={token}
           names={sideNamesOf(wedding)}
+          couple={coupleNames}
           members={members.map((m) => ({ id: m.id, fullName: m.fullName }))}
           events={events.map((e) => ({
             id: e.id,
@@ -77,6 +78,7 @@ export default async function RsvpPage({
             startsAtISO: e.startsAt.toISOString(),
             venueName: e.venueName,
             address: e.address,
+            mapUrl: e.mapUrl,
             dressCode: e.dressCode,
             rsvp: e.rsvp,
           }))}

@@ -33,12 +33,11 @@ export function SheetTools({ weddingId, admin, family, canEdit }: { weddingId: s
       setError(null);
       const r: SheetUpdateResult = await sheetUpdateAction(fd);
       if (!r.ok) { setError(r.error); return; }
+      if (!("plan" in r)) return;
       setPlan(r.plan);
       if (r.applied) { setDone(r.plan.count); router.refresh(); }
     });
   }
-
-  const groups: [string, SheetPlan["changes"][number]["kind"]][] = [["New households", "new-household"], ["New guests", "new-guest"], ["Changes", "update"], ["Not added (already on the list)", "skip"]];
 
   return (
     <>
@@ -79,28 +78,7 @@ export function SheetTools({ weddingId, admin, family, canEdit }: { weddingId: s
               </label>
               {error && <p className="mt-4 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-900" role="alert">{error}</p>}
 
-              {plan && (
-                <div className="mt-5 max-h-[45vh] overflow-y-auto rounded-xl border border-neutral-200 p-4 text-sm" data-testid="sheet-plan">
-                  {plan.errors.length > 0 && (
-                    <div className="mb-4 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-red-900" role="alert">
-                      <p className="font-medium">Fix these rows first, then upload again:</p>
-                      <ul className="mt-1 list-disc pl-5">{plan.errors.map((e, i) => <li key={i}>{e}</li>)}</ul>
-                    </div>
-                  )}
-                  {plan.count === 0 && !plan.errors.length && <p className="text-neutral-600">Nothing to update — the file matches the list.</p>}
-                  {groups.map(([title, kind]) => {
-                    const items = plan.changes.filter((c) => c.kind === kind);
-                    if (!items.length) return null;
-                    return (
-                      <div key={kind} className="mb-3">
-                        <p className="font-medium">{title} · {items.length}</p>
-                        <ul className="mt-1 space-y-0.5 text-neutral-600">{items.map((c, i) => <li key={i}>{c.text}</li>)}</ul>
-                      </div>
-                    );
-                  })}
-                  <p className="text-xs text-neutral-400">{plan.unchanged} guest{plan.unchanged === 1 ? "" : "s"} unchanged.</p>
-                </div>
-              )}
+              {plan && <SheetPlanView plan={plan} />}
 
               <div className="mt-5 flex justify-end gap-2">
                 <button type="button" onClick={close} className="portal-button-secondary">Cancel</button>
@@ -113,5 +91,33 @@ export function SheetTools({ weddingId, admin, family, canEdit }: { weddingId: s
         </div>
       </dialog>
     </>
+  );
+}
+
+const GROUPS: [string, SheetPlan["changes"][number]["kind"]][] = [["New households", "new-household"], ["New guests", "new-guest"], ["Changes", "update"], ["Not added (already on the list)", "skip"]];
+
+/** What an uploaded sheet would change, grouped; shown before anything is saved. */
+export function SheetPlanView({ plan }: { plan: SheetPlan }) {
+  return (
+    <div className="mt-5 max-h-[45vh] overflow-y-auto rounded-xl border border-neutral-200 p-4 text-sm" data-testid="sheet-plan">
+      {plan.errors.length > 0 && (
+        <div className="mb-4 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-red-900" role="alert">
+          <p className="font-medium">Fix these rows first, then upload again:</p>
+          <ul className="mt-1 list-disc pl-5">{plan.errors.map((e, i) => <li key={i}>{e}</li>)}</ul>
+        </div>
+      )}
+      {plan.count === 0 && !plan.errors.length && <p className="text-neutral-600">Nothing to update — the file matches the list.</p>}
+      {GROUPS.map(([title, kind]) => {
+        const items = plan.changes.filter((c) => c.kind === kind);
+        if (!items.length) return null;
+        return (
+          <div key={kind} className="mb-3">
+            <p className="font-medium">{title} · {items.length}</p>
+            <ul className="mt-1 space-y-0.5 text-neutral-600">{items.map((c, i) => <li key={i}>{c.text}</li>)}</ul>
+          </div>
+        );
+      })}
+      <p className="text-xs text-neutral-400">{plan.unchanged} guest{plan.unchanged === 1 ? "" : "s"} unchanged.</p>
+    </div>
   );
 }

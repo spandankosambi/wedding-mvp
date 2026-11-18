@@ -5,6 +5,7 @@ import { submitRsvpAction } from "../actions";
 import { fmtEventDate, fmtEventTime } from "@/lib/format";
 import { sideLabel, type Side } from "@/lib/sides";
 import type { SideNames } from "@/lib/side-names";
+import { googleCalendarLink } from "@/lib/calendar";
 
 type EventProp = {
   id: string;
@@ -13,6 +14,7 @@ type EventProp = {
   startsAtISO: string;
   venueName: string;
   address: string;
+  mapUrl?: string | null;
   dressCode: string | null;
   rsvp: { status: "attending" | "declined"; headcount: number; note: string | null; guestIds: string[] | null } | null;
 };
@@ -24,8 +26,11 @@ export function RsvpForm({
   members,
   events,
   names,
+  couple = "",
 }: {
   token: string;
+  /** "Pooja & Spandan", for calendar entries */
+  couple?: string;
   members: { id: string; fullName: string }[];
   events: EventProp[];
   /** the two families' first names, for "Pooja's side" */
@@ -47,11 +52,13 @@ export function RsvpForm({
   const [note, setNote] = useState<string>(() => events.find((e) => e.rsvp?.note)?.rsvp?.note ?? "");
   const [pending, startTransition] = useTransition();
   const [done, setDone] = useState(false);
+  const [emailedTo, setEmailedTo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const answered = events.filter((e) => statuses[e.id] !== null);
   const nobodyTicked = events.find((e) => statuses[e.id] === "attending" && who[e.id].length === 0);
   const firstAttending = events.find((e) => statuses[e.id] === "attending");
+  const coming = events.filter((e) => statuses[e.id] === "attending");
 
   function submit() {
     setError(null);
@@ -65,7 +72,7 @@ export function RsvpForm({
           note: note.trim() ? note.trim() : undefined,
         })),
       });
-      if (res.ok) setDone(true);
+      if (res.ok) { setEmailedTo(res.emailedTo); setDone(true); }
       else setError(res.error);
     });
   }
@@ -80,6 +87,53 @@ export function RsvpForm({
           Your answers are saved. Plans change — you can edit them anytime from
           this same link.
         </p>
+        {coming.length > 0 && (
+          <section
+            aria-label="Add to your calendar"
+            data-testid="add-to-calendar"
+            className="mx-auto mt-10 max-w-lg p-6 text-left md:p-7"
+            style={{ background: "var(--surface)", border: "1px solid var(--hairline)" }}
+          >
+            <p className="kicker" style={{ letterSpacing: "0.18em" }}>Add to your calendar</p>
+            {emailedTo ? (
+              <p className="mt-3 text-sm leading-relaxed" data-testid="calendar-emailed">
+                We&apos;ve emailed the calendar file to <b>{emailedTo}</b>. Open the attachment
+                (wedding.ics) on your phone or computer to add {coming.length === 1 ? "it" : "every celebration"} in one go.
+              </p>
+            ) : (
+              <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--ink-soft)" }}>
+                Save {coming.length === 1 ? "the date" : "the dates"} so nothing slips by.
+              </p>
+            )}
+            <a
+              href={`/rsvp/${token}/calendar`}
+              download
+              className="mt-5 block w-full px-6 py-3 text-center text-sm tracking-[0.14em] uppercase"
+              style={{ background: "var(--accent)", color: "var(--surface)" }}
+            >
+              Download calendar file (.ics)
+            </a>
+            <p className="mt-2 text-xs" style={{ color: "var(--ink-soft)" }}>
+              Works with iPhone, Android, Outlook and Google Calendar.
+            </p>
+            <ul className="mt-5 space-y-2 text-sm">
+              {coming.map((e) => (
+                <li key={e.id} className="flex flex-wrap items-baseline justify-between gap-2 pt-2" style={{ borderTop: "1px solid var(--hairline)" }}>
+                  <span>{e.name} <span style={{ color: "var(--ink-soft)" }}>· {fmtEventDate(new Date(e.startsAtISO))}</span></span>
+                  <a
+                    href={googleCalendarLink({ ...e, startsAt: new Date(e.startsAtISO) }, couple)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs underline underline-offset-4"
+                    style={{ color: "var(--accent)" }}
+                  >
+                    Add to Google Calendar
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </div>
     );
   }

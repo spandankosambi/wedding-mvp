@@ -11,8 +11,11 @@ import { UploadStep } from "./UploadStep";
 import { MappingStep } from "./MappingStep";
 import { ReviewGrid, blankRow, type OnExisting, type ScanInfo } from "./ReviewGrid";
 import { ScanStep } from "./ScanStep";
+import { sheetUpdateAction } from "../sheet-actions";
+import { SheetPlanView } from "../SheetTools";
+import type { SheetPlan } from "@/lib/guest-sheet";
 
-type Step = "choose" | "upload" | "scan" | "map" | "review" | "done";
+type Step = "choose" | "upload" | "scan" | "map" | "review" | "done" | "sheet";
 type Mode = "upload" | "direct" | "scan";
 
 const STEP_LABELS: Record<Mode, string[]> = {
@@ -20,7 +23,7 @@ const STEP_LABELS: Record<Mode, string[]> = {
   scan: ["Source", "Read the list", "Review", "Done"],
   direct: ["Source", "Type it in", "Review", "Done"],
 };
-const STEP_INDEX: Record<Step, number> = { choose: 0, upload: 0, scan: 1, map: 1, review: 2, done: 3 };
+const STEP_INDEX: Record<Step, number> = { choose: 0, upload: 0, scan: 1, map: 1, review: 2, done: 3, sheet: 2 };
 
 export function ImportWizard({
   weddingId,
@@ -29,6 +32,7 @@ export function ImportWizard({
   initialMode,
   aiConfigured,
   family,
+  admin = false,
 }: {
   weddingId: string;
   /** whose list this import fills: households with no clear side join it */
@@ -37,6 +41,8 @@ export function ImportWizard({
   backHref: string;
   initialMode: "direct" | "scan" | null;
   aiConfigured: boolean;
+  /** an admin working on someone's wedding: the template and sheet calls name it */
+  admin?: boolean;
 }) {
   const [mode, setMode] = useState<Mode>(initialMode ?? "upload");
   const [step, setStep] = useState<Step>(initialMode === "direct" ? "review" : initialMode === "scan" ? "scan" : "choose");
@@ -86,10 +92,36 @@ export function ImportWizard({
     });
   }
 
+  /* our template (or a list downloaded from the guest list page) is read the
+     way "Update from spreadsheet" reads it: matched by ID, nobody twice */
+  const [sheetPlan, setSheetPlan] = useState<SheetPlan | null>(null);
+  const [sheetDone, setSheetDone] = useState<number | null>(null);
+  function sheetCall(f: File, apply: boolean) {
+    const fd = new FormData();
+    fd.set("file", f);
+    fd.set("family", family);
+    if (admin) fd.set("weddingId", weddingId);
+    if (apply) fd.set("apply", "1"); else fd.set("onlyOurs", "1");
+    return sheetUpdateAction(fd);
+  }
+  function applySheet() {
+    if (!file) return;
+    startTransition(async () => {
+      const r = await sheetCall(file, true);
+      if (!r.ok) { setError(r.error); return; }
+      if ("plan" in r) { setSheetPlan(r.plan); if (r.applied) setSheetDone(r.plan.count); }
+    });
+  }
+
   function analyze(f: File, sheetIndex?: number) {
     setError(null);
     setFile(f);
     startTransition(async () => {
+      // anything else (or a file we can't read this way) carries on as before
+      if (sheetIndex === undefined && /\.(xlsx|xls|csv)$/i.test(f.name)) {
+        const ours = await sheetCall(f, false).catch(() => null);
+        if (ours?.ok && "plan" in ours) { setSheetPlan(ours.plan); setSheetDone(null); setStep("sheet"); return; }
+      }
       const fd = new FormData();
       fd.set("weddingId", weddingId);
       fd.set("file", f);
@@ -189,7 +221,33 @@ export function ImportWizard({
       )}
 
       {step === "upload" && (
-        <UploadStep pending={pending} onFile={(f) => analyze(f)} onBack={() => setStep("choose")} />
+        <UploadStep pending={pending} onFile={(f) => analyze(f)} onBack={() => setStep("choose")}
+          templateHref={`/committee/export?family=${family}${admin ? `&wedding=${weddingId}` : ""}&template=1`} />
+      )}
+
+      {step === "sheet" && sheetPlan && (
+        <div className="portal-panel p-6 md:p-8" data-testid="template-review">
+          <p className="portal-eyebrow">Your template</p>
+          <h2 className="mt-2 text-xl font-semibold tracking-tight">{sheetDone !== null ? "Added to the guest list" : "Here's what will be added"}</h2>
+          {sheetDone !== null ? (
+            <p className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-900" role="status">
+              Saved {sheetDone} change{sheetDone === 1 ? "" : "s"}. Nobody was added twice.
+            </p>
+          ) : (
+            <>
+              <p className="mt-2 max-w-xl text-sm leading-relaxed text-neutral-500">We recognised our guest list template. Nothing is saved until you press Add; anyone already on the list isn&apos;t added again.</p>
+              <SheetPlanView plan={sheetPlan} />
+            </>
+          )}
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+            <button type="button" onClick={() => { setSheetPlan(null); setStep("upload"); }} className="portal-button-secondary">← Back</button>
+            {sheetDone !== null
+              ? <Link href={backHref} className="portal-button">See the guest list →</Link>
+              : sheetPlan.count > 0 && !sheetPlan.errors.length && (
+                <button type="button" disabled={pending} onClick={applySheet} className="portal-button">{pending ? "Adding…" : `Add ${sheetPlan.count} change${sheetPlan.count === 1 ? "" : "s"}`}</button>
+              )}
+          </div>
+        </div>
       )}
 
       {step === "scan" && (

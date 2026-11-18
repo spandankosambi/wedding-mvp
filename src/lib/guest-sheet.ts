@@ -40,6 +40,15 @@ export const COLS = {
 } as const;
 const RSVP_PREFIX = "RSVP: ";
 
+/** Is this one of our own sheets — a download or the blank template? (It has the ID columns.) */
+export function isOurSheet(table: unknown[][]): boolean {
+  const n = (v: unknown) => String(v ?? "").trim().toLowerCase();
+  return table.slice(0, 20).some((r) => {
+    const cells = r.map(n);
+    return [COLS.guest, COLS.household, COLS.guestId].every((c) => cells.includes(c.toLowerCase()));
+  });
+}
+
 type Snapshot = Awaited<ReturnType<typeof load>>;
 
 async function load(weddingId: string, family: FamilySide) {

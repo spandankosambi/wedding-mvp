@@ -7,6 +7,8 @@ import { guestSheet, COLS } from "@/lib/guest-sheet";
  * GET /committee/export?family=bride&format=xlsx|csv — this family's guest
  * list as a spreadsheet: a row per guest, with the ids a re-upload needs to
  * apply only what changed. Anyone who can see the guest list can download it.
+ * With &template=1 it's the same sheet with no rows: the standard template,
+ * with this family's celebrations and extra columns already in it.
  */
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -15,9 +17,13 @@ export async function GET(req: Request) {
   const weddingId = staff.role === "admin" ? url.searchParams.get("wedding") : staff.weddingId;
   if (!weddingId) return new Response("No wedding", { status: 404 });
 
-  const { title, header, rows } = await guestSheet(weddingId, family);
+  const template = url.searchParams.get("template") === "1";
+  const sheet0 = await guestSheet(weddingId, family);
+  const { title, header } = sheet0;
+  const rows = template ? [] : sheet0.rows;
   const stamp = new Date().toISOString().slice(0, 10);
-  const base = `${title.replace(/[^\w]+/g, "-").replace(/^-|-$/g, "").toLowerCase()}-${stamp}`;
+  const slug = title.replace(/[^\w]+/g, "-").replace(/^-|-$/g, "").toLowerCase();
+  const base = template ? `${slug}-template` : `${slug}-${stamp}`;
   const headers = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
 
   if (url.searchParams.get("format") === "csv") {
@@ -33,7 +39,17 @@ export async function GET(req: Request) {
   sheet["!cols"] = header.map((h, i) => ({ wch: i < 2 ? 12 : Math.min(40, Math.max(12, h.length + 2, ...rows.map((r) => (r[i] ?? "").length + 1))) }));
   sheet["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: header.length - 1 } }) };
   XLSX.utils.book_append_sheet(wb, sheet, "Guest list");
-  const help = XLSX.utils.aoa_to_sheet([
+  const help = XLSX.utils.aoa_to_sheet(template ? [
+    ["How to fill in this template"],
+    [""],
+    ["1. One row per guest in the Guest list sheet. Guests who live together share the same Household name (e.g. Sharma Family)."],
+    ["2. Fill Guest name and Household; the rest is optional: Relation, Adult or child, Email, Phone / WhatsApp."],
+    ["3. Primary contact: Yes for the one person per household who receives the invitation."],
+    ["4. Travel & Stay: Yes if you're arranging their stay; then Hotel (one of the hotels on your site) and Room No."],
+    ["5. Invited to: the celebrations, separated by commas, using the names as written in the RSVP column titles."],
+    [`6. Leave "${COLS.guestId}" and "${COLS.householdId}" empty.`],
+    ["7. Upload it on the guest list page: Import guest list, or Update from spreadsheet. You'll see every guest before anything is saved, and nobody is added twice."],
+  ] : [
     ["How to update your guest list with this file"],
     [""],
     ["1. Edit names, contact details, Travel & Stay, Hotel, Room No. or 'Invited to' right in the Guest list sheet."],

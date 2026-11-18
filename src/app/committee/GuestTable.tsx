@@ -223,16 +223,12 @@ export function GuestTable({
                       className="h-4 w-4"
                     />
                   </td>
-                  <td>
-                    {travel.shows(f)
-                      ? <HotelCell weddingId={weddingId} guestId={g.id} hotels={hotels} initial={g.details.hotel ?? ""} guestName={g.fullName} />
-                      : <span className="px-2 text-neutral-300" title="Tick Travel & Stay to choose a hotel">—</span>}
-                  </td>
-                  <td>
-                    {travel.shows(f)
-                      ? <DetailCell weddingId={weddingId} guestId={g.id} column={ROOM} initial={g.details.room ?? ""} guestName={g.fullName} />
-                      : <span className="px-2 text-neutral-300" title="Tick Travel & Stay to add a room">—</span>}
-                  </td>
+                  {travel.shows(f)
+                    ? <StayCells weddingId={weddingId} guestId={g.id} hotels={hotels} family={family} hotel={g.details.hotel ?? ""} room={g.details.room ?? ""} guestName={g.fullName} />
+                    : <>
+                        <td><span className="px-2 text-neutral-300" title="Tick Travel & Stay to choose a hotel">—</span></td>
+                        <td><span className="px-2 text-neutral-300" title="Tick Travel & Stay to add a room">—</span></td>
+                      </>}
                   {columns.map((c) => (
                     <td key={c.id}>
                       <DetailCell weddingId={weddingId} guestId={g.id} column={c} initial={g.details[c.id] ?? ""} guestName={g.fullName} />
@@ -307,40 +303,76 @@ export function GuestTable({
   );
 }
 
-const ROOM: GuestColumn = { id: "room", label: "Room No." };
-
 /**
- * Which hotel this guest stays in: one of the hotels on the family's site.
- * With only one hotel listed, that one is chosen for everyone by default.
+ * Hotel and Room No. for a guest whose household is shown Travel & Stay.
+ * Hotel: one of the family's Travel & stay hotels (the only one, by default).
+ * Room: a boxed field, open once a hotel is chosen.
  */
-function HotelCell({ weddingId, guestId, hotels, initial, guestName }: {
-  weddingId: string; guestId: string; hotels: string[]; initial: string; guestName: string;
+function StayCells({ weddingId, guestId, hotels, family, hotel, room, guestName }: {
+  weddingId: string; guestId: string; hotels: string[]; family: "bride" | "groom"; hotel: string; room: string; guestName: string;
 }) {
   const fallback = hotels.length === 1 ? hotels[0] : "";
-  const [value, setValue] = useState(initial || fallback);
-  const [state, setState] = useState<"idle" | "saving" | "error">("idle");
+  const [value, setValue] = useState(hotel || fallback);
+  const [hotelState, setHotelState] = useState<"idle" | "saving" | "error">("idle");
+  const [roomValue, setRoomValue] = useState(room);
+  const [roomSaved, setRoomSaved] = useState(room);
+  const [roomState, setRoomState] = useState<"idle" | "saving" | "error">("idle");
   // a hotel since removed from the site still shows for the guests who have it
-  const options = initial && !hotels.includes(initial) ? [...hotels, initial] : hotels;
+  const options = hotel && !hotels.includes(hotel) ? [...hotels, hotel] : hotels;
 
   async function choose(v: string) {
     setValue(v);
-    setState("saving");
+    setHotelState("saving");
     const r = await setGuestDetailAction({ weddingId, guestId, columnId: "hotel", value: v });
-    setState(r.ok ? "idle" : "error");
+    setHotelState(r.ok ? "idle" : "error");
+  }
+  async function commitRoom() {
+    if (roomValue.trim() === roomSaved.trim()) return;
+    setRoomState("saving");
+    // the only hotel, shown by default, is saved with the first room typed
+    if (value && !hotel) await setGuestDetailAction({ weddingId, guestId, columnId: "hotel", value });
+    const r = await setGuestDetailAction({ weddingId, guestId, columnId: "room", value: roomValue });
+    if (r.ok) { setRoomSaved(roomValue.trim()); setRoomState("idle"); } else setRoomState("error");
   }
 
-  if (!options.length) return <span className="px-2 text-xs text-neutral-400" title="Add hotels in Edit your site → Travel & stay">No hotels yet</span>;
+  const noHotel = !value;
   return (
-    <select
-      value={value}
-      onChange={(e) => choose(e.target.value)}
-      aria-label={`Hotel for ${guestName}`}
-      className="w-full rounded-md border bg-transparent px-1.5 py-1 text-sm"
-      style={{ borderColor: state === "error" ? "#dc2626" : "#e4e1db", minWidth: "9rem", opacity: state === "saving" ? 0.6 : 1 }}
-    >
-      {hotels.length !== 1 && <option value="">—</option>}
-      {options.map((h) => <option key={h} value={h}>{h}</option>)}
-    </select>
+    <>
+      <td>
+        {options.length ? (
+          <select
+            value={value}
+            onChange={(e) => choose(e.target.value)}
+            aria-label={`Hotel for ${guestName}`}
+            className="w-full rounded-md border bg-white px-1.5 py-1 text-sm"
+            style={{ borderColor: hotelState === "error" ? "#dc2626" : "#d9d5cd", minWidth: "9rem", opacity: hotelState === "saving" ? 0.6 : 1 }}
+          >
+            {hotels.length !== 1 && <option value="">Choose…</option>}
+            {options.map((h) => <option key={h} value={h}>{h}</option>)}
+          </select>
+        ) : (
+          <span className="px-2 text-xs text-neutral-500">
+            No hotels yet ·{" "}
+            <a href={`/couple/site?family=${family}#travel`} className="font-medium text-neutral-900 underline underline-offset-2">Add here</a>
+          </span>
+        )}
+      </td>
+      <td>
+        <input
+          value={roomValue}
+          onChange={(e) => setRoomValue(e.target.value)}
+          onBlur={commitRoom}
+          onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+          disabled={noHotel}
+          maxLength={40}
+          aria-label={`Room No. for ${guestName}`}
+          placeholder={noHotel ? "Pick a hotel first" : "e.g. 204"}
+          title={noHotel ? "Choose the hotel first, then type the room" : undefined}
+          className="w-full rounded-md border bg-white px-2 py-1 text-sm placeholder:text-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-50"
+          style={{ borderColor: roomState === "error" ? "#dc2626" : "#d9d5cd", minWidth: "7rem", maxWidth: "9rem", opacity: roomState === "saving" ? 0.6 : 1 }}
+        />
+      </td>
+    </>
   );
 }
 
