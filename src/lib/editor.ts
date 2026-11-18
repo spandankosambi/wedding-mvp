@@ -70,6 +70,9 @@ export const eventSchema = z.object({
   name: z.string().trim().min(1).max(60),
   date: ymd,
   time: hm,
+  /** how long it runs, in hours (half hours allowed); unset = 3 */
+  durationHours: z.union([z.literal(""), z.coerce.number().min(0.5).max(24)]).optional()
+    .transform((v) => (v === "" || v === undefined ? 3 : Math.round(v * 2) / 2)),
   venueName: z.string().trim().min(1).max(120),
   address: z.string().trim().min(1).max(240),
   mapUrl: z.union([z.string().trim().url().max(500), z.literal("")]).optional().transform((v) => v || null),
@@ -195,9 +198,9 @@ export async function updateTravel(weddingId: string, side: FamilySide, input: u
 export async function upsertEvent(weddingId: string, input: unknown): Promise<Result & { id?: string }> {
   const p = eventSchema.safeParse(input);
   if (!p.success) return { ok: false, error: "invalid input" };
-  const { id, date, time, ...rest } = p.data;
+  const { id, date, time, durationHours, ...rest } = p.data;
   // a short Maps link is stored as its full google.com/maps address
-  const values = { ...rest, mapUrl: rest.mapUrl ? await expandMapLink(rest.mapUrl) : null, startsAt: istDate(date, time) };
+  const values = { ...rest, durationMinutes: Math.round(durationHours * 60), mapUrl: rest.mapUrl ? await expandMapLink(rest.mapUrl) : null, startsAt: istDate(date, time) };
   if (id) {
     const [row] = await db.update(events).set(values)
       .where(and(eq(events.id, id), eq(events.weddingId, weddingId))).returning();

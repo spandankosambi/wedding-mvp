@@ -48,7 +48,7 @@ export default async function PrintCards({
   return (
     <main className="portal-page">
       <PortalNav sideNames={sn} names={namesFor(wedding, family).couple} current={family} page="print" weddingId={weddingId} admin={admin} access={staff.access} />
-      <PortalFrame
+      <PortalFrame key={family}
         roomy
         jump={[["print-options", "Card options"], ["print-preview", "Preview & download"]]}
         right={<Checklist title={`${who}'s side: what's done`} items={await getChecklist(weddingId, family, admin)} />}

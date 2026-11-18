@@ -226,8 +226,7 @@ test("Travel & Stay is one tick per household, from either view, and follows the
   await page.goto("/committee?family=groom&view=guests");
   await expect(page.getByLabel("Show Travel & Stay to Rohit Mehta")).toBeChecked();
   // …the bride's Office Gang to 3 of 5
-  await page.getByRole("navigation", { name: "Sections" }).getByRole("link", { name: "Ananya's side" }).click();
-  await expect(page).toHaveURL(/family=bride/);
+  await page.goto("/committee?family=bride");
   await page.getByRole("navigation", { name: "View" }).getByRole("link", { name: /Guests ·/ }).click();
   await expect(page).toHaveURL(/view=guests/);
   const priya = page.getByLabel("Show Travel & Stay to Priya Nair");
@@ -285,9 +284,9 @@ test("the guest list: find a family, see who is still waiting, frozen titles, an
   await expect(page.getByRole("link", { name: "Print invitation cards" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Still waiting on" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /Who can reply to Arjun's side/ })).toBeVisible();
-  // switching family from the bar keeps you on the same kind of page
+  // each family's name in the bar leads to its Overview, from any page
   await page.goto("/committee?family=groom");
-  await expect(page.getByRole("navigation", { name: "Sections" }).getByRole("link", { name: "Ananya's side" })).toHaveAttribute("href", "/committee?family=bride");
+  await expect(page.getByRole("navigation", { name: "Sections" }).getByRole("link", { name: "Ananya's side" })).toHaveAttribute("href", "/couple/bride");
 
   const rows = page.locator("tbody tr");
   const all = await rows.count();

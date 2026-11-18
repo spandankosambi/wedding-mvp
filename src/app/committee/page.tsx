@@ -21,6 +21,8 @@ import { asFamilySide, sideName, type FamilySide } from "@/lib/looks";
 import { FamilyTable } from "./FamilyTable";
 import { StayView } from "./StayView";
 import { GuestTable } from "./GuestTable";
+import { FloatingSave } from "@/components/FloatingSave";
+import { saveStaysAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -83,6 +85,7 @@ export default async function CommitteePage({
     // "every event" means every event open to their side
     showTravel: showsTravel(f.showTravel, allInvites.filter((i) => i.familyId === f.id).map((i) => i.eventId),
       evs.filter((e) => eventForSide(e.side, f.side)).map((e) => e.id)),
+    staySent: f.staySent ?? null,
     rsvpByEvent: Object.fromEntries(
       allRsvps.filter((r) => r.familyId === f.id)
         .map((r) => [r.eventId, { status: r.status, headcount: r.headcount, note: r.note, guestIds: r.guestIds ?? null }]),
@@ -100,7 +103,7 @@ export default async function CommitteePage({
   return (
     <main className="portal-page">
       <PortalNav sideNames={sn} names={namesFor(wedding, family).couple} current={family} page="guests" weddingId={weddingId} admin={staff.role === "admin"} access={staff.access} />
-      <PortalFrame jump={[["replies", "Replies so far"], ["list", "The list"]]}>
+      <PortalFrame key={family} jump={[["replies", "Replies so far"], ["list", "The list"]]}>
       <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3">
         <div className="max-w-2xl">
           <h1 className="portal-heading">{sideName(family, sn)}&apos;s guest list</h1>
@@ -163,6 +166,8 @@ export default async function CommitteePage({
       )}
       </SideNamesProvider>
       </PortalFrame>
+      {/* the Guests view's hotels and rooms are saved together, with one button */}
+      {view === "guests" && !readOnly && <FloatingSave key={family} action={saveStaysAction} batch label="Save hotels & rooms" />}
     </main>
   );
 }

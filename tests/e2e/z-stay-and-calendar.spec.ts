@@ -39,9 +39,22 @@ test("attending: add to calendar, by download, Google link and email", async ({ 
   expect(body).toContain("BEGIN:VEVENT");
   expect(body.match(/BEGIN:VEVENT/g)).toHaveLength(1);
 
+  // an invitation (Yes / Maybe / No in their mail app), with the guest invited
   const sent = mails().reverse().find((m) => m.to === "gupta@example.com" && m.ics);
-  expect(sent.subject).toContain("your celebrations, ready for your calendar");
-  expect(sent.ics).toContain("BEGIN:VCALENDAR");
+  expect(sent.subject).toMatch(/^Invitation: /);
+  expect(sent.ics).toContain("METHOD:REQUEST");
+  expect(sent.ics.replace(/\r\n /g, "")).toContain("mailto:gupta@example.com");
+  // three hours unless the couple set another length
+  expect(body).toMatch(/DTSTART:(\d{8}T\d{6}Z)[\s\S]*DTEND:/);
+
+  // changing their mind about that celebration cancels it on their calendar
+  await page.goto(url);
+  await page.getByTestId("event-card").nth(0).getByRole("button", { name: /can.t make it|declin|regret/i }).click();
+  await page.getByRole("button", { name: /send rsvp|update rsvp/i }).click();
+  await expect(page.getByText(/saved/i).first()).toBeVisible();
+  const cancel = mails().reverse().find((m) => m.to === "gupta@example.com" && m.ics);
+  expect(cancel.subject).toMatch(/^Cancelled: /);
+  expect(cancel.ics).toContain("METHOD:CANCEL");
 
   // a link that isn't theirs gets nothing
   expect((await page.request.get(`/rsvp/not-a-real-token-1234567890/calendar`)).status()).toBe(404);
@@ -95,8 +108,8 @@ test("Hotels & rooms view, and stay details emailed to a household", async ({ pa
   const name = (await row.locator("td").nth(1).locator("p").first().textContent())!.trim();
   await row.getByLabel(`Hotel for ${name}`).selectOption("Taj Lands End, Bandra");
   await row.getByLabel(`Room No. for ${name}`).fill("808");
-  await row.getByLabel(`Room No. for ${name}`).press("Enter");
-  await page.waitForTimeout(800);
+  await page.getByTestId("floating-save").click();
+  await expect(page.getByTestId("floating-save")).toHaveText("All changes saved");
 
   await page.getByRole("link", { name: "Hotels & rooms" }).click();
   await expect(page).toHaveURL(/view=stay/);
@@ -114,4 +127,54 @@ test("Hotels & rooms view, and stay details emailed to a household", async ({ pa
   expect(sent.subject).toContain("where you're staying");
   expect(sent.html).toContain("Taj Lands End, Bandra");
   expect(sent.html).toContain("Room 808");
+  // and the household shows it was sent
+  await expect(household.getByTestId("stay-sent")).toContainText("✓ Emailed");
+  await page.reload();
+  await expect(page.getByTestId("stay-household").filter({ hasText: "808" }).first().getByTestId("stay-sent")).toContainText("✓ Emailed");
+});
+
+test("switching family keeps each editor's own fields; Add here lands in Travel & Stay; event duration", async ({ page }) => {
+  test.setTimeout(150_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page, "couple@example.com");
+
+  // what the groom's family's editor holds on a fresh visit
+  await page.goto("/couple/site?family=groom");
+  const groomStory = await page.locator("#words textarea[name=story]").inputValue();
+  const groomTag = await page.locator("#words input[name=hashtag]").inputValue();
+
+  // from the bride's editor, the family's name in the bar leads to its Overview…
+  await page.goto("/couple/site?family=bride");
+  await page.locator("#words textarea[name=story]").fill("Only the bride's family's story.");
+  await page.getByRole("navigation", { name: "Sections" }).getByRole("link", { name: "Arjun's side" }).click();
+  // (leaving with an unsaved change asks first)
+  page.once("dialog", (d) => d.accept());
+  await expect(page).toHaveURL(/\/couple\/groom$/);
+  // …and its editor shows its own fields, with nothing to save
+  await page.getByRole("navigation", { name: "Arjun's side pages" }).getByRole("link", { name: "Edit your site" }).click();
+  await expect(page).toHaveURL(/\/couple\/site\?family=groom/);
+  await expect(page.getByTestId("floating-save")).toHaveAttribute("data-ready", "true");
+  await expect(page.locator("#words textarea[name=story]")).toHaveValue(groomStory);
+  await expect(page.locator("#words input[name=hashtag]")).toHaveValue(groomTag);
+  await expect(page.getByTestId("floating-save")).toHaveText("All changes saved");
+
+  // "Add here" from the guest list: Travel & Stay on screen, cursor in a hotel name
+  await page.goto("/couple/site?family=groom&focus=hotel#travel");
+  await expect.poll(() => page.evaluate(() => (document.activeElement as HTMLInputElement | null)?.name ?? "")).toMatch(/^stay\d+name$/);
+  const top = await page.locator("#travel").evaluate((el) => el.getBoundingClientRect().top);
+  expect(top).toBeGreaterThanOrEqual(0);
+  expect(top).toBeLessThan(300);
+
+  // each celebration has a duration, 3 hours unless changed
+  await page.goto("/couple/site?family=groom");
+  const ev = page.locator("details[id^=event-]").first();
+  await ev.locator("summary").click();
+  const dur = ev.getByLabel(/^Duration in hours for/);
+  await expect(dur).toHaveValue("3");
+  await dur.fill("2.5");
+  await page.getByTestId("floating-save").click();
+  await expect(page).toHaveURL(/saved=/);
+  await page.reload();
+  await page.locator("details[id^=event-]").first().locator("summary").click();
+  await expect(page.locator("details[id^=event-]").first().getByLabel(/^Duration in hours for/)).toHaveValue("2.5");
 });

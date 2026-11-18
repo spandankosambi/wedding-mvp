@@ -152,25 +152,39 @@ ${emailLogo()}
   }
 }
 
-/** After an RSVP: the celebrations they're coming to, as a calendar file they
-    can open to add them all at once. Sent from the couple's name. */
-export async function sendCalendarEmail(args: {
+/** The address calendar replies go to (the organiser of the invitation). */
+export const calendarOrganizer = () => process.env.SMTP_USER || "onetapinvites@gmail.com";
+
+/**
+ * After an RSVP: one calendar invitation per celebration they're coming to.
+ * Gmail, Outlook and Apple Mail show it with Yes / Maybe / No, and Yes adds
+ * it to their calendar. A celebration they no longer come to is cancelled
+ * the same way, which takes it off their calendar. Sent from the couple's name.
+ */
+export async function sendCalendarInvite(args: {
   to: string; familyName: string; coupleNames: string; rsvpUrl: string; ics: string;
-  events: { name: string; when: string; where: string; google: string }[];
+  method: "REQUEST" | "CANCEL";
+  event: { name: string; when: string; where: string; google: string };
 }) {
-  const subject = `${args.coupleNames}: your celebrations, ready for your calendar`;
-  const rows = args.events.map((e) => `<tr><td style="padding:8px 0;border-top:1px solid #eee"><b>${escapeHtml(e.name)}</b><br><span style="color:#6b6760">${escapeHtml(e.when)} · ${escapeHtml(e.where)}</span><br><a href="${e.google}" style="font-size:13px;color:#b23a26">Add to Google Calendar</a></td></tr>`).join("");
+  const e = args.event;
+  const cancel = args.method === "CANCEL";
+  const subject = cancel
+    ? `Cancelled: ${e.name} · ${args.coupleNames}`
+    : `Invitation: ${e.name} · ${args.coupleNames} · ${e.when}`;
   const html = `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.55;color:#22201c;max-width:520px">
 <p>Dear ${escapeHtml(args.familyName)},</p>
-<p>Thank you for your RSVP. Here ${args.events.length === 1 ? "is the celebration" : "are the celebrations"} you&rsquo;re coming to:</p>
-<table style="width:100%;border-collapse:collapse;font-size:14px">${rows}</table>
-<p>The attached file <b>wedding.ics</b> adds ${args.events.length === 1 ? "it" : "them all"} to your calendar: open it on your phone or computer.</p>
+${cancel
+  ? `<p>You&rsquo;ve let us know you can&rsquo;t make it to the <b>${escapeHtml(e.name)}</b>, so it&rsquo;s been taken off your calendar.</p>`
+  : `<p>Thank you for your RSVP. Here&rsquo;s the <b>${escapeHtml(e.name)}</b> for your calendar:</p>
+<p style="margin:12px 0;padding:12px 14px;border:1px solid #eee;border-radius:10px"><b>${escapeHtml(e.name)}</b><br><span style="color:#6b6760">${escapeHtml(e.when)}<br>${escapeHtml(e.where)}</span></p>
+<p>Press <b>Yes</b> on the invitation above this message to add it to your calendar. Not seeing the buttons? Open the attached <b>invite.ics</b>, or <a href="${e.google}" style="color:#b23a26">add it to Google Calendar</a>.</p>`}
 <p style="color:#6b6760;font-size:13px">Plans change? <a href="${args.rsvpUrl}">Update your RSVP</a> from the same link.</p>
 </div>`;
   if (smtpConfigured()) {
     await smtpTransport().sendMail({
       from: fromHeader(args.coupleNames), to: args.to, subject, html,
-      attachments: [{ filename: "wedding.ics", content: args.ics, contentType: "text/calendar; charset=utf-8; method=PUBLISH" }],
+      // the invitation itself, which mail apps turn into Yes / Maybe / No
+      icalEvent: { method: args.method, filename: "invite.ics", content: args.ics },
     });
   } else {
     await recordOutbox({ to: args.to, subject, kind: "calendar", link: args.rsvpUrl, html, attachment: args.ics });

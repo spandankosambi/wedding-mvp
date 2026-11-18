@@ -15,6 +15,7 @@ type EventProp = {
   venueName: string;
   address: string;
   mapUrl?: string | null;
+  durationMinutes?: number;
   dressCode: string | null;
   rsvp: { status: "attending" | "declined"; headcount: number; note: string | null; guestIds: string[] | null } | null;
 };
@@ -97,8 +98,8 @@ export function RsvpForm({
             <p className="kicker" style={{ letterSpacing: "0.18em" }}>Add to your calendar</p>
             {emailedTo ? (
               <p className="mt-3 text-sm leading-relaxed" data-testid="calendar-emailed">
-                We&apos;ve emailed the calendar file to <b>{emailedTo}</b>. Open the attachment
-                (wedding.ics) on your phone or computer to add {coming.length === 1 ? "it" : "every celebration"} in one go.
+                We&apos;ve sent {coming.length === 1 ? "a calendar invitation" : "a calendar invitation for each celebration"} to <b>{emailedTo}</b>.
+                Press <b>Yes</b> in the email to add {coming.length === 1 ? "it" : "them"} to your calendar.
               </p>
             ) : (
               <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--ink-soft)" }}>

@@ -134,6 +134,7 @@ export async function saveTravel(formData: FormData) {
 const applyEvent = (ctx: Ctx, formData: FormData): Promise<Applied> =>
   editor.upsertEvent(ctx.weddingId, {
     id: str(formData, "id") || undefined, name: str(formData, "name"), date: str(formData, "date"), time: str(formData, "time"),
+    durationHours: str(formData, "durationHours"),
     venueName: str(formData, "venueName"), address: str(formData, "address"), mapUrl: str(formData, "mapUrl"),
     dressCode: str(formData, "dressCode"), description: str(formData, "description"),
     isPublished: formData.get("isPublished") === "on",

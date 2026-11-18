@@ -11,8 +11,8 @@ type Page = "overview" | "site" | "guests" | "print";
 /**
  * The one line across the top of every couple-side screen: our logo (which
  * leads to the dashboard), a switch between the two families by name,
- * then — inside a family — its pages. Switching family keeps you on the same
- * kind of page. Only the families and pages this person has access to appear.
+ * then — inside a family — its pages. Each family's name leads to its
+ * Overview. Only the families and pages this person has access to appear.
  */
 export function PortalNav({ names: _names, sideNames = DEFAULT_SIDE_NAMES, current, page, weddingId, admin = false, access }: {
   names: string; current?: Section; page?: Page;
@@ -45,14 +45,11 @@ export function PortalNav({ names: _names, sideNames = DEFAULT_SIDE_NAMES, curre
         <nav aria-label="Sections" className="portal-nav-sides">
           {admin && <Link href="/admin" className="portal-nav-admin">All weddings</Link>}
           <span className="portal-nav-switch">
-            {sides.map((f) => {
-              const p = family && page && open(f, page) ? page : "overview";
-              return (
-                <Link key={f} href={href(f, p)} aria-current={current === f ? "page" : undefined}>
-                  {sideNames[f]}<span className="portal-nav-wide">&apos;s side</span>
-                </Link>
-              );
-            })}
+            {sides.map((f) => (
+              <Link key={f} href={href(f, "overview")} aria-current={current === f ? "page" : undefined}>
+                {sideNames[f]}<span className="portal-nav-wide">&apos;s side</span>
+              </Link>
+            ))}
           </span>
         </nav>
         {family && (

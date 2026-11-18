@@ -1,7 +1,7 @@
 "use client";
 
 import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Stay = { name: string; note: string; url?: string; common?: boolean };
 type Row = Stay & { key: number };
@@ -20,10 +20,28 @@ export function StaysEditor({ initial, family, max, names = DEFAULT_SIDE_NAMES }
   const own = `${names[family]}'s family's`;
   const other = `${names[family === "bride" ? "groom" : "bride"]}'s`;
 
+  /* arriving from the guest list's "Add here" (?focus=hotel): straight to
+     Travel & Stay, cursor in the first empty hotel */
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("focus") !== "hotel") return;
+    const go = () => {
+      const inputs = Array.from(box.current?.querySelectorAll<HTMLInputElement>("input[name$=name]") ?? []);
+      const target = inputs.find((el) => !el.value.trim()) ?? inputs[0];
+      if (!target) return;
+      document.getElementById("travel")?.scrollIntoView({ block: "start" });
+      target.focus({ preventScroll: true });
+    };
+    go();
+    // once more after the page has finished drawing (images, fonts) so the jump holds
+    const t = setTimeout(go, 400);
+    return () => clearTimeout(t);
+  }, []);
+
   const update = (key: number, patch: Partial<Stay>) => setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" ref={box}>
       {rows.map((s, i) => {
         const label = s.name.trim() || `Hotel ${i + 1}`;
         return (

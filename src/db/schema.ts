@@ -130,6 +130,8 @@ export const events = pgTable("events", {
   icon: text("icon"),
   /** an uploaded icon ("custom"): a 96×96 alpha mask, base64 — drawn in the theme's colour */
   iconImage: text("icon_image"),
+  /** how long the celebration runs, for guests' calendar entries */
+  durationMinutes: integer("duration_minutes").notNull().default(180),
 });
 
 export const families = pgTable("families", {
@@ -147,8 +149,18 @@ export const families = pgTable("families", {
   /** Whether this household's invitation shows the Travel & Stay section.
       null = automatic: shown when they're invited to every event. */
   showTravel: boolean("show_travel"),
+  /** when this household was last sent its stay details, and how */
+  staySent: jsonb("stay_sent").$type<StaySent>(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+export type StaySent = {
+  /** WhatsApp: when the message was opened, ready to send (we can't see it go) */
+  whatsappAt?: string;
+  whatsappTo?: string | null;
+  emailAt?: string;
+  emailTo?: string;
+};
 
 export const guests = pgTable("guests", {
   id: uuid("id").defaultRandom().primaryKey(),

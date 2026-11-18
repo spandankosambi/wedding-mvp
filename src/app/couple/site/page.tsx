@@ -96,7 +96,10 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
   return (
     <main className="portal-page">
       <PortalNav sideNames={sn} names={coupleNames} current={family} page="site" weddingId={weddingId} admin={!!adminQ} access={staff.access} />
+      {/* keyed by family: moving from one family's editor to the other's starts
+          every field afresh, rather than carrying over what the first showed */}
       <PortalFrame
+        key={family}
         jump={[["theme", "Look"], ["decor", "Design touches"], ["wording", "Invitation wording"], ["words", "Tagline & story"], ["events", "Celebrations"], ["travel", "Travel & stay"], ["gallery", "Photos"], ["know", "Things to know"], ["music", "Music"]]}
         right={<Checklist title={`${sn[family]}'s side: what's done`} items={checklist} />}
       >
@@ -303,9 +306,13 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                         {wid}
                         <input type="hidden" name="id" value={e.id} />
                         <Field label="Name"><input name="name" defaultValue={e.name} required maxLength={60} className="portal-input" /></Field>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-[1.3fr_1fr_0.9fr] gap-3">
                           <Field label="Date"><input name="date" type="date" defaultValue={p.date} required className="portal-input" /></Field>
                           <Field label="Time (IST)"><input name="time" type="time" defaultValue={p.time} required className="portal-input" /></Field>
+                          <Field label="Duration (hours)">
+                            <input name="durationHours" type="number" min={0.5} max={24} step={0.5} defaultValue={(e.durationMinutes ?? 180) / 60}
+                              required aria-label={`Duration in hours for ${e.name}`} className="portal-input" title="For guests' calendar entries" />
+                          </Field>
                         </div>
                         <Field label="Venue"><input name="venueName" defaultValue={e.venueName} required maxLength={120} className="portal-input" /></Field>
                         <Field label="Address" hint="end with the city"><input name="address" defaultValue={e.address} required maxLength={240} className="portal-input" /></Field>

@@ -79,6 +79,7 @@ export default async function RsvpPage({
             venueName: e.venueName,
             address: e.address,
             mapUrl: e.mapUrl,
+            durationMinutes: e.durationMinutes,
             dressCode: e.dressCode,
             rsvp: e.rsvp,
           }))}

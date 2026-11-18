@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { weddings, families, guests, events, eventInvites } from "@/db/schema";
+import { weddings, families, guests, events, eventInvites, type StaySent } from "@/db/schema";
 import { getLook, namesFor } from "@/lib/looks";
 import { stayGroups, type StayGroup } from "@/lib/stay-groups";
 import { showsTravel } from "@/lib/travel";
@@ -27,8 +27,8 @@ export function stayMessage(o: { greeting: string; couple: string; groups: StayG
 }
 
 type Result =
-  | { ok: true; via: "whatsapp"; url: string; to: string | null }
-  | { ok: true; via: "email"; to: string }
+  | { ok: true; via: "whatsapp"; url: string; to: string | null; at: string }
+  | { ok: true; via: "email"; to: string; at: string }
   | { ok: false; error: string };
 
 export async function sendStayDetails(weddingId: string, familyId: string, via: "whatsapp" | "email"): Promise<Result> {
@@ -52,12 +52,19 @@ export async function sendStayDetails(weddingId: string, familyId: string, via: 
   const couple = namesFor(wedding, side).couple;
   const text = stayMessage({ greeting: first ? `Namaste ${first}!` : `Namaste ${family.name}!`, couple, groups, gettingThere: look.travel?.gettingThere });
 
+  const mark = (patch: StaySent) =>
+    db.update(families).set({ staySent: { ...(family.staySent ?? {}), ...patch } }).where(eq(families.id, familyId));
+  const at = new Date().toISOString();
+
   if (via === "whatsapp") {
     const number = whatsappNumber(primary?.phone ?? family.phone);
-    return { ok: true, via, url: `https://wa.me/${number ?? ""}?text=${encodeURIComponent(text)}`, to: number };
+    // we can't see the message go out of WhatsApp; this is when it was opened, ready to send
+    await mark({ whatsappAt: at, whatsappTo: number });
+    return { ok: true, via, url: `https://wa.me/${number ?? ""}?text=${encodeURIComponent(text)}`, to: number, at };
   }
   const to = (primary?.email ?? family.email ?? "").trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return { ok: false, error: "No email saved for this household's primary contact." };
   await sendStayEmail({ to, familyName: family.name, coupleNames: couple, groups, gettingThere: look.travel?.gettingThere ?? "" });
-  return { ok: true, via, to };
+  await mark({ emailAt: at, emailTo: to });
+  return { ok: true, via, to, at };
 }

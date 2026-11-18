@@ -35,14 +35,29 @@ test("Guests view: Hotel and Room No. for households shown Travel & Stay", async
   const name = (await row.locator("td").nth(1).locator("p").first().textContent())!.trim();
   const hotel = row.getByLabel(`Hotel for ${name}`);
   await expect(hotel.locator("option")).toContainText(["Choose…", "Taj Lands End, Bandra", "Grand Hyatt, Santacruz"]);
+  // saved with the floating Save, not as you type
+  const save = page.getByTestId("floating-save");
+  await expect(save).toHaveText("All changes saved");
+  await expect(row.getByLabel(`Room No. for ${name}`)).toBeDisabled();
   await hotel.selectOption("Grand Hyatt, Santacruz");
   await row.getByLabel(`Room No. for ${name}`).fill("1207");
-  await row.getByLabel(`Room No. for ${name}`).press("Enter");
-  await page.waitForTimeout(800);
+  await expect(save).toHaveText("Save hotels & rooms");
+  await save.click();
+  await expect(save).toHaveText("All changes saved");
   await page.reload();
   const again = page.locator("tbody tr").filter({ hasText: name }).first();
   await expect(again.getByLabel(`Hotel for ${name}`)).toHaveValue("Grand Hyatt, Santacruz");
   await expect(again.getByLabel(`Room No. for ${name}`)).toHaveValue("1207");
+
+  // back to "Choose…" and Save: no hotel, so the room is emptied too
+  await again.getByLabel(`Hotel for ${name}`).selectOption("");
+  await save.click();
+  await expect(save).toHaveText("All changes saved");
+  await page.reload();
+  const cleared = page.locator("tbody tr").filter({ hasText: name }).first();
+  await expect(cleared.getByLabel(`Hotel for ${name}`)).toHaveValue("");
+  await expect(cleared.getByLabel(`Room No. for ${name}`)).toHaveValue("");
+  await expect(cleared.getByLabel(`Room No. for ${name}`)).toBeDisabled();
 
   // a household not shown Travel & Stay has no hotel or room to fill
   const off = page.locator("tbody tr").filter({ has: page.locator("input[aria-label^='Show Travel & Stay']:not(:checked)") }).first();

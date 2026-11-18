@@ -38,7 +38,7 @@ export async function getFamilyByToken(token: string) {
     members: members.map((m) => ({ id: m.id, fullName: m.fullName, ageGroup: m.ageGroup })),
     events: evs.map((e) => {
       const r = existing.find((x) => x.eventId === e.id);
-      return { id: e.id, name: e.name, side: e.side, startsAt: e.startsAt, venueName: e.venueName, address: e.address, mapUrl: e.mapUrl, dressCode: e.dressCode,
+      return { id: e.id, name: e.name, side: e.side, startsAt: e.startsAt, venueName: e.venueName, address: e.address, mapUrl: e.mapUrl, dressCode: e.dressCode, durationMinutes: e.durationMinutes,
         rsvp: r ? { status: r.status, headcount: r.headcount, note: r.note, guestIds: r.guestIds ?? null } : null };
     }),
   };

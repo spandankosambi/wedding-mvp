@@ -11,6 +11,7 @@ import { BulkRsvpDialog } from "./BulkRsvpDialog";
 import { openWhatsAppInvite } from "./whatsapp";
 import { useBarHeight, useIsPhone } from "./layout-hooks";
 
+import type { StaySent } from "@/db/schema";
 export type Row = {
   id: string;
   name: string;
@@ -24,6 +25,8 @@ export type Row = {
   eventIds: string[];
   /** their invitation shows the site's Travel & Stay section */
   showTravel: boolean;
+  /** when their stay details were last sent, and how */
+  staySent?: StaySent | null;
   rsvpByEvent: Record<string, { status: "attending" | "declined"; headcount: number; note: string | null; guestIds: string[] | null }>;
   lastEmail: { type: string; status: string; sentAt: string } | null;
 };

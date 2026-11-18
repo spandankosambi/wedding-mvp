@@ -224,7 +224,7 @@ export function GuestTable({
                     />
                   </td>
                   {travel.shows(f)
-                    ? <StayCells weddingId={weddingId} guestId={g.id} hotels={hotels} family={family} hotel={g.details.hotel ?? ""} room={g.details.room ?? ""} guestName={g.fullName} />
+                    ? <StayCells key={`${g.id}|${g.details.hotel ?? ""}|${g.details.room ?? ""}`} weddingId={weddingId} guestId={g.id} hotels={hotels} family={family} hotel={g.details.hotel ?? ""} room={g.details.room ?? ""} guestName={g.fullName} />
                     : <>
                         <td><span className="px-2 text-neutral-300" title="Tick Travel & Stay to choose a hotel">—</span></td>
                         <td><span className="px-2 text-neutral-300" title="Tick Travel & Stay to add a room">—</span></td>
@@ -311,65 +311,52 @@ export function GuestTable({
 function StayCells({ weddingId, guestId, hotels, family, hotel, room, guestName }: {
   weddingId: string; guestId: string; hotels: string[]; family: "bride" | "groom"; hotel: string; room: string; guestName: string;
 }) {
+  // saved with the page's floating Save: one small form per guest, which the
+  // room box (in the next cell) joins through form=…
+  const formId = `stay-${guestId}`;
   const fallback = hotels.length === 1 ? hotels[0] : "";
   const [value, setValue] = useState(hotel || fallback);
-  const [hotelState, setHotelState] = useState<"idle" | "saving" | "error">("idle");
-  const [roomValue, setRoomValue] = useState(room);
-  const [roomSaved, setRoomSaved] = useState(room);
-  const [roomState, setRoomState] = useState<"idle" | "saving" | "error">("idle");
   // a hotel since removed from the site still shows for the guests who have it
   const options = hotel && !hotels.includes(hotel) ? [...hotels, hotel] : hotels;
-
-  async function choose(v: string) {
-    setValue(v);
-    setHotelState("saving");
-    const r = await setGuestDetailAction({ weddingId, guestId, columnId: "hotel", value: v });
-    setHotelState(r.ok ? "idle" : "error");
-  }
-  async function commitRoom() {
-    if (roomValue.trim() === roomSaved.trim()) return;
-    setRoomState("saving");
-    // the only hotel, shown by default, is saved with the first room typed
-    if (value && !hotel) await setGuestDetailAction({ weddingId, guestId, columnId: "hotel", value });
-    const r = await setGuestDetailAction({ weddingId, guestId, columnId: "room", value: roomValue });
-    if (r.ok) { setRoomSaved(roomValue.trim()); setRoomState("idle"); } else setRoomState("error");
-  }
-
   const noHotel = !value;
   return (
     <>
       <td>
         {options.length ? (
-          <select
-            value={value}
-            onChange={(e) => choose(e.target.value)}
-            aria-label={`Hotel for ${guestName}`}
-            className="w-full rounded-md border bg-white px-1.5 py-1 text-sm"
-            style={{ borderColor: hotelState === "error" ? "#dc2626" : "#d9d5cd", minWidth: "9rem", opacity: hotelState === "saving" ? 0.6 : 1 }}
-          >
-            {hotels.length !== 1 && <option value="">Choose…</option>}
-            {options.map((h) => <option key={h} value={h}>{h}</option>)}
-          </select>
+          <form id={formId} data-save-part={formId} onSubmit={(e) => e.preventDefault()}>
+            <input type="hidden" name="weddingId" value={weddingId} />
+            <input type="hidden" name="guestId" value={guestId} />
+            <select
+              name="hotel"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              aria-label={`Hotel for ${guestName}`}
+              className="w-full rounded-md border bg-white px-1.5 py-1 text-sm"
+              style={{ borderColor: "#d9d5cd", minWidth: "9rem" }}
+            >
+              {hotels.length !== 1 && <option value="">Choose…</option>}
+              {options.map((h) => <option key={h} value={h}>{h}</option>)}
+            </select>
+          </form>
         ) : (
           <span className="px-2 text-xs text-neutral-500">
             No hotels yet ·{" "}
-            <a href={`/couple/site?family=${family}#travel`} className="font-medium text-neutral-900 underline underline-offset-2">Add here</a>
+            <a href={`/couple/site?family=${family}&focus=hotel#travel`} className="font-medium text-neutral-900 underline underline-offset-2">Add here</a>
           </span>
         )}
       </td>
       <td>
         <input
-          value={roomValue}
-          onChange={(e) => setRoomValue(e.target.value)}
-          onBlur={commitRoom}
-          onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+          form={options.length ? formId : undefined}
+          name="room"
+          defaultValue={room}
           disabled={noHotel}
           maxLength={40}
           aria-label={`Room No. for ${guestName}`}
           placeholder={noHotel ? "Pick a hotel first" : "e.g. 204"}
           title={noHotel ? "Choose the hotel first, then type the room" : undefined}
           className="w-full rounded-md border bg-white px-2 py-1 text-sm placeholder:text-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-50"
-          style={{ borderColor: roomState === "error" ? "#dc2626" : "#d9d5cd", minWidth: "7rem", maxWidth: "9rem", opacity: roomState === "saving" ? 0.6 : 1 }}
+          style={{ borderColor: "#d9d5cd", minWidth: "7rem", maxWidth: "9rem" }}
         />
       </td>
     </>

@@ -255,3 +255,23 @@ export async function stayDetailsAction(input: { weddingId: string; familyId: st
     return { ok: false as const, error: "Couldn't send it just now. Try again in a minute." };
   }
 }
+
+/**
+ * The Guests view's floating Save: every changed guest's hotel and room at
+ * once. A guest left on "Choose…" has no hotel, so their room is emptied too.
+ */
+export async function saveStaysAction(fd: FormData) {
+  const parts = String(fd.get("__parts") ?? "").split(",").filter(Boolean).slice(0, 500);
+  const rows = parts.map((_, i) => ({ i, guestId: String(fd.get(`${i}.guestId`) ?? "") }))
+    .filter((r) => z.string().uuid().safeParse(r.guestId).success);
+  // every guest named must be on this person's side
+  const weddingId = await scopedFrom({ weddingId: String(fd.get("weddingId") ?? ""), guestIds: rows.map((r) => r.guestId) });
+  if (!weddingId) return;
+  for (const { i, guestId } of rows) {
+    const hotel = String(fd.get(`${i}.hotel`) ?? "").trim();
+    const room = hotel ? String(fd.get(`${i}.room`) ?? "").trim() : "";
+    await household.setGuestDetail(weddingId, guestId, "hotel", hotel);
+    await household.setGuestDetail(weddingId, guestId, "room", room);
+  }
+  revalidatePath("/committee");
+}

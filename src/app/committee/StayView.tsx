@@ -5,6 +5,11 @@ import Link from "next/link";
 import { stayDetailsAction } from "./actions";
 import { stayGroups } from "@/lib/stay-groups";
 import type { Row } from "./FamilyTable";
+import type { StaySent } from "@/db/schema";
+
+/** "18 Nov, 4:05 pm", in India time */
+const when = (iso: string) =>
+  new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" });
 
 type Stay = { name: string; note: string; url?: string };
 
@@ -52,6 +57,9 @@ export function StayView({
 
   const [flash, setFlash] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  // what's been sent, kept up to date as buttons are pressed here
+  const [sent, setSent] = useState<Record<string, StaySent>>(() =>
+    Object.fromEntries(rows.filter((r) => r.staySent).map((r) => [r.id, r.staySent!])));
   async function send(r: Row, via: "whatsapp" | "email") {
     setFlash(null);
     setBusy(`${r.id}:${via}`);
@@ -62,9 +70,11 @@ export function StayView({
     if (!res.ok) { tab?.close(); setFlash(`Couldn't send to ${r.name}: ${res.error}`); return; }
     if (res.via === "whatsapp") {
       if (tab) tab.location.href = res.url; else window.location.href = res.url;
-      setFlash(res.to ? `WhatsApp opened for ${r.name}` : `WhatsApp opened for ${r.name}: no phone saved, pick the contact`);
+      setFlash(res.to ? `WhatsApp opened for ${r.name}: press send in WhatsApp` : `WhatsApp opened for ${r.name}: no phone saved, pick the contact`);
+      setSent((s) => ({ ...s, [r.id]: { ...s[r.id], whatsappAt: res.at, whatsappTo: res.to } }));
     } else {
       setFlash(`Stay details emailed to ${res.to}`);
+      setSent((s) => ({ ...s, [r.id]: { ...s[r.id], emailAt: res.at, emailTo: res.to } }));
     }
   }
 
@@ -73,7 +83,7 @@ export function StayView({
       <div className="portal-panel p-8 text-center" data-testid="stay-empty">
         <p className="text-base font-medium">No hotels yet</p>
         <p className="mt-2 text-sm text-neutral-500">Add the hotels in Travel &amp; Stay, then choose each guest&apos;s hotel and room in the Guests view.</p>
-        <Link href={`/couple/site?family=${family}#travel`} className="portal-button mt-5 inline-flex">Add hotels</Link>
+        <Link href={`/couple/site?family=${family}&focus=hotel#travel`} className="portal-button mt-5 inline-flex">Add hotels</Link>
       </div>
     );
   }
@@ -135,7 +145,7 @@ export function StayView({
         <div className="portal-table-wrap mt-4 overflow-x-auto">
           <table className="portal-table w-full text-sm">
             <thead>
-              <tr><th className="text-left">Household</th><th className="text-left">Primary contact</th><th className="text-left">Staying at</th>{!readOnly && <th className="text-left">Send</th>}</tr>
+              <tr><th className="text-left">Household</th><th className="text-left">Primary contact</th><th className="text-left">Staying at</th>{!readOnly && <th className="text-left">Send</th>}<th className="text-left">Sent</th></tr>
             </thead>
             <tbody>
               {staying.map((r) => {
@@ -162,11 +172,21 @@ export function StayView({
                         </button>
                       </td>
                     )}
+                    <td className="text-xs leading-relaxed" data-testid="stay-sent">
+                      {sent[r.id]?.emailAt || sent[r.id]?.whatsappAt ? (
+                        <>
+                          {sent[r.id].emailAt && <p className="text-emerald-700">✓ Emailed {when(sent[r.id].emailAt!)}<span className="text-neutral-400"> · {sent[r.id].emailTo}</span></p>}
+                          {sent[r.id].whatsappAt && <p style={{ color: "#128c7e" }} title="When WhatsApp was opened with the message; we can't see it being sent">✓ WhatsApp {when(sent[r.id].whatsappAt!)}</p>}
+                        </>
+                      ) : (
+                        <span className="text-neutral-400">Not sent yet</span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
               {!staying.length && (
-                <tr><td colSpan={4} className="py-6 text-center text-neutral-400">No households are shown Travel &amp; Stay yet.</td></tr>
+                <tr><td colSpan={5} className="py-6 text-center text-neutral-400">No households are shown Travel &amp; Stay yet.</td></tr>
               )}
             </tbody>
           </table>
