@@ -123,6 +123,7 @@ test("left panel: icons on each section and a help form at the foot", async ({ p
   await signIn(page, "couple@example.com");
   await page.goto("/couple/site?family=bride");
   const jump = page.getByRole("navigation", { name: "Jump to" }).first();
+  await expect(jump.getByRole("link").first()).toBeVisible(); // past the loading screen
   await expect(jump.locator(".portal-jump-icon")).toHaveCount(await jump.getByRole("link").count());
   // Need help? sits at the bottom of the column, below the list; About us is gone
   await expect(page.getByText("About us")).toHaveCount(0);
