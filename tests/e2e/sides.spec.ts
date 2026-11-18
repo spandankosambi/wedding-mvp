@@ -53,15 +53,15 @@ test("an event can be one family's own; each family's section, list and site fol
   await expect(page.getByRole("row", { name: /Malhotra Family/ })).toHaveCount(0); // the bride's
 
   await page.goto("/committee?family=bride");
-  await expect(page.getByRole("row", { name: /Malhotra Family/ }).getByText(/Mehendi · Karishma/)).toBeVisible();
+  await expect(page.getByRole("row", { name: /Malhotra Family/ }).getByText(/Mehendi/)).toBeVisible();
   // a new family joins this list, offered common events and the bride's own
   await page.getByRole("button", { name: "Add family" }).click();
   const dialog = page.getByRole("dialog");
   const side = dialog.getByRole("combobox", { name: "Side" });
   await expect(side).toHaveValue("bride");
   await expect(side.locator("option")).toHaveText(["Karishma's family", "Gaurav's family"]); // no "both"
-  await dialog.getByRole("button", { name: "Mehendi · Karishma" }).click();
-  await expect(dialog.getByRole("button", { name: "Mehendi · Karishma" })).toHaveAttribute("aria-pressed", "true");
+  await dialog.getByRole("button", { name: "Mehendi", exact: true }).click();
+  await expect(dialog.getByRole("button", { name: "Mehendi", exact: true })).toHaveAttribute("aria-pressed", "true");
   if (shots) await page.screenshot({ path: `${shots}/family-side-events.png` });
   // moving it to the groom's family drops the bride's own event
   await side.selectOption("groom");
