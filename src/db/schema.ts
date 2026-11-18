@@ -132,6 +132,8 @@ export const events = pgTable("events", {
   iconImage: text("icon_image"),
   /** how long the celebration runs, for guests' calendar entries */
   durationMinutes: integer("duration_minutes").notNull().default(180),
+  /** where the celebration happens, so its time means local time there */
+  timeZone: text("time_zone").notNull().default("Asia/Kolkata"),
 });
 
 export const families = pgTable("families", {

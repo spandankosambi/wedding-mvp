@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { DEFAULT_ZONE, guessZone, zonedParts } from "@/lib/timezones";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
@@ -22,14 +23,14 @@ async function scoped(formData: FormData, need: "site" | "guests" | "couple" = "
   const staff = await requireRole(["committee", "couple", "admin"]);
   const weddingId = staff.role === "admin" ? String(formData.get("weddingId") ?? "") : staff.weddingId;
   if (!weddingId) redirect("/couple");
-  const [w] = await db.select({ slug: weddings.slug, weddingDate: weddings.weddingDate }).from(weddings).where(eq(weddings.id, weddingId));
+  const [w] = await db.select({ slug: weddings.slug, weddingDate: weddings.weddingDate, city: weddings.city }).from(weddings).where(eq(weddings.id, weddingId));
   if (!w) redirect("/couple");
   // which family's section this came from (the editor is per family)
   const family: FamilySide = asFamilySide(formData.get("family")) ?? homeSide(staff.access);
   // the site needs full access to that family's site; the shared details are the couple's
   const ok = need === "couple" ? staff.access.manage : allows(staff.access, need, family, "full");
   if (!ok) redirect("/couple");
-  return { weddingId, slug: w.slug, weddingDate: w.weddingDate, admin: staff.role === "admin", family, access: staff.access };
+  return { weddingId, slug: w.slug, weddingDate: w.weddingDate, city: w.city, admin: staff.role === "admin", family, access: staff.access };
 }
 
 type Ctx = Awaited<ReturnType<typeof scoped>>;
@@ -135,6 +136,7 @@ const applyEvent = (ctx: Ctx, formData: FormData): Promise<Applied> =>
   editor.upsertEvent(ctx.weddingId, {
     id: str(formData, "id") || undefined, name: str(formData, "name"), date: str(formData, "date"), time: str(formData, "time"),
     durationHours: str(formData, "durationHours"),
+    timeZone: str(formData, "timeZone"),
     venueName: str(formData, "venueName"), address: str(formData, "address"), mapUrl: str(formData, "mapUrl"),
     dressCode: str(formData, "dressCode"), description: str(formData, "description"),
     isPublished: formData.get("isPublished") === "on",
@@ -153,9 +155,12 @@ export async function addPresetEvent(formData: FormData) {
   const ctx = await scoped(formData);
   const preset = EVENT_PRESETS.find((p) => p.name === str(formData, "preset"));
   const startsAt = preset ? presetStart(preset, ctx.weddingDate) : ctx.weddingDate;
-  const parts = editor.istParts(startsAt);
+  // a destination wedding's city sets the new celebration's time zone
+  const timeZone = guessZone(ctx.city) ?? DEFAULT_ZONE;
+  // the preset's usual hour (e.g. 7 pm), read as local time there
+  const parts = zonedParts(startsAt, DEFAULT_ZONE);
   const r = await editor.upsertEvent(ctx.weddingId, {
-    name: preset?.name ?? "New celebration", date: parts.date, time: parts.time,
+    name: preset?.name ?? "New celebration", date: parts.date, time: parts.time, timeZone,
     venueName: "Venue to be announced", address: "To be announced",
     dressCode: preset?.dressCode ?? "", description: preset?.blurb ?? "", isPublished: true, side: "both",
   });

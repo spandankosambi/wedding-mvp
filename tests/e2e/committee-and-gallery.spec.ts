@@ -56,7 +56,7 @@ test("committee adds a family by name, records their RSVP, then deletes them", a
   await expect(page.getByText("RSVP saved for The Desais")).toBeVisible();
   await expect(row.getByText("Sangeet ✓2")).toBeVisible();
   await expect(row.getByText("Reception ✗")).toBeVisible();
-  await expect(row.getByRole("cell", { name: "3", exact: true })).toBeVisible(); // Meera joined the family
+  await expect(row.getByText("3 guests", { exact: true })).toBeVisible(); // Meera joined the family
 
   // ── the same family in the Guests view, with a custom column ──
   await page.getByRole("link", { name: /^Guests/ }).click();
@@ -88,7 +88,7 @@ test("committee adds a family by name, records their RSVP, then deletes them", a
   await expect(row.getByText("Sangeet ✓3")).toBeVisible();
 
   // ── delete the family ──────────────────────────────────────
-  await row.getByRole("button", { name: "edit" }).click();
+  await row.getByRole("button", { name: /^Edit / }).click();
   await page.getByRole("button", { name: "Delete family" }).click();
   if (shots) await page.screenshot({ path: `${shots}/delete-confirm.png` });
   await page.getByRole("button", { name: "Yes, delete family" }).click();
@@ -171,7 +171,7 @@ test("a family can be saved without an email", async ({ page }) => {
   await expect(row.getByText("no contact")).toBeVisible();
 
   // contact details live on each guest; the primary adult's are the family's
-  await row.getByRole("button", { name: "edit" }).click();
+  await row.getByRole("button", { name: /^Edit / }).click();
   await page.getByText("+ add another guest").click();
   await page.getByLabel("Guest 2 name").fill("Sonu");
   await expect(page.getByLabel("Guest 2 phone")).toHaveCount(0); // contact opens on demand
@@ -204,20 +204,32 @@ test("a family can be saved without an email", async ({ page }) => {
   expect(text).toContain("Namaste Sonu!");
   expect(text).toMatch(/\/w\/[\w-]+\?invite=[\w-]{20,}/); // opens the wedding site first
   await tab.close();
-  await expect(row.getByText("invite · WhatsApp")).toBeVisible();
+  // the Sent column says so, with when
+  await expect(row.getByTestId("invite-sent")).toContainText("✓ WhatsApp");
+
+  // sending again replaces the link they have: it asks first
+  await row.getByRole("button", { name: /^Share invitation with .* on WhatsApp$/ }).click();
+  const ask = page.getByRole("alertdialog");
+  await expect(ask).toContainText("already has an invite link");
+  await expect(ask).toContainText("will stop working");
+  await ask.getByRole("button", { name: "Cancel" }).click();
+  await expect(ask).toHaveCount(0);
 });
 
-test("a guest can be edited from the Guests view", async ({ page }) => {
+test("the Guests view has no per-row WhatsApp, RSVP or edit; the Families view has them as icons", async ({ page }) => {
   await signIn(page, "committee@example.com");
   await page.goto("/committee?view=guests");
-  await page.getByRole("button", { name: "Edit Padma Iyer" }).click();
-  const name = page.getByLabel(/Guest \d name/).and(page.locator(":focus"));
-  await expect(name).toHaveValue("Padma Iyer"); // the cursor lands on her
-  await name.fill("Padma K Iyer");
-  await page.getByRole("button", { name: "Save family" }).click();
-  await expect(page.getByText("Saved Padma Iyer's household")).toBeVisible();
-  await expect(page.getByRole("row", { name: /Padma K Iyer/ })).toBeVisible();
-  await expect(page).toHaveURL(/view=guests/);
+  await expect(page.getByRole("row", { name: /Padma Iyer/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Edit Padma Iyer" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Record RSVP for Padma/ })).toHaveCount(0);
+  await expect(page.getByRole("columnheader", { name: "Stay", exact: true })).toBeVisible();
+  await page.goto("/committee");
+  const row = page.getByRole("row").filter({ hasText: "The Iyers" }).first();
+  for (const name of [/on WhatsApp$/, /^Email invitation to/, /^Record RSVP for/, /^Edit /]) {
+    await expect(row.getByRole("button", { name })).toBeVisible();
+  }
+  await expect(page.getByRole("columnheader", { name: "Stay", exact: true })).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "Sent", exact: true })).toBeVisible();
 });
 
 test("Travel & Stay is one tick per household, from either view, and follows the invitation", async ({ page }) => {
@@ -258,7 +270,7 @@ test("Travel & Stay is one tick per household, from either view, and follows the
   await expect(page.getByText("Travel & Stay hidden from Ananya's Office Gang")).toBeVisible();
 
   // in the family form, selecting every event ticks it
-  await row.getByRole("button", { name: "edit" }).click();
+  await row.getByRole("button", { name: /^Edit / }).click();
   const dialog = page.getByRole("dialog");
   const formBox = dialog.getByLabel(/Show Travel & Stay on their wedding site/);
   await expect(formBox).not.toBeChecked();

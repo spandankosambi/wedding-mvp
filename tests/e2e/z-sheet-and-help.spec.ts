@@ -45,6 +45,9 @@ test("Guests view: Hotel and Room No. for households shown Travel & Stay", async
   await save.click();
   await expect(save).toHaveText("All changes saved");
   await page.reload();
+  // a saved hotel is not a change: Save stays grey on arrival
+  await expect(save).toHaveAttribute("data-ready", "true");
+  await expect(save).toHaveText("All changes saved");
   const again = page.locator("tbody tr").filter({ hasText: name }).first();
   await expect(again.getByLabel(`Hotel for ${name}`)).toHaveValue("Grand Hyatt, Santacruz");
   await expect(again.getByLabel(`Room No. for ${name}`)).toHaveValue("1207");

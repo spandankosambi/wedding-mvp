@@ -20,6 +20,7 @@ type EventRow = {
   icon?: string | null;
   iconImage?: string | null;
   startsAt: Date;
+  timeZone?: string | null;
   venueName: string;
   address: string;
   mapUrl: string | null;
@@ -54,7 +55,7 @@ export function EventTimeline({ theme: _theme, events, no = "02", icons = false,
                 <p className="kicker mt-3" style={{ color: "var(--accent)" }}>{sideLabel(e.side, names)}</p>
               )}
               <p className="kicker mt-4">
-                {fmtEventDate(e.startsAt)} · {fmtEventTime(e.startsAt)}
+                {fmtEventDate(e.startsAt, e.timeZone)} · {fmtEventTime(e.startsAt, e.timeZone)}
               </p>
               {e.description && (
                 <p className="mt-4 max-w-md text-sm leading-relaxed" style={{ color: "var(--ink-soft)" }}>

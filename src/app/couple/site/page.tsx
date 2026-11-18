@@ -7,7 +7,9 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
-import { istParts, MAX_STAYS, STORY_MAX } from "@/lib/editor";
+import { MAX_STAYS, STORY_MAX } from "@/lib/editor";
+import { zonedParts, zoneNote } from "@/lib/timezones";
+import { TimeZoneField } from "./TimeZoneField";
 import { EVENT_PRESETS } from "@/lib/presets";
 import { fmtWeddingDate } from "@/lib/format";
 import { ThemeSwitcher } from "../ThemeSwitcher";
@@ -284,7 +286,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
 
             <div className="mt-6 space-y-4">
               {evs.map((e, i) => {
-                const p = istParts(e.startsAt);
+                const p = zonedParts(e.startsAt, e.timeZone);
                 return (
                   <details key={e.id} id={`event-${e.id}`} open={sp.section === `event-${e.id}` || (sp.saved === `event-${e.id}`)}
                     className={`group rounded-xl border ${e.isPublished ? "border-neutral-200 bg-white" : "border-dashed border-neutral-300 bg-neutral-50"}`}>
@@ -295,7 +297,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                         <span className="ml-2 rounded border border-neutral-200 px-1.5 py-0.5 text-xs text-neutral-600">
                           {e.side === "both" ? "Common" : "This family only"}
                         </span>
-                        <span className="ml-2 text-xs text-neutral-400">{p.date} · {p.time} · {e.venueName}</span>
+                        <span className="ml-2 text-xs text-neutral-400">{p.date} · {p.time}{zoneNote(e.timeZone) ? ` ${zoneNote(e.timeZone)}` : ""} · {e.venueName}</span>
                       </span>
                       {!e.isPublished && <span className="portal-badge">hidden</span>}
                       <span className="text-xs text-neutral-400 group-open:hidden">edit ▾</span>
@@ -306,9 +308,10 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                         {wid}
                         <input type="hidden" name="id" value={e.id} />
                         <Field label="Name"><input name="name" defaultValue={e.name} required maxLength={60} className="portal-input" /></Field>
-                        <div className="grid grid-cols-[1.3fr_1fr_0.9fr] gap-3">
+                        <div className="grid grid-cols-2 gap-3 md:grid-cols-[1.2fr_0.9fr_1.3fr_0.8fr]">
                           <Field label="Date"><input name="date" type="date" defaultValue={p.date} required className="portal-input" /></Field>
-                          <Field label="Time (IST)"><input name="time" type="time" defaultValue={p.time} required className="portal-input" /></Field>
+                          <Field label="Time"><input name="time" type="time" defaultValue={p.time} required className="portal-input" /></Field>
+                          <Field label="Time zone"><TimeZoneField value={e.timeZone} eventName={e.name} /></Field>
                           <Field label="Duration (hours)">
                             <input name="durationHours" type="number" min={0.5} max={24} step={0.5} defaultValue={(e.durationMinutes ?? 180) / 60}
                               required aria-label={`Duration in hours for ${e.name}`} className="portal-input" title="For guests' calendar entries" />

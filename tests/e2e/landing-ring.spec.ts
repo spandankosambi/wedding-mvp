@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { test, expect, type Page } from "@playwright/test";
 
 /* The ring of six invitations on the landing page.
@@ -125,7 +126,22 @@ test("the product is One Tap Invites everywhere a visitor or a share preview loo
   // guests can find who made the invitation, and how to reach us
   const made = page.locator("footer").getByTestId("made-with");
   await expect(made.getByRole("link", { name: "One Tap Invites" })).toHaveAttribute("href", "https://onetapinvites.com/?from=invite");
-  await expect(made.getByRole("link", { name: "Questions? Contact us" })).toHaveAttribute("href", "https://onetapinvites.com/?from=invite#contact");
+  // on its own line, opening a form that reaches our inbox
+  const ask = made.getByRole("button", { name: "Questions or feedback? Contact us" });
+  await ask.click();
+  const dialog = page.getByRole("dialog", { name: "Questions or feedback?" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel("Your name").fill("Meera");
+  await dialog.getByLabel("Your email").fill("meera@example.com");
+  await dialog.getByLabel("What is it about?").selectOption("I'd like one for my own event");
+  await dialog.getByLabel("Your message").fill("Loved this invitation. How do I make one?");
+  await dialog.getByRole("button", { name: "Send message" }).click();
+  await expect(dialog.getByRole("status")).toContainText("meera@example.com");
+  const mail = fs.readFileSync("var/outbox/mail.jsonl", "utf8").trim().split("\n").map((l) => JSON.parse(l)).reverse()
+    .find((m) => m.to === "onetapinvites@gmail.com" && /Guest · I'd like one/.test(m.subject));
+  expect(mail.html).toContain("Loved this invitation");
+  expect(mail.html).not.toContain("k=sample"); // the private code stays out
+  await dialog.getByRole("button", { name: "Done" }).click();
   await page.goto("/w/ananya-weds-arjun/rsvp?k=sample");
   await expect(page.getByTestId("made-with")).toBeVisible();
   await page.goto("/#contact");

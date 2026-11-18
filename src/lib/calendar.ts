@@ -1,3 +1,4 @@
+import { fmtEventDate, fmtEventTime } from "./format";
 /*
  * Calendar entries for the celebrations a household said it's coming to:
  * one .ics file (opens in Apple Calendar, Outlook, Google Calendar…) and a
@@ -21,6 +22,8 @@ export type CalendarEvent = {
   dressCode?: string | null;
   /** how long it runs; unset = 3 hours */
   durationMinutes?: number | null;
+  /** where it happens; times in calendars are exact moments, this just says it in local words */
+  timeZone?: string | null;
 };
 
 const end = (e: Pick<CalendarEvent, "startsAt" | "durationMinutes">) =>
@@ -48,6 +51,7 @@ function fold(line: string) {
 
 function details(e: CalendarEvent, extra?: string) {
   return [
+    `${fmtEventDate(e.startsAt, e.timeZone)}, ${fmtEventTime(e.startsAt, e.timeZone)}${e.timeZone && e.timeZone !== "Asia/Kolkata" ? "" : " (India time)"}`,
     e.dressCode ? `Dress: ${e.dressCode}` : "",
     e.mapUrl ? `Map: ${e.mapUrl}` : "",
     extra ?? "",

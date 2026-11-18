@@ -7,7 +7,6 @@ import { guestAnswer, type GuestAnswer } from "@/lib/attendance";
 import { guestRsvpAction, addGuestColumnAction, removeGuestColumnAction, setGuestDetailAction } from "./actions";
 import { BulkRsvpDialog } from "./BulkRsvpDialog";
 import { FamilyForm, draftFromFamily, type FamilyDraft } from "./FamilyForm";
-import { openWhatsAppInvite } from "./whatsapp";
 import { useTravelToggle } from "./travel";
 import { useBarHeight } from "./layout-hooks";
 import type { Side } from "@/lib/sides";
@@ -153,8 +152,8 @@ export function GuestTable({
               <th className="p-3">Guest</th>
               <th className="p-3">Contact</th>
               <th className="p-3">Family</th>
-              <th className="p-3">RSVP by event</th>
-              <th className="p-3" title="Set per household: ticking one guest ticks their whole family">Travel &amp; Stay</th>
+              <th className="p-3">RSVP</th>
+              <th className="p-3 text-center" title="Show the Travel & Stay section: set per household, so ticking one guest ticks their whole family">Stay</th>
               <th className="p-3" title="For guests shown Travel & Stay: one of the hotels on your site">Hotel</th>
               <th className="p-3" title="For guests shown Travel & Stay">Room No.</th>
               {columns.map((c) => (
@@ -172,7 +171,6 @@ export function GuestTable({
                   </span>
                 </th>
               ))}
-              <th className="p-3" />
             </tr>
           </thead>
           <tbody>
@@ -234,34 +232,12 @@ export function GuestTable({
                       <DetailCell weddingId={weddingId} guestId={g.id} column={c} initial={g.details[c.id] ?? ""} guestName={g.fullName} />
                     </td>
                   ))}
-                  <td className="whitespace-nowrap text-right">
-                    {g.isPrimary && (
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const res = await openWhatsAppInvite(weddingId, f.id);
-                          setFlash(res.ok ? `WhatsApp opened for ${g.fullName}` : `Couldn't prepare the WhatsApp message: ${res.error}`);
-                        }}
-                        className="portal-link mr-4"
-                        style={{ color: "#128c7e" }}
-                        aria-label={`Share invitation with ${g.fullName} on WhatsApp`}
-                      >
-                        WhatsApp
-                      </button>
-                    )}
-                    <button type="button" onClick={() => setRsvpFor({ ids: [g.id], label: g.fullName })} className="portal-link mr-4" aria-label={`Record RSVP for ${g.fullName}`}>
-                      RSVP
-                    </button>
-                    <button type="button" onClick={() => setEditing({ draft: draftFromFamily({ ...f, showTravel: travel.shows(f) }), guestId: g.id, name: g.fullName })} className="portal-link" aria-label={`Edit ${g.fullName}`}>
-                      edit
-                    </button>
-                  </td>
                 </tr>
               );
             })}
             {shown.length === 0 && (
               <tr>
-                <td colSpan={9 + columns.length} className="p-10 text-center text-sm text-neutral-400">
+                <td colSpan={8 + columns.length} className="p-10 text-center text-sm text-neutral-400">
                   {guests.length ? "No guest matches that search." : "No guests yet — add a family in the Families view."}
                 </td>
               </tr>
@@ -328,11 +304,13 @@ function StayCells({ weddingId, guestId, hotels, family, hotel, room, guestName 
             <input type="hidden" name="guestId" value={guestId} />
             <select
               name="hotel"
-              value={value}
+              // uncontrolled, so the page knows which hotel was saved (a
+              // controlled select hides that, and every row looked changed)
+              defaultValue={hotel || fallback}
               onChange={(e) => setValue(e.target.value)}
               aria-label={`Hotel for ${guestName}`}
               className="w-full rounded-md border bg-white px-1.5 py-1 text-sm"
-              style={{ borderColor: "#d9d5cd", minWidth: "9rem" }}
+              style={{ borderColor: "#c7c0b4", minWidth: "9rem" }}
             >
               {hotels.length !== 1 && <option value="">Choose…</option>}
               {options.map((h) => <option key={h} value={h}>{h}</option>)}
@@ -356,7 +334,7 @@ function StayCells({ weddingId, guestId, hotels, family, hotel, room, guestName 
           placeholder={noHotel ? "Pick a hotel first" : "e.g. 204"}
           title={noHotel ? "Choose the hotel first, then type the room" : undefined}
           className="w-full rounded-md border bg-white px-2 py-1 text-sm placeholder:text-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-50"
-          style={{ borderColor: "#d9d5cd", minWidth: "7rem", maxWidth: "9rem" }}
+          style={{ borderColor: "#c7c0b4", minWidth: "7rem", maxWidth: "9rem" }}
         />
       </td>
     </>

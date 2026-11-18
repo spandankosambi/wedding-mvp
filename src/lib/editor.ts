@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DEFAULT_ZONE, isZone, zonedDate } from "./timezones";
 import { expandMapLink } from "@/lib/maplinks";
 import { getLook, saveTravelLook, updateLook, type FamilySide, type LookPatch } from "@/lib/looks";
 import { contactsOf, MAX_CONTACTS } from "@/lib/contacts";
@@ -70,6 +71,8 @@ export const eventSchema = z.object({
   name: z.string().trim().min(1).max(60),
   date: ymd,
   time: hm,
+  /** where it happens: the date and time are local time there */
+  timeZone: z.string().optional().transform((v) => (v && isZone(v) ? v : DEFAULT_ZONE)),
   /** how long it runs, in hours (half hours allowed); unset = 3 */
   durationHours: z.union([z.literal(""), z.coerce.number().min(0.5).max(24)]).optional()
     .transform((v) => (v === "" || v === undefined ? 3 : Math.round(v * 2) / 2)),
@@ -200,7 +203,7 @@ export async function upsertEvent(weddingId: string, input: unknown): Promise<Re
   if (!p.success) return { ok: false, error: "invalid input" };
   const { id, date, time, durationHours, ...rest } = p.data;
   // a short Maps link is stored as its full google.com/maps address
-  const values = { ...rest, durationMinutes: Math.round(durationHours * 60), mapUrl: rest.mapUrl ? await expandMapLink(rest.mapUrl) : null, startsAt: istDate(date, time) };
+  const values = { ...rest, durationMinutes: Math.round(durationHours * 60), mapUrl: rest.mapUrl ? await expandMapLink(rest.mapUrl) : null, startsAt: zonedDate(date, time, rest.timeZone) };
   if (id) {
     const [row] = await db.update(events).set(values)
       .where(and(eq(events.id, id), eq(events.weddingId, weddingId))).returning();

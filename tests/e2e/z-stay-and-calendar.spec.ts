@@ -178,3 +178,56 @@ test("switching family keeps each editor's own fields; Add here lands in Travel 
   await page.locator("details[id^=event-]").first().locator("summary").click();
   await expect(page.locator("details[id^=event-]").first().getByLabel(/^Duration in hours for/)).toHaveValue("2.5");
 });
+
+test("time zone per celebration: picked from the venue, shown to guests in local time", async ({ page }) => {
+  test.setTimeout(150_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page, "couple@example.com");
+  await page.goto("/couple/site?family=groom");
+  const ev = page.locator("details[id^=event-]").first();
+  await ev.locator("summary").click();
+  const zone = ev.getByLabel(/^Time zone for/);
+  await expect(zone).toHaveValue("Asia/Kolkata");
+  // typing a venue abroad switches the zone
+  await ev.locator("input[name=address]").fill("Crescent Road, The Palm, Dubai");
+  await expect(zone).toHaveValue("Asia/Dubai");
+  await ev.locator("input[name=time]").fill("19:00");
+  const name = await ev.locator("input[name=name]").inputValue();
+  await page.getByTestId("floating-save").click();
+  await expect(page).toHaveURL(/saved=/);
+  await page.reload();
+  const again = page.locator("details[id^=event-]").first();
+  await again.locator("summary").click();
+  await expect(again.getByLabel(/^Time zone for/)).toHaveValue("Asia/Dubai");
+  await expect(again.locator("input[name=time]")).toHaveValue("19:00");
+  // guests see 7 pm Dubai time
+  await page.goto("/w/ananya-weds-arjun?side=groom&k=sample");
+  await expect(page.getByText(/7:00 pm Dubai time/).first()).toBeVisible();
+  void name;
+});
+
+test("after replying: no 'tell us who's coming', and back returns to the RSVP", async ({ page }) => {
+  const url = fs.readFileSync("var/e2e-seed.txt", "utf8").split("\n").find((l) => l.startsWith("The Iyers:"))?.split(": ")[1]?.trim()
+    ?? fs.readFileSync("var/e2e-seed.txt", "utf8").split("\n").find((l) => l.includes("/rsvp/"))!.split(": ")[1].trim();
+  await page.goto(url);
+  await expect(page.getByText(/Tell us who.s coming/)).toBeVisible();
+  await page.getByTestId("event-card").nth(0).getByRole("button", { name: /attending/i }).click();
+  await page.getByRole("button", { name: /send rsvp|update rsvp/i }).click();
+  await expect(page.getByText(/Your answers are saved/)).toBeVisible();
+  await expect(page.getByText(/Tell us who.s coming/)).toBeHidden();
+  await expect(page.getByRole("link", { name: "← The wedding site" })).toBeHidden();
+  await page.getByRole("link", { name: "← Back to your RSVP" }).click();
+  await expect(page.getByRole("button", { name: /send rsvp|update rsvp/i })).toBeVisible();
+});
+
+test("the section you're reading is lit in the left list", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page, "couple@example.com");
+  await page.goto("/couple/site?family=groom");
+  const jump = page.getByRole("navigation", { name: "Jump to" }).first();
+  await expect(jump.getByRole("link").first()).toBeVisible();
+  await jump.getByRole("link", { name: "Travel & stay" }).click();
+  await expect(jump.getByRole("link", { name: "Travel & stay" })).toHaveAttribute("aria-current", "location");
+  await expect(jump.locator("[aria-current=location]")).toHaveCount(1);
+});

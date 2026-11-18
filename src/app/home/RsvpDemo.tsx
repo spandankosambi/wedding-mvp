@@ -31,6 +31,20 @@ export function RsvpDemo() {
             ? `${total} ${total === 1 ? "seat" : "seats"} held across ${coming.length} ${coming.length === 1 ? "celebration" : "celebrations"}. The family's dashboard just moved.`
             : "Declined for everything — the family sees that instantly, and nobody has to chase you."}
         </p>
+        {coming.length > 0 && (
+          <div className="mx-auto mt-6 max-w-xs text-left text-sm" style={{ border: "1px solid var(--hairline)", padding: "0.9rem 1rem" }} data-testid="demo-calendar">
+            <p className="kicker" style={{ letterSpacing: "0.16em" }}>Add to your calendar</p>
+            <ul className="mt-2 space-y-1">
+              {coming.map((r) => (
+                <li key={r} className="flex items-center justify-between gap-3">
+                  <span>{r}</span>
+                  <span className="text-xs" style={{ color: "var(--accent)" }}>Invitation sent ✓</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs" style={{ color: "var(--ink-soft)" }}>One tap on Yes in the email and it&apos;s in their calendar.</p>
+          </div>
+        )}
         <button
           type="button"
           onClick={() => { setAnswers({ Mehendi: null, Sangeet: null, Pheras: null }); setSent(false); }}

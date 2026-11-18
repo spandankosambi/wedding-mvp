@@ -44,3 +44,24 @@ describe("stay groups", () => {
     expect(stayGroups([{ fullName: "A", details: null }], [stays[0]])[0].hotel).toBe("Taj");
   });
 });
+
+import { zonedDate, zonedParts, guessZone, zoneNote } from "@/lib/timezones";
+import { fmtEventTime } from "@/lib/format";
+
+describe("time zones", () => {
+  it("7 pm in Dubai is 3 pm UTC; in India it's 1:30 pm UTC; and back again", () => {
+    expect(zonedDate("2027-01-28", "19:00", "Asia/Dubai").toISOString()).toBe("2027-01-28T15:00:00.000Z");
+    expect(zonedDate("2027-01-28", "19:00", "Asia/Kolkata").toISOString()).toBe("2027-01-28T13:30:00.000Z");
+    expect(zonedParts(new Date("2027-01-28T15:00:00Z"), "Asia/Dubai")).toEqual({ date: "2027-01-28", time: "19:00" });
+  });
+  it("summer time in London is handled", () => {
+    expect(zonedDate("2027-07-10", "18:00", "Europe/London").toISOString()).toBe("2027-07-10T17:00:00.000Z");
+  });
+  it("guesses the zone from the venue; India says nothing", () => {
+    expect(guessZone("Atlantis The Palm", "Crescent Rd, Dubai")).toBe("Asia/Dubai");
+    expect(guessZone("Ayana Resort", "Jimbaran, Bali")).toBe("Asia/Makassar");
+    expect(guessZone("Taj Lake Palace", "Udaipur, Rajasthan")).toBeNull();
+    expect(zoneNote("Asia/Kolkata")).toBe("");
+    expect(fmtEventTime(new Date("2027-01-28T15:00:00Z"), "Asia/Dubai")).toBe("7:00 pm Dubai time");
+  });
+});

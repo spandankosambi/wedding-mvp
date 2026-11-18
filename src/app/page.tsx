@@ -8,9 +8,10 @@ import { LivePreview } from "./home/LivePreview";
 import { RsvpDemo } from "./home/RsvpDemo";
 import { OpsBoard } from "./home/OpsBoard";
 import { BrandLogo } from "@/components/BrandLogo";
+import { GuestFeedback } from "@/components/GuestFeedback";
 
 const DESCRIPTION =
-  "A themed invitation site, per-ceremony RSVP, a guest list that counts itself, and the logistics of a five-day Indian wedding. Free while we're in pilot.";
+  "A themed invitation site for each family, per-ceremony RSVP that lands in guests' calendars, a guest list that counts itself, and hotels and rooms sorted. Free while we're in pilot.";
 export const metadata = {
   title: { absolute: `${BRAND} — ${BRAND_TAGLINE}` },
   description: DESCRIPTION,
@@ -30,27 +31,29 @@ const DAYS: { label: string; from: number; to: number }[] = [
 ];
 
 const LIVE: [string, string][] = [
-  ["An invitation site in six looks", "Names, parents, your story, every ceremony with its venue and dress code. Change the look in April and every page follows."],
-  ["RSVP per ceremony", "Guests answer each celebration on its own, with a headcount and veg, Jain or non-veg, from one link and no account."],
-  ["A guest list that counts itself", "Upload the spreadsheet or photograph the handwritten one. Families, sides, who hasn't answered, plates per event."],
-  ["Invitations under your names", "Each family can get a personal email with a private link, sent as you, not as us. Plus the open link, WhatsApp text and QR."],
-  ["Logins for the people who help", "Your planner, or the chachu who volunteers for everything, gets their own login to the list. You keep the theme switcher."],
+  ["An invitation site in six looks", "Names, parents, your story, every ceremony with its venue, dress code and time. Change the look in April and every page follows."],
+  ["Two families, two sites", "The bride's side and the groom's side each get their own invitation, guest list and celebrations, with the common ones shared."],
+  ["RSVP per ceremony", "Guests answer each celebration on its own, with who's coming, from one private link and no account. They can change it later."],
+  ["Straight into their calendar", "Every yes sends a calendar invitation with the venue and map. One tap on Yes and it's in their phone, with a reminder the day before."],
+  ["Invitations from your phone", "Send each family their link on WhatsApp in one tap, or by email under your names. You see who was sent what, and when."],
+  ["Hotels and rooms, sorted", "Pick a hotel and room for every out-of-town guest, see each hotel room by room, and send every family their stay details and map."],
+  ["A guest list that counts itself", "Upload a spreadsheet, start from our template, or photograph the handwritten one. Families, sides, who hasn't answered, plates per event."],
+  ["Print-ready cards", "The same design as your site, laid out as a card for the printer, so the paper invitation and the link match."],
+  ["Private by default", "Each family's link is their own. Anyone without it sees only your names and the date, never the venues or the guest list."],
 ];
 
 const ROADMAP: { when: string; items: [string, string][] }[] = [
   {
-    when: "November",
+    when: "December",
     items: [
-      ["Print the invitation", "The site design rendered as a print-ready card, so the physical invitation and the link are the same object."],
-      ["WhatsApp reminders", "Invites and nudges from a WhatsApp Business number, with the email you already have."],
+      ["WhatsApp reminders, on their own", "Invites and gentle nudges sent for you from a WhatsApp Business number, alongside the email you already have."],
+      ["Itineraries, 24 hours before", "Each guest gets their hotel, check-in and pickup on WhatsApp and email the day before they land. Nobody asks you where to go."],
     ],
   },
   {
-    when: "December to January",
+    when: "January",
     items: [
-      ["Hotel blocks and rooms", "Map every arriving family to a hotel and a room number, and see what's still unassigned."],
       ["ID collection, done properly", "Hotels need government IDs at check-in. Guests upload once; stored encrypted, deleted on a schedule, in line with the DPDP Act."],
-      ["Itineraries, 24 hours before", "Each guest gets their hotel, check-in and pickup on WhatsApp and email the day before they land. Nobody asks you where to go."],
       ["Cars and buses, live", "Guests see where their pickup is. Drivers run a lightweight web app; each vehicle is tied to a route and the families on it."],
       ["A shared photo drive", "A QR on every table. Guests' photos land in one album while the party is still on."],
     ],
@@ -80,9 +83,10 @@ export default function Home() {
                 Five days.<br />Three hundred guests.<br />One link.
               </h1>
               <p className="hero-sub">
-                {BRAND} is the Indian wedding, run from a link: a themed invitation site,
-                an RSVP for every ceremony, a guest list that counts itself, and, this
-                winter, the rooms, pickups and itineraries. Live in two minutes.
+                {BRAND} is the Indian wedding, run from a link: a themed invitation site
+                for each family, an RSVP for every ceremony that drops into guests&apos;
+                calendars, a guest list that counts itself, and every hotel room sorted.
+                Live in two minutes.
               </p>
               <div className="hero-ctas">
                 <Link href="/start" className="cta">Create your site</Link>
@@ -108,12 +112,13 @@ export default function Home() {
               <h2 className="font-display h2">Half a minute, on a phone, with no password.</h2>
               <p className="lede">
                 This is the real form, and it works. A guest picks the celebrations they can
-                make and says how many are coming. Plans change, so the same link edits the
-                answer later.
+                make and says how many are coming. Each yes arrives in their inbox as a
+                calendar invitation, and plans change, so the same link edits the answer later.
               </p>
               <p className="lede">
                 Every reply lands on your dashboard as it happens: who is coming, who
-                hasn&apos;t answered, and the plates per event for the caterer.
+                hasn&apos;t answered, and the plates per event for the caterer. Out-of-town
+                guests see where they&apos;re staying, room number and map included.
               </p>
             </div>
             <RsvpDemo />
@@ -126,9 +131,10 @@ export default function Home() {
             <div className="max-w-2xl">
               <h2 className="font-display h2">The guest list is the hard part. So that&apos;s the product.</h2>
               <p className="lede">
-                Bring the list you already have, in a spreadsheet or a photo of the one
-                your mother wrote. We read it, ask about anything unclear, and never add the
-                same family twice. Then the replies arrive on their own.
+                Bring the list you already have, in a spreadsheet, our template, or a photo of
+                the one your mother wrote. We read it, ask about anything unclear, and never
+                add the same family twice. Send every family their link on WhatsApp or email,
+                then watch the replies, the rooms and the plates add up on their own.
               </p>
             </div>
             <div className="mt-12"><OpsBoard /></div>
@@ -178,9 +184,10 @@ export default function Home() {
             <div className="max-w-2xl">
               <h2 className="font-display h2">From the Roka to the Vidaai, by the winter.</h2>
               <p className="lede">
-                The invitation and the guest list are live today. The rest of running a
-                wedding, rooms, IDs, pickups and the day-before itinerary, ships in the order
-                a wedding needs it. We are building it for our own, so the dates are real.
+                The invitation, the guest list, calendar invites, print cards and hotel rooms
+                are live today. The rest of running a wedding, IDs, pickups and the day-before
+                itinerary, ships in the order a wedding needs it. We are building it for our
+                own, so the dates are real.
               </p>
             </div>
             <div className="roadmap">
@@ -223,10 +230,13 @@ export default function Home() {
           <a href="#roadmap" className="nav-link">Roadmap</a>
           <a href="#contact" className="nav-link">Contact</a>
         </nav>
-        <p id="contact" className="mt-8 text-sm" style={{ color: "var(--ink-soft)" }}>
-          Questions, or help with an invitation you received? Write to{" "}
-          <a href={`mailto:${CONTACT_EMAIL}`} className="underline underline-offset-4" style={{ color: "var(--ink)" }}>{CONTACT_EMAIL}</a>
-        </p>
+        <div id="contact" className="mt-8 text-sm" style={{ color: "var(--ink-soft)" }}>
+          <div style={{ color: "var(--ink)" }}><GuestFeedback /></div>
+          <p className="mt-2">
+            Or write to{" "}
+            <a href={`mailto:${CONTACT_EMAIL}`} className="underline underline-offset-4" style={{ color: "var(--ink)" }}>{CONTACT_EMAIL}</a>
+          </p>
+        </div>
         <p className="mt-4 text-xs" style={{ color: "var(--ink-soft)" }} data-testid="copyright">{COPYRIGHT}</p>
       </footer>
     </div>

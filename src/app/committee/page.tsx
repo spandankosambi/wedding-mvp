@@ -94,6 +94,16 @@ export default async function CommitteePage({
       const l = allLogs.find((x) => x.familyId === f.id);
       return l ? { type: l.type, status: l.status, sentAt: l.sentAt.toISOString() } : null;
     })(),
+    // the latest invitation by each route (logs come newest first)
+    inviteSent: (() => {
+      const logs = allLogs.filter((x) => x.familyId === f.id);
+      const wa = logs.find((x) => x.status === "whatsapp");
+      const em = logs.find((x) => x.status !== "whatsapp");
+      return {
+        whatsappAt: wa?.sentAt.toISOString() ?? null,
+        email: em ? { at: em.sentAt.toISOString(), type: em.type, ok: em.status === "sent" } : null,
+      };
+    })(),
   }));
 
   // the hotels on this family's site (its own and the common ones), for the Guests view's Hotel column

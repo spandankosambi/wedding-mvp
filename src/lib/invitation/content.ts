@@ -14,7 +14,7 @@ import { defaultMonogram, type InvitationOptions } from "./options";
  */
 
 export type CardEvent = {
-  id: string; name: string; side: Side; startsAt: Date; venueName: string; address: string;
+  id: string; name: string; side: Side; startsAt: Date; timeZone?: string | null; venueName: string; address: string;
   dressCode: string | null; isPublished: boolean; sortOrder: number; icon?: string | null; iconImage?: string | null;
 };
 export type CardWedding = {
@@ -70,8 +70,8 @@ export type Invitation = {
 };
 
 const TZ = "Asia/Kolkata";
-export const fmtCardDate = (d: Date) =>
-  new Intl.DateTimeFormat("en-IN", { timeZone: TZ, weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(d);
+export const fmtCardDate = (d: Date, zone?: string | null) =>
+  new Intl.DateTimeFormat("en-IN", { timeZone: zone || TZ, weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(d);
 
 const phrase = (t: string): Line => ({ t });
 const named = (t: string): Line => ({ t, name: true });
@@ -132,7 +132,7 @@ export function buildInvitation(w: CardWedding, all: CardEvent[], o: InvitationO
     id: e.id, name: e.name, icon: iconOf(e), iconImage: e.icon === "custom" ? e.iconImage ?? null : null,
     // only an event the couple picked from the other side needs saying whose it is
     sideLabel: e.side === "both" || e.side === o.version ? null : `${sideNamesOf(w)[e.side]}'s side`,
-    date: fmtCardDate(e.startsAt), time: fmtEventTime(e.startsAt),
+    date: fmtCardDate(e.startsAt, e.timeZone), time: fmtEventTime(e.startsAt, e.timeZone),
     venue: e.venueName, address: e.address, dressCode: o.dressCode ? e.dressCode : null,
   }));
 

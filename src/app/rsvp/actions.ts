@@ -43,7 +43,7 @@ export async function submitRsvpAction(input: {
           to: to!, familyName: before.family.name, coupleNames: couple, rsvpUrl, method,
           ics: icsFile([e], { couple, link: rsvpUrl, invite: invite(method) }),
           event: {
-            name: e.name, when: `${fmtEventDate(e.startsAt)}, ${fmtEventTime(e.startsAt)}`,
+            name: e.name, when: `${fmtEventDate(e.startsAt, e.timeZone)}, ${fmtEventTime(e.startsAt, e.timeZone)}`,
             where: [e.venueName, e.address].filter(Boolean).join(", "), google: googleCalendarLink(e, couple),
           },
         });

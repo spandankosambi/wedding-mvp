@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { submitRsvpAction } from "../actions";
 import { fmtEventDate, fmtEventTime } from "@/lib/format";
 import { sideLabel, type Side } from "@/lib/sides";
@@ -12,6 +12,7 @@ type EventProp = {
   name: string;
   side: Side;
   startsAtISO: string;
+  timeZone?: string;
   venueName: string;
   address: string;
   mapUrl?: string | null;
@@ -78,6 +79,15 @@ export function RsvpForm({
     });
   }
 
+  // the page around the form: no "tell us who's coming" once they have, and
+  // the back link returns to their answers
+  useEffect(() => {
+    if (!done) return;
+    document.documentElement.dataset.rsvp = "done";
+    window.scrollTo({ top: 0 });
+    return () => { delete document.documentElement.dataset.rsvp; };
+  }, [done]);
+
   if (done) {
     return (
       <div className="mt-16 text-center">
@@ -120,7 +130,7 @@ export function RsvpForm({
             <ul className="mt-5 space-y-2 text-sm">
               {coming.map((e) => (
                 <li key={e.id} className="flex flex-wrap items-baseline justify-between gap-2 pt-2" style={{ borderTop: "1px solid var(--hairline)" }}>
-                  <span>{e.name} <span style={{ color: "var(--ink-soft)" }}>· {fmtEventDate(new Date(e.startsAtISO))}</span></span>
+                  <span>{e.name} <span style={{ color: "var(--ink-soft)" }}>· {fmtEventDate(new Date(e.startsAtISO), e.timeZone)}</span></span>
                   <a
                     href={googleCalendarLink({ ...e, startsAt: new Date(e.startsAtISO) }, couple)}
                     target="_blank"
@@ -155,7 +165,7 @@ export function RsvpForm({
               <div className="flex flex-wrap items-baseline justify-between gap-3">
                 <h2 className="font-display text-3xl tracking-tight">{e.name}</h2>
                 <p className="kicker" style={{ letterSpacing: "0.22em" }}>
-                  {fmtEventDate(startsAt)} · {fmtEventTime(startsAt)}
+                  {fmtEventDate(startsAt, e.timeZone)} · {fmtEventTime(startsAt, e.timeZone)}
                 </p>
               </div>
               {sideLabel(e.side, names) && (

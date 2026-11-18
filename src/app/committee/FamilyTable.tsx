@@ -10,6 +10,7 @@ import { RsvpEditor, type RsvpTarget } from "./RsvpEditor";
 import { BulkRsvpDialog } from "./BulkRsvpDialog";
 import { openWhatsAppInvite } from "./whatsapp";
 import { useBarHeight, useIsPhone } from "./layout-hooks";
+import { EditIcon, IconButton, MailIcon, RsvpIcon, WhatsAppIcon } from "./icons";
 
 import type { StaySent } from "@/db/schema";
 export type Row = {
@@ -29,7 +30,16 @@ export type Row = {
   staySent?: StaySent | null;
   rsvpByEvent: Record<string, { status: "attending" | "declined"; headcount: number; note: string | null; guestIds: string[] | null }>;
   lastEmail: { type: string; status: string; sentAt: string } | null;
+  /** the latest invitation by each route */
+  inviteSent?: { whatsappAt: string | null; email: { at: string; type: string; ok: boolean } | null };
 };
+
+/** "19 Nov, 12:44 am", in India time */
+export const sentWhen = (iso: string) =>
+  new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" });
+
+/** has this household already been sent a personal link (any route)? */
+const hasLink = (r: Row) => !!(r.inviteSent?.whatsappAt || r.inviteSent?.email || r.lastEmail);
 
 
 export function FamilyTable({
@@ -55,6 +65,8 @@ export function FamilyTable({
   const [bulk, setBulk] = useState(false);
   const [pending, startTransition] = useTransition();
   const [flash, setFlash] = useState<string | null>(null);
+  // a send that would replace links already given out waits for a yes
+  const [confirm, setConfirm] = useState<{ title: string; body: string; go: string; run: () => void } | null>(null);
   const travel = useTravelToggle(weddingId, rows, setFlash);
   const [query, setQuery] = useState("");
   const [waitingOnly, setWaitingOnly] = useState(false);
@@ -69,7 +81,43 @@ export function FamilyTable({
     });
   }
 
+  /** Every send makes a fresh personal link and the previous one stops
+      working, so households that already have one ask first. */
+  function guarded(familyIds: string[], how: string, run: () => void) {
+    const had = rows.filter((r) => familyIds.includes(r.id) && hasLink(r));
+    if (!had.length) { run(); return; }
+    const one = familyIds.length === 1 ? had[0] : null;
+    const before = (r: Row) => {
+      const w = r.inviteSent?.whatsappAt, e = r.inviteSent?.email?.at;
+      const latest = [w && { at: w, by: "WhatsApp" }, e && { at: e, by: "email" }].filter(Boolean).sort((a, b) => (a as { at: string }).at < (b as { at: string }).at ? 1 : -1)[0] as { at: string; by: string } | undefined;
+      return latest ? ` (sent by ${latest.by} on ${sentWhen(latest.at)})` : "";
+    };
+    setConfirm({
+      title: one ? `${one.name} already has an invite link` : `${had.length} of these ${familyIds.length} households already have an invite link`,
+      body: one
+        ? `Sending a new one ${how} gives them a fresh link${before(one)}. The link they already have will stop working, so they'll need to use the new one.`
+        : `Sending ${how} gives each a fresh link. The links they already have will stop working, so they'll need to use the new ones.`,
+      go: `Send ${how} anyway`,
+      run,
+    });
+  }
+
+  function whatsapp(r: Row) {
+    guarded([r.id], "on WhatsApp", async () => {
+      setFlash(null);
+      const res = await openWhatsAppInvite(weddingId, r.id);
+      setFlash(res.ok
+        ? res.to ? `WhatsApp opened for ${r.name}: press send in WhatsApp` : `WhatsApp opened for ${r.name} — no phone saved, pick the contact`
+        : `Couldn't prepare the WhatsApp message: ${res.error}`);
+      if (res.ok) router.refresh();
+    });
+  }
+
   function send(type: "invite" | "resend" | "remind", familyIds: string[]) {
+    guarded(familyIds, type === "remind" ? "as a reminder" : "by email", () => sendNow(type, familyIds));
+  }
+
+  function sendNow(type: "invite" | "resend" | "remind", familyIds: string[]) {
     setFlash(null);
     startTransition(async () => {
       const res = await sendInvitesAction({ weddingId, familyIds, type });
@@ -151,41 +199,38 @@ export function FamilyTable({
       className="h-4 w-4"
     />
   );
-  const lastSent = (r: Row) =>
-    r.lastEmail ? (
-      r.lastEmail.status === "whatsapp" ? (
-        <span className="portal-badge">invite · WhatsApp</span>
-      ) : r.lastEmail.status === "sent" ? (
-        <span className="portal-badge">{r.lastEmail.type} · sent</span>
-      ) : (
-        <span className="text-xs font-medium text-red-600">
-          failed
-          <button disabled={pending} onClick={() => send("resend", [r.id])} className="ml-2 rounded border border-red-200 px-1.5 py-0.5 text-xs hover:bg-red-50">
-            retry
-          </button>
-        </span>
-      )
-    ) : (
-      <span className="text-xs text-neutral-400">never</span>
+  /* what's gone out: email and WhatsApp, each with when */
+  const sentLines = (r: Row) => {
+    const s = r.inviteSent;
+    if (!s?.email && !s?.whatsappAt) return <span className="text-xs text-neutral-400">Not sent yet</span>;
+    return (
+      <div className="sent-lines text-xs leading-relaxed" data-testid="invite-sent">
+        {s.email && (s.email.ok
+          ? <p className="text-emerald-700">✓ {s.email.type === "remind" ? "Reminded" : "Emailed"} {sentWhen(s.email.at)}{r.email && <span className="text-neutral-400"> · {r.email}</span>}</p>
+          : <p className="font-medium text-red-600">
+              ✗ Email failed {sentWhen(s.email.at)}
+              <button disabled={pending} onClick={() => sendNow("resend", [r.id])} className="ml-2 rounded border border-red-200 px-1.5 py-0.5 hover:bg-red-50">retry</button>
+            </p>)}
+        {s.whatsappAt && <p style={{ color: "#128c7e" }} title="When WhatsApp was opened with the invitation; we can't see it being sent">✓ WhatsApp {sentWhen(s.whatsappAt)}</p>}
+      </div>
     );
+  };
   const actions = (r: Row) => (
-    <>
-      <button
-        onClick={async () => {
-          setFlash(null);
-          const res = await openWhatsAppInvite(weddingId, r.id);
-          setFlash(res.ok
-            ? res.to ? `WhatsApp opened for ${r.name}` : `WhatsApp opened for ${r.name} — no phone saved, pick the contact`
-            : `Couldn't prepare the WhatsApp message: ${res.error}`);
-          if (res.ok) router.refresh();
-        }}
-        className="portal-link mr-4"
-        style={{ color: "#128c7e" }}
-        aria-label={`Share invitation with ${r.name} on WhatsApp`}
+    <span className="row-actions">
+      <IconButton tone="whatsapp" label={`Share invitation with ${r.name} on WhatsApp`} title="Send the invitation on WhatsApp" onClick={() => whatsapp(r)}>
+        <WhatsAppIcon />
+      </IconButton>
+      <IconButton
+        label={`Email invitation to ${r.name}`}
+        title={r.email ? `Email the invitation to ${r.email}` : "No email saved for this household"}
+        disabled={!r.email || pending}
+        onClick={() => send(hasLink(r) ? "resend" : "invite", [r.id])}
       >
-        WhatsApp
-      </button>
-      <button
+        <MailIcon />
+      </IconButton>
+      <IconButton
+        label={`Record RSVP for ${r.name}`}
+        title="Record their RSVP"
         onClick={() =>
           setRsvpFor({
             familyId: r.id,
@@ -195,15 +240,13 @@ export function FamilyTable({
             current: r.rsvpByEvent,
           })
         }
-        className="portal-link mr-4"
-        aria-label={`Record RSVP for ${r.name}`}
       >
-        RSVP
-      </button>
-      <button onClick={() => setEditing(draftFromFamily({ ...r, showTravel: travel.shows(r) }))} className="portal-link" aria-label={`Edit ${r.name}`}>
-        edit
-      </button>
-    </>
+        <RsvpIcon />
+      </IconButton>
+      <IconButton label={`Edit ${r.name}`} title="Edit this household" onClick={() => setEditing(draftFromFamily({ ...r, showTravel: travel.shows(r) }))}>
+        <EditIcon />
+      </IconButton>
+    </span>
   );
   const empty = rows.length === 0
     ? readOnly ? <>No families yet.</> : <>No families yet — add the first one, or <a href={importHref} className="portal-link">import a spreadsheet</a>.</>
@@ -307,8 +350,8 @@ export function FamilyTable({
                   <div className="mt-2 text-neutral-600">{contact(r)}</div>
                   <div className="mt-3">{chips(r)}</div>
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-600">
-                    <label className="flex items-center gap-2">{travelBox(r)} Travel &amp; Stay</label>
-                    <span className="flex items-center gap-1.5">Last sent: {lastSent(r)}</span>
+                    <label className="flex items-center gap-2">{travelBox(r)} Stay</label>
+                    {sentLines(r)}
                   </div>
                   <div className="mt-3 border-t border-neutral-100 pt-3 text-sm">{actions(r)}</div>
                 </div>
@@ -331,12 +374,11 @@ export function FamilyTable({
                 />
               </th>
               <th className="p-3">Family</th>
-              <th className="p-3">Primary contact</th>
-              <th className="p-3">Members</th>
-              <th className="p-3">RSVP by event</th>
-              <th className="p-3" title="Show the Travel & Stay section on their wedding site">Travel &amp; Stay</th>
-              <th className="p-3">Last sent</th>
-              <th className="p-3" />
+              <th className="p-3">Contact</th>
+              <th className="p-3">RSVP</th>
+              <th className="p-3 text-center" title="Show the Travel & Stay section on their wedding site">Stay</th>
+              <th className="p-3">Sent</th>
+              <th className="p-3"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody>
@@ -347,19 +389,19 @@ export function FamilyTable({
                 </td>
                 <td>
                   <p className="font-medium">{r.name}</p>
+                  <p className="text-xs text-neutral-500 tabular-nums">{r.members.length} {r.members.length === 1 ? "guest" : "guests"}</p>
                   {tags(r)}
                 </td>
                 <td className="text-neutral-600">{contact(r)}</td>
-                <td className="tabular-nums">{r.members.length}</td>
                 <td>{chips(r)}</td>
                 <td className="text-center">{travelBox(r)}</td>
-                <td>{lastSent(r)}</td>
+                <td>{sentLines(r)}</td>
                 <td className="whitespace-nowrap text-right">{actions(r)}</td>
               </tr>
             ))}
             {shown.length === 0 && (
               <tr>
-                <td colSpan={8} className="p-10 text-center text-sm text-neutral-400">{empty}</td>
+                <td colSpan={7} className="p-10 text-center text-sm text-neutral-400">{empty}</td>
               </tr>
             )}
           </tbody>
@@ -367,6 +409,20 @@ export function FamilyTable({
       </div>
       )}
       </fieldset>
+
+      {confirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/35 p-4 backdrop-blur-sm" role="alertdialog" aria-modal aria-labelledby="relink-title" aria-describedby="relink-body">
+          <div className="portal-panel w-full max-w-md p-6">
+            <p className="portal-eyebrow">Before you send</p>
+            <h2 id="relink-title" className="mt-2 text-lg font-semibold tracking-tight">{confirm.title}</h2>
+            <p id="relink-body" className="mt-3 text-sm leading-relaxed text-neutral-600">{confirm.body}</p>
+            <div className="mt-6 flex flex-wrap justify-end gap-2">
+              <button type="button" className="portal-button-secondary" onClick={() => setConfirm(null)} autoFocus>Cancel</button>
+              <button type="button" className="portal-button" onClick={() => { const run = confirm.run; setConfirm(null); run(); }}>{confirm.go}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {bulk && (
         <BulkRsvpDialog

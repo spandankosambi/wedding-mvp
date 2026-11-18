@@ -68,7 +68,7 @@ export default async function OpenRsvpPage({ params, searchParams }: { params: P
             initialSide={side}
             shareKey={look.shareKey}
             events={events.map((e) => ({
-              id: e.id, name: e.name, side: e.side, startsAtISO: e.startsAt.toISOString(),
+              id: e.id, name: e.name, side: e.side, startsAtISO: e.startsAt.toISOString(), timeZone: e.timeZone,
               venueName: e.venueName, address: e.address, dressCode: e.dressCode,
             }))}
           />

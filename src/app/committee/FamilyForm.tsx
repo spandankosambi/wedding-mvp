@@ -206,9 +206,7 @@ export function FamilyForm({
                         autoFocus={!!focusGuestId && m.id === focusGuestId}
                         aria-label={`Guest ${i + 1} name`}
                         className="portal-input"
-                        style={{ ...COMPACT, flex: "1 1 auto", minWidth: 0, borderColor: "transparent", background: "transparent" }}
-                        onFocus={(e) => { e.currentTarget.style.borderColor = "#d9d5cd"; e.currentTarget.style.background = "#fff"; }}
-                        onBlur={(e) => { e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.background = "transparent"; }}
+                        style={{ ...COMPACT, flex: "1 1 auto", minWidth: 0 }}
                       />
                       <select
                         value={m.ageGroup}

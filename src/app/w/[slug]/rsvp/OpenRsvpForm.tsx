@@ -7,7 +7,7 @@ import { DIET_OPTIONS, MAX_OPEN_HEADCOUNT_UI as MAX } from "./limits";
 import { eventForSide, sideLabel, type Side } from "@/lib/sides";
 import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
 
-type EventProp = { id: string; name: string; side: Side; startsAtISO: string; venueName: string; address: string; dressCode: string | null };
+type EventProp = { id: string; name: string; side: Side; startsAtISO: string; timeZone?: string; venueName: string; address: string; dressCode: string | null };
 type Status = "attending" | "declined" | null;
 
 const field = { background: "var(--surface)", border: "1px solid var(--hairline)", color: "var(--ink)" } as const;
@@ -124,7 +124,7 @@ export function OpenRsvpForm({ slug, events, initialSide = "bride", shareKey, na
             <li key={e.id} data-testid="event-card" className="p-7 md:p-8" style={{ background: "var(--surface)", border: "1px solid var(--hairline)" }}>
               <div className="flex flex-wrap items-baseline justify-between gap-3">
                 <h2 className="font-display text-3xl tracking-tight">{e.name}</h2>
-                <p className="kicker" style={{ letterSpacing: "0.22em" }}>{fmtEventDate(startsAt)} · {fmtEventTime(startsAt)}</p>
+                <p className="kicker" style={{ letterSpacing: "0.22em" }}>{fmtEventDate(startsAt, e.timeZone)} · {fmtEventTime(startsAt, e.timeZone)}</p>
               </div>
               {sideLabel(e.side, names) && (
                 <p className="kicker mt-2" style={{ color: "var(--accent)", letterSpacing: "0.18em" }}>{sideLabel(e.side, names)}</p>

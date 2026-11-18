@@ -44,10 +44,18 @@ export default async function RsvpPage({
       <div className="mx-auto max-w-2xl">
         <a
           href={`/w/${wedding.slug}?invite=${token}`}
-          className="kicker inline-block"
+          className="rsvp-back-site kicker inline-block"
           style={{ color: "var(--ink-soft)", letterSpacing: "0.18em" }}
         >
           ← The wedding site
+        </a>
+        {/* once they've replied, back means back to their answers */}
+        <a
+          href={`/rsvp/${token}`}
+          className="rsvp-back-form kicker"
+          style={{ color: "var(--ink-soft)", letterSpacing: "0.18em" }}
+        >
+          ← Back to your RSVP
         </a>
         <header className="mt-8 text-center">
           <p className="kicker rise rise-1">{coupleNames} · {fmtWeddingDate(wedding.weddingDate)}</p>
@@ -57,7 +65,7 @@ export default async function RsvpPage({
           >
             Dear {family.name},
           </h1>
-          <p className="rise rise-3 mt-6 text-base md:text-lg" style={{ color: "var(--ink-soft)" }}>
+          <p className="rsvp-intro rise rise-3 mt-6 text-base md:text-lg" style={{ color: "var(--ink-soft)" }}>
             We would be honoured to have you with us. Tell us who&apos;s coming —
             it takes half a minute.
           </p>
@@ -76,6 +84,7 @@ export default async function RsvpPage({
             name: e.name,
             side: e.side,
             startsAtISO: e.startsAt.toISOString(),
+            timeZone: e.timeZone,
             venueName: e.venueName,
             address: e.address,
             mapUrl: e.mapUrl,

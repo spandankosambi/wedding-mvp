@@ -5,6 +5,7 @@ import Link from "next/link";
 import { stayDetailsAction } from "./actions";
 import { stayGroups } from "@/lib/stay-groups";
 import type { Row } from "./FamilyTable";
+import { IconButton, MailIcon, WhatsAppIcon } from "./icons";
 import type { StaySent } from "@/db/schema";
 
 /** "18 Nov, 4:05 pm", in India time */
@@ -161,15 +162,18 @@ export function StayView({
                     </td>
                     {!readOnly && (
                       <td className="whitespace-nowrap">
-                        <button type="button" disabled={!groups.length || !!busy} onClick={() => send(r, "whatsapp")}
-                          className="portal-link mr-4 disabled:opacity-40" style={{ color: "#128c7e" }} aria-label={`Send stay details to ${r.name} on WhatsApp`}>
-                          {busy === `${r.id}:whatsapp` ? "Opening…" : "WhatsApp"}
-                        </button>
-                        <button type="button" disabled={!groups.length || !email || !!busy} onClick={() => send(r, "email")}
-                          title={email ? undefined : "No email saved for the primary contact"}
-                          className="portal-link disabled:opacity-40" aria-label={`Email stay details to ${r.name}`}>
-                          {busy === `${r.id}:email` ? "Sending…" : "Email"}
-                        </button>
+                        <span className="row-actions">
+                          <IconButton tone="whatsapp" label={`Send stay details to ${r.name} on WhatsApp`}
+                            title={groups.length ? "Send their stay details on WhatsApp" : "Nobody in this household has a hotel yet"}
+                            disabled={!groups.length || !!busy} onClick={() => send(r, "whatsapp")}>
+                            {busy === `${r.id}:whatsapp` ? <span className="text-[10px]">…</span> : <WhatsAppIcon />}
+                          </IconButton>
+                          <IconButton label={`Email stay details to ${r.name}`}
+                            title={!groups.length ? "Nobody in this household has a hotel yet" : email ? `Email their stay details to ${email}` : "No email saved for the primary contact"}
+                            disabled={!groups.length || !email || !!busy} onClick={() => send(r, "email")}>
+                            {busy === `${r.id}:email` ? <span className="text-[10px]">…</span> : <MailIcon />}
+                          </IconButton>
+                        </span>
                       </td>
                     )}
                     <td className="text-xs leading-relaxed" data-testid="stay-sent">
