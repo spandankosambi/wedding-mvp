@@ -230,6 +230,10 @@ test("the Guests view has no per-row WhatsApp, RSVP or edit; the Families view h
   }
   await expect(page.getByRole("columnheader", { name: "Stay", exact: true })).toBeVisible();
   await expect(page.getByRole("columnheader", { name: "Sent", exact: true })).toBeVisible();
+  for (const h of ["Replies", "Send invites", "RSVP", "Edit"]) await expect(page.getByRole("columnheader", { name: h, exact: true })).toBeVisible();
+  // no phone for a household: its WhatsApp can't be pressed
+  const noPhone = page.getByRole("row").filter({ hasText: "no contact" }).first();
+  if (await noPhone.count()) await expect(noPhone.getByRole("button", { name: /on WhatsApp$/ })).toBeDisabled();
 });
 
 test("Travel & Stay is one tick per household, from either view, and follows the invitation", async ({ page }) => {

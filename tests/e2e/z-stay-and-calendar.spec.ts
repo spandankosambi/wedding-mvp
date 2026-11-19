@@ -216,7 +216,10 @@ test("after replying: no 'tell us who's coming', and back returns to the RSVP", 
   await expect(page.getByText(/Your answers are saved/)).toBeVisible();
   await expect(page.getByText(/Tell us who.s coming/)).toBeHidden();
   await expect(page.getByRole("link", { name: "← The wedding site" })).toBeHidden();
+  // the footer, with the feedback form, is on the thank-you screen too
+  await expect(page.getByTestId("made-with").getByRole("button", { name: "Questions or feedback? Contact us" })).toBeVisible();
   await page.getByRole("link", { name: "← Back to your RSVP" }).click();
+  await expect(page.getByTestId("made-with")).toBeVisible();
   await expect(page.getByRole("button", { name: /send rsvp|update rsvp/i })).toBeVisible();
 });
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { MadeWith } from "@/components/MadeWith";
 import { sideNamesOf } from "@/lib/side-names";
 import { getFamilyByToken } from "@/lib/rsvp";
 import { fmtWeddingDate } from "@/lib/format";
@@ -32,6 +33,7 @@ export default async function RsvpPage({
           It may have expired or been replaced with a fresh one. Ask the family to
           resend your invitation — the newest email always carries a working link.
         </p>
+        <MadeWith className="mt-14" />
       </main>
     );
   }
@@ -94,6 +96,7 @@ export default async function RsvpPage({
           }))}
         />
       </div>
+      <MadeWith className="mt-10 pb-8 text-center" />
     </main>
   );
 }

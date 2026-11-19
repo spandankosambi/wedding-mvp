@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BRAND, BRAND_TAGLINE, COPYRIGHT, CONTACT_EMAIL } from "@/lib/brand";
+import { BRAND, BRAND_TAGLINE, COPYRIGHT } from "@/lib/brand";
 import { EVENT_PRESETS } from "@/lib/presets";
 import { SiteHeader } from "./home/SiteHeader";
 import { ThemeSweep } from "./home/ThemeSweep";
@@ -232,10 +232,6 @@ export default function Home() {
         </nav>
         <div id="contact" className="mt-8 text-sm" style={{ color: "var(--ink-soft)" }}>
           <div style={{ color: "var(--ink)" }}><GuestFeedback /></div>
-          <p className="mt-2">
-            Or write to{" "}
-            <a href={`mailto:${CONTACT_EMAIL}`} className="underline underline-offset-4" style={{ color: "var(--ink)" }}>{CONTACT_EMAIL}</a>
-          </p>
         </div>
         <p className="mt-4 text-xs" style={{ color: "var(--ink-soft)" }} data-testid="copyright">{COPYRIGHT}</p>
       </footer>

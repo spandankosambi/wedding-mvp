@@ -215,39 +215,42 @@ export function FamilyTable({
       </div>
     );
   };
-  const actions = (r: Row) => (
+  /** the number WhatsApp would go to: the primary adult's, else the household's */
+  const waNumber = (r: Row) => (r.members.find((m) => m.isPrimary)?.phone || r.phone || "").replace(/[^\d+]/g, "");
+  const openRsvp = (r: Row) =>
+    setRsvpFor({ familyId: r.id, name: r.name, members: r.members, events: events.filter((e) => r.eventIds.includes(e.id)), current: r.rsvpByEvent });
+  const sendIcons = (r: Row) => (
     <span className="row-actions">
-      <IconButton tone="whatsapp" label={`Share invitation with ${r.name} on WhatsApp`} title="Send the invitation on WhatsApp" onClick={() => whatsapp(r)}>
+      <IconButton
+        label={`Share invitation with ${r.name} on WhatsApp`}
+        title={waNumber(r) ? "Send the invitation on WhatsApp" : "No phone saved for this household — add one with Edit"}
+        disabled={!waNumber(r)}
+        onClick={() => whatsapp(r)}
+      >
         <WhatsAppIcon />
       </IconButton>
       <IconButton
         label={`Email invitation to ${r.name}`}
-        title={r.email ? `Email the invitation to ${r.email}` : "No email saved for this household"}
+        title={r.email ? `Email the invitation to ${r.email}` : "No email saved for this household — add one with Edit"}
         disabled={!r.email || pending}
         onClick={() => send(hasLink(r) ? "resend" : "invite", [r.id])}
       >
         <MailIcon />
       </IconButton>
-      <IconButton
-        label={`Record RSVP for ${r.name}`}
-        title="Record their RSVP"
-        onClick={() =>
-          setRsvpFor({
-            familyId: r.id,
-            name: r.name,
-            members: r.members,
-            events: events.filter((e) => r.eventIds.includes(e.id)),
-            current: r.rsvpByEvent,
-          })
-        }
-      >
-        <RsvpIcon />
-      </IconButton>
-      <IconButton label={`Edit ${r.name}`} title="Edit this household" onClick={() => setEditing(draftFromFamily({ ...r, showTravel: travel.shows(r) }))}>
-        <EditIcon />
-      </IconButton>
     </span>
   );
+  const rsvpIcon = (r: Row) => (
+    <IconButton label={`Record RSVP for ${r.name}`} title="Record their RSVP" onClick={() => openRsvp(r)}>
+      <RsvpIcon />
+    </IconButton>
+  );
+  const editIcon = (r: Row) => (
+    <IconButton label={`Edit ${r.name}`} title="Edit this household" onClick={() => setEditing(draftFromFamily({ ...r, showTravel: travel.shows(r) }))}>
+      <EditIcon />
+    </IconButton>
+  );
+  /** all four together, for the phone card */
+  const actions = (r: Row) => <span className="row-actions">{sendIcons(r)}{rsvpIcon(r)}{editIcon(r)}</span>;
   const empty = rows.length === 0
     ? readOnly ? <>No families yet.</> : <>No families yet — add the first one, or <a href={importHref} className="portal-link">import a spreadsheet</a>.</>
     : waitingOnly && !q ? <>Everyone has answered. 🎉</> : <>No family matches that search.</>;
@@ -375,10 +378,12 @@ export function FamilyTable({
               </th>
               <th className="p-3">Family</th>
               <th className="p-3">Contact</th>
-              <th className="p-3">RSVP</th>
+              <th className="p-3">Replies</th>
               <th className="p-3 text-center" title="Show the Travel & Stay section on their wedding site">Stay</th>
               <th className="p-3">Sent</th>
-              <th className="p-3"><span className="sr-only">Actions</span></th>
+              <th className="p-3 text-center">Send invites</th>
+              <th className="p-3 text-center">RSVP</th>
+              <th className="p-3 text-center">Edit</th>
             </tr>
           </thead>
           <tbody>
@@ -396,12 +401,14 @@ export function FamilyTable({
                 <td>{chips(r)}</td>
                 <td className="text-center">{travelBox(r)}</td>
                 <td>{sentLines(r)}</td>
-                <td className="whitespace-nowrap text-right">{actions(r)}</td>
+                <td className="whitespace-nowrap text-center">{sendIcons(r)}</td>
+                <td className="text-center">{rsvpIcon(r)}</td>
+                <td className="text-center">{editIcon(r)}</td>
               </tr>
             ))}
             {shown.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-10 text-center text-sm text-neutral-400">{empty}</td>
+                <td colSpan={9} className="p-10 text-center text-sm text-neutral-400">{empty}</td>
               </tr>
             )}
           </tbody>

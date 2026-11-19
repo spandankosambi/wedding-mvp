@@ -142,8 +142,11 @@ test("the product is One Tap Invites everywhere a visitor or a share preview loo
   expect(mail.html).toContain("Loved this invitation");
   expect(mail.html).not.toContain("k=sample"); // the private code stays out
   await dialog.getByRole("button", { name: "Done" }).click();
+  // the landing page offers the form, not a bare email address
+  await page.goto("/");
+  await expect(page.getByText(/Or write to/)).toHaveCount(0);
   await page.goto("/w/ananya-weds-arjun/rsvp?k=sample");
   await expect(page.getByTestId("made-with")).toBeVisible();
   await page.goto("/#contact");
-  await expect(page.locator("#contact").getByRole("link", { name: "onetapinvites@gmail.com" })).toHaveAttribute("href", "mailto:onetapinvites@gmail.com");
+  await expect(page.locator("#contact").getByRole("button", { name: "Questions or feedback? Contact us" })).toBeVisible();
 });

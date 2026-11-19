@@ -163,7 +163,7 @@ export function StayView({
                     {!readOnly && (
                       <td className="whitespace-nowrap">
                         <span className="row-actions">
-                          <IconButton tone="whatsapp" label={`Send stay details to ${r.name} on WhatsApp`}
+                          <IconButton label={`Send stay details to ${r.name} on WhatsApp`}
                             title={groups.length ? "Send their stay details on WhatsApp" : "Nobody in this household has a hotel yet"}
                             disabled={!groups.length || !!busy} onClick={() => send(r, "whatsapp")}>
                             {busy === `${r.id}:whatsapp` ? <span className="text-[10px]">…</span> : <WhatsAppIcon />}

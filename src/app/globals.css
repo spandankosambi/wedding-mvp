@@ -1500,8 +1500,6 @@ html.fx .themed[data-motion="lively"] .reveal.is-in { opacity: 1; transform: non
 /* Guest list row actions: icons in a small square that lights on hover */
 .row-icon { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 0.5rem; border: 1px solid transparent; color: #625c54; transition: background-color 0.15s, color 0.15s, border-color 0.15s; }
 .row-icon:hover:not(:disabled) { background: #faf6f2; border-color: #ead9cf; color: #E2553B; }
-.row-icon[data-tone="whatsapp"] { color: #128c7e; }
-.row-icon[data-tone="whatsapp"]:hover:not(:disabled) { background: #edf8f5; border-color: #c4e6dd; color: #0e7065; }
 .row-icon:disabled { opacity: 0.3; cursor: not-allowed; }
 .row-actions { display: inline-flex; gap: 0.15rem; }
 .sent-lines p { white-space: nowrap; }
