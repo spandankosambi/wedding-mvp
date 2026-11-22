@@ -30,7 +30,7 @@ test("Gujarati cards: our draft, your edits with the keyboard, a cover, and the 
   await expect(page).toHaveURL(/\/couple\/groom\/print\/words\?.*lang=gu/);
 
   // every line, English beside our Gujarati draft
-  await expect(page.getByRole("heading", { name: /cards in Gujarati/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /cards in Gujarati/ })).toBeVisible({ timeout: 30_000 }); // first visit compiles the page
   const request = page.getByLabel("The invitation in Gujarati", { exact: true });
   await expect(request).toHaveValue(/આમંત્રણ/);
   const first = page.getByLabel("First name in Gujarati", { exact: true });
