@@ -837,7 +837,7 @@ export function PrintInvitation(props: Props) {
                     return (
                       <p className="mt-2 text-xs text-neutral-500" data-testid="envelope-note">
                         {form.envelope === "front"
-                          ? <>Your card fits a <b>{env.name}</b> envelope. Buy those (plain, light-coloured ones print best) and feed them into the printer one at a time. The front has a line to write each guest&rsquo;s name by hand; the second page puts your monogram seal on the back.</>
+                          ? <>Your card fits a <b>{env.name}</b> envelope. Buy those (plain, light-coloured ones print best) and feed them into the printer one at a time. The front has a line to write each guest&rsquo;s name by hand; the second page puts your monogram seal on the back.<br /><span data-testid="envelope-ink">Printed in your design&rsquo;s ink on a light envelope. For an envelope in your card&rsquo;s colours, choose Cut-and-fold.</span></>
                           : <>Makes a <b>{env.name}</b> envelope. Print on <b>{sheet.name === "custom" ? "a large sheet" : sheet.name}</b> card stock{sheet.name === "A3" ? " (most print shops do A3)" : ""}, cut along the solid line and fold along the dashes. Your monogram seal sits on the flap.</>}
                       </p>
                     );

@@ -175,6 +175,7 @@ test("setup and design — with the live preview on every page — then download
   await expect(page.getByTestId("envelope-note")).toHaveCount(0);
   await page.getByRole("radio", { name: /^Print on envelopes/ }).click();
   await expect(page.getByTestId("envelope-note")).toContainText("161 × 237 mm envelope");
+  await expect(page.getByTestId("envelope-ink")).toHaveText("Printed in your design’s ink on a light envelope. For an envelope in your card’s colours, choose Cut-and-fold.");
   await page.getByRole("radio", { name: /^Cut-and-fold/ }).click();
   await expect(page.getByTestId("envelope-note")).toContainText("a large sheet");
   await page.getByRole("button", { name: "1 · Setup" }).click();
