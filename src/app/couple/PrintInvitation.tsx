@@ -260,13 +260,13 @@ function PdfPages({ pdf }: { pdf: Blob | null }) {
 /* ── Download PDF: the printing press ─────────────────────────── */
 
 /**
- * For five seconds after Download PDF, the page blurs and a little press
+ * For twenty seconds after Download PDF, the page blurs and a little press
  * prints the card the family designed (the preview's first page), then says
  * what paper each file goes on. A click closes it sooner.
  */
 function PrintPress({ image, card, envelope, onClose }: { image: string | null; card: string; envelope: string | null; onClose: () => void }) {
   useEffect(() => {
-    const id = setTimeout(onClose, 5000);
+    const id = setTimeout(onClose, 20_000);
     return () => clearTimeout(id);
   }, [onClose]);
   return (
@@ -299,7 +299,7 @@ function PrintPress({ image, card, envelope, onClose }: { image: string | null; 
             <div><dt className="inline font-medium text-stone-700">Invitation: </dt><dd className="inline text-stone-600">print on {card}</dd></div>
             {envelope && <div><dt className="inline font-medium text-stone-700">Envelope: </dt><dd className="inline text-stone-600">print on {envelope} card stock</dd></div>}
           </dl>
-          <p className="mt-2 text-xs text-stone-400">These sizes stay next to Download PDF.</p>
+          <p className="mt-2 text-xs text-stone-400">These sizes stay next to Download PDF. Click anywhere to close.</p>
         </div>
       </div>
     </div>

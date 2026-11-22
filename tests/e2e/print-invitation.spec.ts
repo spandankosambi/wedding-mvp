@@ -150,7 +150,11 @@ test("setup and design — with the live preview on every page — then download
   await expect(press.getByRole("img", { name: "Your card" })).toBeVisible();
   if (shots) { await page.waitForTimeout(1500); await page.screenshot({ path: `${shots}/press-1.png` }); await page.waitForTimeout(2200); await page.screenshot({ path: `${shots}/press-2.png` }); }
   await expect(page.getByTestId("press-paper")).toContainText("Invitation: print on 154 × 216 mm card stock, trimmed to 148 × 210 mm");
-  await expect(press).toBeHidden({ timeout: 7_000 });
+  // it stays up to 20 seconds; a click anywhere closes it sooner
+  await page.waitForTimeout(6_000);
+  await expect(press).toBeVisible();
+  await press.click({ position: { x: 10, y: 10 } });
+  await expect(press).toBeHidden();
   await expect(page.getByTestId("paper-sizes")).toContainText("Invitation: 154 × 216 mm card stock, trimmed to 148 × 210 mm");
   const file = await download.path();
   const pdf = fs.readFileSync(file!).toString("latin1");
@@ -214,7 +218,8 @@ test("setup and design — with the live preview on every page — then download
     "Arjun-Ananya_Groom-side_Envelope_97x135mm_Print-on-A4.pdf",
     "Arjun-Ananya_Groom-side_Invitation_5x7in_Folded_English_Print-shop.pdf",
   ]);
-  await expect(page.getByTestId("print-press")).toBeHidden({ timeout: 7_000 });
+  await page.getByTestId("print-press").click({ position: { x: 10, y: 10 } });
+  await expect(page.getByTestId("print-press")).toBeHidden();
 
   // landscape cards can't fold side by side: the choice turns off, with the reason
   await page.getByRole("button", { name: "1 · Setup" }).click();
