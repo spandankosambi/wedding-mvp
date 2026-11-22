@@ -280,3 +280,13 @@ export const accountActions = pgTable("account_actions", {
   usedAt: timestamp("used_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+/* Lines machine-translated for the printed cards (Azure Translator), kept so
+   each is fetched once: kind "name" is spelled out (transliterated), "text" translated. */
+export const machineText = pgTable("machine_text", {
+  lang: text("lang").notNull(),
+  kind: text("kind").notNull(),
+  src: text("src").notNull(),
+  out: text("out").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [primaryKey({ columns: [t.lang, t.kind, t.src] })]);

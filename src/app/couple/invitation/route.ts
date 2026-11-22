@@ -7,7 +7,7 @@ import { sharePath } from "@/lib/share";
 import { appOrigin } from "@/lib/origin";
 import { invitationSchema } from "@/lib/invitation/options";
 import { fileName } from "@/lib/invitation/content";
-import { localize } from "@/lib/invitation/i18n";
+import { localizeCards } from "@/lib/invitation/machine";
 import { renderInvitationPdf } from "@/lib/invitation/pdf";
 import { getLook, withLook, wordingOf } from "@/lib/looks";
 import { decorOf } from "@/lib/site-decor";
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
 
   // in Gujarati or Hindi: the family's words from the Card wording page, else our draft
   const words = o.lang === "en" ? {} : look.printText?.[o.lang] ?? {};
-  const { inv } = localize(withLook(card, look), evs, o, `${await appOrigin()}${sharePath(wedding.slug, o.version, look.shareKey)}`, o.lang, words);
+  const { inv } = await localizeCards(withLook(card, look), evs, o, `${await appOrigin()}${sharePath(wedding.slug, o.version, look.shareKey)}`, o.lang, words);
   const pdf = await renderInvitationPdf(inv, o, look.theme);
   return new Response(new Uint8Array(pdf), {
     headers: {

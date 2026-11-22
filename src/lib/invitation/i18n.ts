@@ -81,10 +81,10 @@ const EVENTS: Record<string, [string, string]> = {
 };
 
 const spell = (s: string, l: OtherLang) => transliterate(s, SCRIPT[l]);
-const eventName = (name: string, l: OtherLang) => {
+const eventName = (name: string, l: OtherLang, tx: (s: string) => string) => {
   const k = name.trim().toLowerCase();
   const hit = EVENTS[k] ?? EVENTS[k.replace(/s$/, "")];
-  return hit ? hit[l === "gu" ? 0 : 1] : spell(name, l);
+  return hit ? hit[l === "gu" ? 0 : 1] : tx(name);
 };
 
 /** "Friday, 29 January 2027" in the language, with its own numerals. */
@@ -104,16 +104,17 @@ function langTime(d: Date, l: OtherLang, zone?: string | null) {
 }
 
 /** "Mrs. Manisha Kosambi 9427702237": the name spelled out, the number kept. */
-function contactLine(line: string, l: OtherLang) {
+function contactLine(line: string, nm: (s: string) => string) {
   const m = line.match(/(\+?\d[\d\s\-().]{5,}\d)\s*$/);
-  if (!m) return spell(line, l);
-  return `${spell(line.slice(0, m.index).replace(/[\s\-–:,]+$/, ""), l)} ${m[1]}`;
+  if (!m) return nm(line);
+  return `${nm(line.slice(0, m.index).replace(/[\s\-–:,]+$/, ""))} ${m[1]}`;
 }
 
 /* ── the fields ───────────────────────────────────────────────── */
 
 export { GROUP_LABEL, type CardField, type FieldGroup } from "./i18n-types";
 import type { CardField } from "./i18n-types";
+import type { Machine } from "./machine";
 
 type Ctx = { w: CardWedding; all: CardEvent[]; o: InvitationOptions; l: OtherLang };
 
@@ -122,7 +123,7 @@ type Ctx = { w: CardWedding; all: CardEvent[]; o: InvitationOptions; l: OtherLan
  * the family's words (from `text`) or our draft, plus the list of fields the
  * wording page shows. English returns the invitation as it is.
  */
-export function localize(w: CardWedding, all: CardEvent[], o: InvitationOptions, siteUrl: string, lang: CardLang, text: Record<string, string> = {}): { inv: Invitation; fields: CardField[] } {
+export function localize(w: CardWedding, all: CardEvent[], o: InvitationOptions, siteUrl: string, lang: CardLang, text: Record<string, string> = {}, mt?: Machine): { inv: Invitation; fields: CardField[] } {
   const inv = buildInvitation(w, all, o, siteUrl);
   if (lang === "en") return { inv, fields: [] };
   const l = lang;
@@ -136,29 +137,32 @@ export function localize(w: CardWedding, all: CardEvent[], o: InvitationOptions,
     return mine !== undefined && mine.trim() !== "" ? mine : f.auto;
   };
   const ph = P[l];
+  /** names and blessings, spelled out; free text, translated (Azure when on, else our rules) */
+  const nm = (s: string) => mt?.get("name", s) ?? spell(s, l);
+  const tx = (s: string) => mt?.get("text", s) ?? spell(s, l);
   const fromBride = o.version === "bride";
   const bp = w.brideParents?.trim() || null, gp = w.groomParents?.trim() || null;
   const hostsEn = inv.front.lead[0]?.t ?? "";
-  const hostsAuto = (fromBride ? bp : gp) ? spell(hostsEn, l) : ph.familyOf(spell(fromBride ? w.brideName : w.groomName, l));
+  const hostsAuto = (fromBride ? bp : gp) ? tx(hostsEn) : ph.familyOf(nm(fromBride ? w.brideName : w.groomName));
 
   /* front */
   const f = inv.front;
-  if (f.invocation) f.invocation = put({ key: "invocation", group: "front", label: "Invocation", en: f.invocation, auto: spell(f.invocation, l) });
-  f.shloka = f.shloka.map((s, i) => put({ key: `shloka.${i}`, group: "front", label: `Blessing, line ${i + 1}`, en: s, auto: spell(s, l), check: hasLatin(s) }));
+  if (f.invocation) f.invocation = put({ key: "invocation", group: "front", label: "Invocation", en: f.invocation, auto: nm(f.invocation) });
+  f.shloka = f.shloka.map((s, i) => put({ key: `shloka.${i}`, group: "front", label: `Blessing, line ${i + 1}`, en: s, auto: nm(s), check: hasLatin(s) }));
   const hosts = put({ key: "hosts", group: "front", label: "The hosting family", en: hostsEn, auto: hostsAuto });
   const request = put({ key: "request", group: "front", label: "The invitation", en: inv.front.lead[1]?.t ?? "", auto: ph.request, long: true });
   const wedding = put({ key: "weddingOf", group: "front", label: "The occasion", en: inv.front.lead[2]?.t ?? "", auto: fromBride ? ph.weddingDaughter : ph.weddingSon, long: true });
   f.lead = [{ t: hosts, name: true }, { t: request }, { t: wedding }];
-  const first = put({ key: "first", group: "front", label: "First name", en: f.first, auto: spell(f.first, l) });
-  const second = put({ key: "second", group: "front", label: "Second name", en: f.second, auto: spell(f.second, l) });
+  const first = put({ key: "first", group: "front", label: "First name", en: f.first, auto: nm(f.first) });
+  const second = put({ key: "second", group: "front", label: "Second name", en: f.second, auto: nm(f.second) });
   f.first = first; f.second = second;
   f.joiner = put({ key: "joiner", group: "front", label: "Between the names", en: f.joiner, auto: ph.joiner });
   if (f.secondOf) {
     const parents = fromBride ? gp! : bp!;
-    f.secondOf = put({ key: "secondOf", group: "front", label: "Parents of the second name", en: f.secondOf, auto: fromBride ? ph.sonOf(spell(parents, l)) : ph.daughterOf(spell(parents, l)) });
+    f.secondOf = put({ key: "secondOf", group: "front", label: "Parents of the second name", en: f.secondOf, auto: fromBride ? ph.sonOf(tx(parents)) : ph.daughterOf(tx(parents)) });
   }
   f.date = put({ key: "date", group: "front", label: "Wedding date", en: f.date, auto: langDate(w.weddingDate, l, null) });
-  if (f.place) f.place = put({ key: "place", group: "front", label: "City", en: f.place, auto: spell(f.place, l) });
+  if (f.place) f.place = put({ key: "place", group: "front", label: "City", en: f.place, auto: nm(f.place) });
   if (f.enclosed) f.enclosed = put({ key: "enclosed", group: "front", label: "Event cards enclosed", en: f.enclosed, auto: inv.inserts.length === 1 ? ph.enclosedOne : ph.enclosedMany });
 
   /* celebrations: the same words on the back and on their own cards */
@@ -166,15 +170,15 @@ export function localize(w: CardWedding, all: CardEvent[], o: InvitationOptions,
   const evFields = (e: Invitation["back"]["events"][number]) => {
     const src = raw.get(e.id)!;
     const head = `${src.name}: `;
-    e.name = put({ key: `event.${e.id}.name`, group: "celebrations", label: `${src.name}`, en: e.name, auto: eventName(e.name, l) });
+    e.name = put({ key: `event.${e.id}.name`, group: "celebrations", label: `${src.name}`, en: e.name, auto: eventName(e.name, l, tx) });
     e.date = put({ key: `event.${e.id}.date`, group: "celebrations", label: `${head}date`, en: e.date, auto: langDate(src.startsAt, l, src.timeZone) });
     e.time = put({ key: `event.${e.id}.time`, group: "celebrations", label: `${head}time`, en: e.time, auto: langTime(src.startsAt, l, src.timeZone) });
-    e.venue = put({ key: `event.${e.id}.venue`, group: "celebrations", label: `${head}venue`, en: e.venue, auto: spell(e.venue, l) });
-    e.address = put({ key: `event.${e.id}.address`, group: "celebrations", label: `${head}address`, en: e.address, auto: spell(e.address, l), long: true });
-    if (e.dressCode) e.dressCode = put({ key: `event.${e.id}.dress`, group: "celebrations", label: `${head}dress`, en: e.dressCode, auto: spell(e.dressCode, l), check: true });
+    e.venue = put({ key: `event.${e.id}.venue`, group: "celebrations", label: `${head}venue`, en: e.venue, auto: tx(e.venue) });
+    e.address = put({ key: `event.${e.id}.address`, group: "celebrations", label: `${head}address`, en: e.address, auto: tx(e.address), long: true });
+    if (e.dressCode) e.dressCode = put({ key: `event.${e.id}.dress`, group: "celebrations", label: `${head}dress`, en: e.dressCode, auto: tx(e.dressCode), check: true });
     if (e.sideLabel) {
       const who = src.side === "groom" ? w.groomName : w.brideName;
-      e.sideLabel = put({ key: `event.${e.id}.side`, group: "celebrations", label: `${head}whose`, en: e.sideLabel, auto: ph.side(spell(who.split(/\s+/)[0], l)) });
+      e.sideLabel = put({ key: `event.${e.id}.side`, group: "celebrations", label: `${head}whose`, en: e.sideLabel, auto: ph.side(nm(who.split(/\s+/)[0])) });
     }
   };
   inv.back.events.forEach(evFields);
@@ -188,12 +192,12 @@ export function localize(w: CardWedding, all: CardEvent[], o: InvitationOptions,
 
   /* details */
   const d = inv.back.details;
-  d.rsvp = d.rsvp.map((s, i) => put({ key: `rsvp.${i}`, group: "details", label: `Contact ${i + 1}`, en: s, auto: contactLine(s, l) }));
+  d.rsvp = d.rsvp.map((s, i) => put({ key: `rsvp.${i}`, group: "details", label: `Contact ${i + 1}`, en: s, auto: contactLine(s, nm) }));
   if (d.replyBy && w.rsvpDeadline) {
     d.replyBy = put({ key: "replyBy", group: "details", label: "Reply by", en: d.replyBy, auto: ph.replyBy(new Intl.DateTimeFormat(LOCALE[l], { day: "numeric", month: "long", year: "numeric" }).format(w.rsvpDeadline)) });
   }
-  d.compliments = d.compliments.map((s, i) => put({ key: `compliments.${i}`, group: "details", label: `Compliments, line ${i + 1}`, en: s, auto: spell(s, l) }));
-  if (d.note) d.note = put({ key: "note", group: "details", label: "Closing line", en: d.note, auto: spell(d.note, l), long: true, check: true });
+  d.compliments = d.compliments.map((s, i) => put({ key: `compliments.${i}`, group: "details", label: `Compliments, line ${i + 1}`, en: s, auto: tx(s) }));
+  if (d.note) d.note = put({ key: "note", group: "details", label: "Closing line", en: d.note, auto: tx(d.note), long: true, check: true });
 
   /* headings and envelope */
   const lb = inv.labels;
