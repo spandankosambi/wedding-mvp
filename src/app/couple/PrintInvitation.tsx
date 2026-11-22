@@ -1,6 +1,7 @@
 "use client";
 
 import { sideNamesOf } from "@/lib/side-names";
+import { CARD_LANGS, langLabel, langNative, type CardLang, type OtherLang } from "@/lib/invitation/langs";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adoptCardWordingAction, savePrintConfigAction } from "./actions";
@@ -44,6 +45,10 @@ type Props = {
   savedConfig?: Record<string, unknown> | null;
   /** the other family's saved choices, for "same as your partner's card" */
   partnerConfig?: Record<string, unknown> | null;
+  /** the Card wording page for a language: base address, "&lang=gu" is added */
+  wordsHref: string;
+  /** lines the family has already put in their own words, per language */
+  editedCounts?: Partial<Record<OtherLang, number>>;
 };
 
 export type CardWording = { invocation: string | null; shloka: string | null; rsvpContacts: string | null; compliments: string | null; closingLine: string | null };
@@ -66,6 +71,7 @@ function initial(p: Props): Form {
     omit: [], qr: true, dressCode: true, replyBy: p.hasDeadline,
     frame: "classic", toran: false, patternBorder: false, borderStyle: "diamond", pattern: "none", symbol: "motif", symbolImage: "", icons: false, cardIcons: true, monogram: false, monogramText: "", monogramStyle: "circle",
     fill: "classic", nameFont: "serif", photo: null, photoPlace: "front", photoShape: "arch",
+    lang: "en", cover: false,
     customW: "", customH: "", unit: "in",
   };
 }
@@ -105,7 +111,7 @@ const legacyKey = (id: string) => `print-invitation:${id}`;
     whose card it is or its events (the wording has its own "Same as" on the site). */
 const SHARED_KEYS = [
   "size", "orientation", "eventLayout", "output", "cropMarks", "colours", "omit", "qr", "dressCode", "replyBy",
-  "frame", "toran", "patternBorder", "borderStyle", "pattern", "symbol", "symbolImage", "icons", "cardIcons", "monogram", "monogramStyle", "fill", "nameFont", "photo", "photoPlace", "photoShape", "customW", "customH", "unit",
+  "cover", "frame", "toran", "patternBorder", "borderStyle", "pattern", "symbol", "symbolImage", "icons", "cardIcons", "monogram", "monogramStyle", "fill", "nameFont", "photo", "photoPlace", "photoShape", "customW", "customH", "unit",
 ] as const;
 const readSaved = (key: string): Record<string, unknown> | null => {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; }
@@ -525,6 +531,45 @@ export function PrintInvitation(props: Props) {
                   </ul>
                 </div>
 
+                <fieldset data-testid="card-language">
+                  <legend className={label}>Language on the card</legend>
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    <select
+                      aria-label="Language on the card"
+                      value={form.lang}
+                      onChange={(e) => set("lang", e.target.value as CardLang)}
+                      className="portal-input w-auto min-w-[12rem]"
+                    >
+                      {CARD_LANGS.map((l) => (
+                        <option key={l.id} value={l.id}>{l.id === "en" ? "English" : `${l.label} · ${l.native}`}</option>
+                      ))}
+                    </select>
+                    {form.lang === "en" && <span className="text-xs text-neutral-500">Also in Gujarati and Hindi, for the printed cards only.</span>}
+                  </div>
+                  {form.lang !== "en" && (
+                    <div className="mt-3 rounded-lg bg-[#fdf6f2] px-3 py-3 text-xs ring-1 ring-[#f1d8cc]" data-testid="language-note">
+                      <p className="text-neutral-700">
+                        We&apos;ve put every line of the card into <b>{langLabel(form.lang)}</b>: the usual invitation phrases,
+                        dates and times, and names and places spelled out in {langNative(form.lang)}. Names are a first draft:
+                        check them before printing. Your edits are used <b>only on the printed cards</b>, never on your website.
+                      </p>
+                      <div className="mt-2.5 flex flex-wrap items-center gap-3">
+                        <a
+                          href={`${props.wordsHref}&lang=${form.lang}`}
+                          onClick={remember}
+                          className="portal-button"
+                          data-testid="edit-card-words"
+                        >
+                          Check and edit the {langLabel(form.lang)} wording →
+                        </a>
+                        {!!props.editedCounts?.[form.lang] && (
+                          <span className="text-neutral-500">{props.editedCounts[form.lang]} line{props.editedCounts[form.lang] === 1 ? "" : "s"} in your own words</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </fieldset>
+
                 <fieldset>
                   <legend className={label}>Card size</legend>
                   <div className="mt-2 grid gap-3 sm:grid-cols-[1fr_auto]">
@@ -760,6 +805,7 @@ export function PrintInvitation(props: Props) {
                 <fieldset>
                   <legend className={label}>Also on the card</legend>
                   <div className="mt-2 space-y-2">
+                    <Check checked={form.cover} onChange={(v) => set("cover", v)}>A cover page <span className="text-xs text-neutral-500">— in the same design: your names, the date and the city, before the invitation</span></Check>
                     <Check checked={form.qr} onChange={(v) => set("qr", v)}>QR code to the wedding website <span className="text-xs text-neutral-500">— on the back, for guests to RSVP</span></Check>
                     {props.icons ? (
                       <Check checked={form.cardIcons} onChange={(v) => set("cardIcons", v)}>Celebration icons <span className="text-xs text-neutral-500">— beside each event. Unticking removes them from the printed cards only, not your website.</span></Check>

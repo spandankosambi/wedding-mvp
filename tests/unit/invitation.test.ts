@@ -113,9 +113,13 @@ describe("design", () => {
   it("splits Hindi, Marathi and Sanskrit from English so each prints in its own face", async () => {
     const { scriptRuns } = await import("@/lib/invitation/motifs");
     expect(scriptRuns("Spandan (स्पंदन) & Pooja")).toEqual([
-      { text: "Spandan (", deva: false }, { text: "स्पंदन", deva: true }, { text: ") & Pooja", deva: false },
+      { text: "Spandan (", deva: false, font: null }, { text: "स्पंदन", deva: true, font: "Tiro" }, { text: ") & Pooja", deva: false, font: null },
     ]);
-    expect(scriptRuns("॥ श्री गणेशाय नमः ॥")).toEqual([{ text: "॥ श्री गणेशाय नमः ॥", deva: true }]);
+    expect(scriptRuns("॥ श्री गणेशाय नमः ॥")).toEqual([{ text: "॥ श्री गणेशाय नमः ॥", deva: true, font: "Tiro" }]);
+    // Gujarati prints in its own face
+    expect(scriptRuns("સ્પંદન કોસંબી, Pune")).toEqual([
+      { text: "સ્પંદન કોસંબી", deva: true, font: "Gujarati" }, { text: ", Pune", deva: false, font: null },
+    ]);
   });
   it("suggests monogram letters with the hosting side first", async () => {
     const { defaultMonogram } = await import("@/lib/invitation/options");

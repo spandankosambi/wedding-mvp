@@ -326,11 +326,16 @@ export function crest(style: MonogramStyle): Crest {
 
 /** Devanagari (and Vedic marks) → printed with the Devanagari face. */
 export const DEVANAGARI = /[ऀ-ॿ᳐-᳿꣠-ꣿ]/;
-/** Split a line into runs of Devanagari and everything else; the spaces
-    and dandas (। ॥) between Devanagari words stay in the Devanagari run. */
-export function scriptRuns(s: string): { text: string; deva: boolean }[] {
+/** Gujarati → printed with the Gujarati face. */
+export const GUJARATI = /[\u0A80-\u0AFF]/;
+/** Split a line into runs of Devanagari, Gujarati and everything else; the
+    spaces, dandas (। ॥) and marks between words of one script stay in its run. */
+export function scriptRuns(s: string): { text: string; deva: boolean; font: "Tiro" | "Gujarati" | null }[] {
   return s
-    .split(/([ऀ-ॿ᳐-᳿꣠-ꣿ]+(?:[\s।॥.,]+[ऀ-ॿ᳐-᳿꣠-ꣿ]+)*)/)
+    .split(/([ऀ-ॿ᳐-᳿꣠-ꣿ]+(?:[\s।॥.,:]+[ऀ-ॿ᳐-᳿꣠-ꣿ]+)*|[\u0A80-\u0AFF]+(?:[\s।॥.,:]+[\u0A80-\u0AFF]+)*)/)
     .filter(Boolean)
-    .map((text) => ({ text, deva: DEVANAGARI.test(text) }));
+    .map((text) => {
+      const font = DEVANAGARI.test(text) ? "Tiro" as const : GUJARATI.test(text) ? "Gujarati" as const : null;
+      return { text, deva: font !== null, font };
+    });
 }

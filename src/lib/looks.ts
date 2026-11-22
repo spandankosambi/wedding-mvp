@@ -91,7 +91,7 @@ export function namesFor(
   };
 }
 
-export type LookPatch = Partial<Pick<Look, "theme" | "heroTagline" | "story" | "hashtag" | "contactPhone" | "travel" | "gallery" | "rsvpOpen" | "rsvpDeadline" | "rsvpPeople" | "decor" | "know" | "music" | "printConfig" | "shareKey" | (typeof WORDING_KEYS)[number]>>;
+export type LookPatch = Partial<Pick<Look, "theme" | "heroTagline" | "story" | "hashtag" | "contactPhone" | "travel" | "gallery" | "rsvpOpen" | "rsvpDeadline" | "rsvpPeople" | "decor" | "know" | "music" | "printConfig" | "printText" | "shareKey" | (typeof WORDING_KEYS)[number]>>;
 
 export async function updateLook(weddingId: string, side: FamilySide, patch: LookPatch) {
   await getLooks(weddingId); // make sure the row exists

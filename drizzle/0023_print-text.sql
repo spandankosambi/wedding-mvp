@@ -1,0 +1,1 @@
+ALTER TABLE "wedding_sides" ADD COLUMN IF NOT EXISTS "print_text" jsonb;

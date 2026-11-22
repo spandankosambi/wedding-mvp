@@ -50,6 +50,15 @@ function registerFonts() {
       { src: devaIt, fontWeight, fontStyle: "italic" as const },
     ]),
   });
+  // Gujarati: Noto Serif Gujarati, every weight and slant answered
+  const guj = (w: number) => f(`noto-serif-gujarati-gujarati-${w}-normal.woff`);
+  Font.register({
+    family: "Gujarati",
+    fonts: ([[400, 400], [500, 400], [600, 600], [700, 700]] as const).flatMap(([fontWeight, file]) => [
+      { src: guj(file), fontWeight },
+      { src: guj(file), fontWeight, fontStyle: "italic" as const },
+    ]),
+  });
   Font.register({
     family: "GreatVibes",
     fonts: [400, 500, 600, 700].map((fontWeight) => ({ src: f("great-vibes-latin-400-normal.woff"), fontWeight })),
@@ -90,16 +99,20 @@ type Ctx = {
   arch: boolean;
   /** how far type may grow to fill the space: 1 (classic spacing) or more (fill the card) */
   grow: number;
+  /** the cards' headings, in the card's language */
+  labels: Invitation["labels"];
 };
 const ink = (p: Palette, k?: Ink) => (k ? p[k === "hair" ? "hair" : k] : undefined);
 
-/** Text that switches to the Devanagari face for Hindi/Marathi/Sanskrit runs. */
+/** Text that switches to the Devanagari face for Hindi/Marathi/Sanskrit runs, and the Gujarati face for Gujarati. */
 function Tx({ style, children }: { style?: Style; children: string }) {
   const runs = scriptRuns(children);
-  if (runs.length === 1 && !runs[0].deva) return <Text style={style}>{children}</Text>;
+  if (runs.length === 1 && !runs[0].font) return <Text style={style}>{children}</Text>;
+  // Indian scripts hang vowel signs (ુ ृ) below the line: give them room
+  const lh = Number((style as { lineHeight?: number } | undefined)?.lineHeight ?? 1.2);
   return (
-    <Text style={style}>
-      {runs.map((r, i) => (r.deva ? <Text key={i} style={{ fontFamily: "Tiro", letterSpacing: 0 }}>{r.text}</Text> : r.text))}
+    <Text style={{ ...style, lineHeight: Math.max(lh, 1.35) }}>
+      {runs.map((r, i) => (r.font ? <Text key={i} style={{ fontFamily: r.font, letterSpacing: 0 }}>{r.text}</Text> : r.text))}
     </Text>
   );
 }
@@ -330,6 +343,46 @@ function Front({ c: base, inv }: { c: Ctx; inv: Invitation }) {
   );
 }
 
+/* ── the cover ────────────────────────────────────────────────── */
+
+/**
+ * An optional front cover, before the invitation: the same frame, colours
+ * and motifs, with the couple's names large, the date and the city, and the
+ * crest when it's on. In the card's language.
+ */
+function CoverPage({ c: base, inv }: { c: Ctx; inv: Invitation }) {
+  const o = base.o;
+  const cv = inv.cover;
+  const top = topMotif(base.theme), div = dividerMotif(base.theme);
+  const hasSymbol = o.symbol !== "motif" && (o.symbol !== "custom" || !!iconPng(o.symbolImage));
+  const nameBase = o.nameFont === "script" ? 46 : 38;
+  const need = (hasSymbol ? 40 : 0) + (96 * top.h) / top.w + 14 + 18 + nameSize(cv.first, nameBase) * 1.2 + 24 +
+    nameSize(cv.second, nameBase) * 1.2 + 24 + 18 + (cv.place ? 16 : 0) + (cv.monogram ? 56 : 0);
+  const k = Math.max(0.55, Math.min(1.5, contentHeight(base, o.toran) / (need * base.s)));
+  const c = { ...base, s: base.s * k };
+  const name = (n: string) => o.nameFont === "script"
+    ? { fontFamily: "GreatVibes", fontWeight: 400, fontSize: nameSize(n, nameBase) * c.s, lineHeight: 1.2, color: c.p.accent }
+    : { fontWeight: 700, fontSize: nameSize(n, nameBase) * c.s, lineHeight: 1.1 };
+  return (
+    <Card c={base}>
+      {hasSymbol && (o.symbol === "custom"
+        ? <Image src={iconPng(o.symbolImage, c.p.accent)!} style={{ width: 34 * c.s, height: 34 * c.s, marginBottom: 6 * c.s }} />
+        : isGlyph(o.symbol)
+          ? <Text style={{ fontFamily: SYMBOL_GLYPHS[o.symbol].font, fontSize: 30 * c.s, color: c.p.accent, lineHeight: 1.1, marginBottom: 4 * c.s }}>{SYMBOL_GLYPHS[o.symbol].text}</Text>
+          : <Draw m={symbol(o.symbol as DrawnSymbol)} width={34 * c.s} p={c.p} style={{ marginBottom: 6 * c.s }} />)}
+      <Draw m={top} width={96 * c.s} p={c.p} style={{ marginBottom: 8 * c.s }} />
+      <Kicker c={c} size={9}>{cv.title}</Kicker>
+      <Tx style={{ ...name(cv.first), marginTop: 12 * c.s }}>{cv.first}</Tx>
+      <Tx style={{ fontStyle: "italic", fontSize: 16 * c.s, color: c.p.accent, marginVertical: 4 * c.s }}>{cv.joiner}</Tx>
+      <Tx style={name(cv.second)}>{cv.second}</Tx>
+      <Draw m={div} width={64 * c.s} p={c.p} style={{ marginVertical: 10 * c.s }} />
+      <Kicker c={c} size={8.5}>{cv.date}</Kicker>
+      {cv.place && <Tx style={{ fontSize: 11 * c.s, marginTop: 4 * c.s, color: c.p.soft }}>{cv.place}</Tx>}
+      {cv.monogram && <View style={{ marginTop: 14 * c.s }}><Crest c={c} text={cv.monogram} size={40 * c.s} /></View>}
+    </Card>
+  );
+}
+
 /* ── back and event cards ─────────────────────────────────────── */
 
 function EventBlock({ c, e, width }: { c: Ctx; e: EventCard; width: string }) {
@@ -338,10 +391,10 @@ function EventBlock({ c, e, width }: { c: Ctx; e: EventCard; width: string }) {
       {c.o.icons && <EventIcon c={c} e={e} size={15} gap={2} />}
       <Tx style={{ fontWeight: 700, fontSize: 15 * c.s, lineHeight: 1.1 }}>{e.name}</Tx>
       {e.sideLabel && <Kicker c={c} size={5.6}>{e.sideLabel}</Kicker>}
-      <Text style={{ fontSize: 9.5 * c.s, marginTop: 2 * c.s }}>{e.date} · {e.time}</Text>
+      <Tx style={{ fontSize: 9.5 * c.s, marginTop: 2 * c.s }}>{`${e.date} · ${e.time}`}</Tx>
       <Tx style={{ fontWeight: 600, fontSize: 10 * c.s, marginTop: 1.5 * c.s }}>{e.venue}</Tx>
       <Tx style={{ fontSize: 8.8 * c.s, color: c.p.soft }}>{e.address}</Tx>
-      {e.dressCode && <Tx style={{ fontStyle: "italic", fontSize: 8.5 * c.s, color: c.p.soft, marginTop: 1 * c.s }}>{`Dress: ${e.dressCode}`}</Tx>}
+      {e.dressCode && <Tx style={{ fontStyle: "italic", fontSize: 8.5 * c.s, color: c.p.soft, marginTop: 1 * c.s }}>{`${c.labels.dress}: ${e.dressCode}`}</Tx>}
     </View>
   );
 }
@@ -387,11 +440,11 @@ function DetailsBlock({ c, d, qr }: { c: Ctx; d: Details; qr: string | null }) {
     <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", alignItems: "center", width: "100%" }}>
       {hasRsvp && (
         <View style={col(textW)}>
-          <Text style={head}>R.S.V.P.</Text>
+          <Tx style={head}>{c.labels.rsvp}</Tx>
           {pair
             ? <View style={{ flexDirection: "row", justifyContent: "center" }}>{contacts.map((p, i) => person(p, i, false))}</View>
             : contacts.map((p, i) => person(p, i, true))}
-          {d.replyBy && <Text style={{ fontStyle: "italic", fontSize: 8 * c.s, color: c.p.soft, marginTop: 2.5 * c.s }}>{d.replyBy}</Text>}
+          {d.replyBy && <Tx style={{ fontStyle: "italic", fontSize: 8 * c.s, color: c.p.soft, marginTop: 2.5 * c.s }}>{d.replyBy}</Tx>}
         </View>
       )}
       {qr && (
@@ -399,12 +452,12 @@ function DetailsBlock({ c, d, qr }: { c: Ctx; d: Details; qr: string | null }) {
           <View style={{ backgroundColor: "#ffffff", padding: 2.5 * c.s, borderRadius: 2 }}>
             <Image src={qr} style={{ width: 46 * c.s, height: 46 * c.s }} />
           </View>
-          <Text style={{ fontStyle: "italic", fontSize: 7 * c.s, color: c.p.soft, marginTop: 2.5 * c.s }}>Scan to RSVP</Text>
+          <Tx style={{ fontStyle: "italic", fontSize: 7 * c.s, color: c.p.soft, marginTop: 2.5 * c.s }}>{c.labels.scan}</Tx>
         </View>
       )}
       {hasComp && (
         <View style={col(textW)}>
-          <Text style={head}>With best compliments from</Text>
+          <Tx style={head}>{c.labels.compliments}</Tx>
           {d.compliments.map((l, i) => <Tx key={i} style={{ fontWeight: i ? 400 : 600, fontSize: 8.8 * c.s }}>{l}</Tx>)}
         </View>
       )}
@@ -439,7 +492,7 @@ function Back({ c, inv, qr }: { c: Ctx; inv: Invitation; qr: string | null }) {
   return (
     <Card c={c} toran={false}>
       {photo && <Photo c={cc} src={photo} width={photoW * k} />}
-      {evs.length > 0 && <Kicker c={cc} size={8}>The Celebrations</Kicker>}
+      {evs.length > 0 && <Kicker c={cc} size={8}>{c.labels.celebrations}</Kicker>}
       {evs.length > 0 && <Draw m={div} width={50 * cc.s} p={c.p} style={{ marginVertical: 5 * cc.s }} />}
       <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
         {evs.map((e) => <EventBlock key={e.id} c={cc} e={e} width={cols === 2 ? "50%" : "100%"} />)}
@@ -471,10 +524,10 @@ function Insert({ c: base, card }: { c: Ctx; card: InsertCard }) {
       {card.couple && <Tx style={{ fontWeight: 600, fontSize: 13 * c.s, marginTop: 2 * c.s }}>{card.couple}</Tx>}
       <Draw m={div} width={50 * c.s} p={c.p} style={{ marginVertical: 6 * c.s }} />
       <Kicker c={c} size={8}>{e.date}</Kicker>
-      <Text style={{ fontSize: 10 * c.s, marginTop: 2 * c.s }}>{e.time}</Text>
+      <Tx style={{ fontSize: 10 * c.s, marginTop: 2 * c.s }}>{e.time}</Tx>
       <Tx style={{ fontWeight: 600, fontSize: 11.5 * c.s, marginTop: 7 * c.s }}>{e.venue}</Tx>
       <Tx style={{ fontSize: 9.5 * c.s, color: c.p.soft }}>{e.address}</Tx>
-      {e.dressCode && <Tx style={{ fontStyle: "italic", fontSize: 9 * c.s, color: c.p.soft, marginTop: 5 * c.s }}>{`Dress: ${e.dressCode}`}</Tx>}
+      {e.dressCode && <Tx style={{ fontStyle: "italic", fontSize: 9 * c.s, color: c.p.soft, marginTop: 5 * c.s }}>{`${c.labels.dress}: ${e.dressCode}`}</Tx>}
     </Card>
   );
 }
@@ -488,12 +541,14 @@ export async function renderInvitationPdf(inv: Invitation, o: InvitationOptions,
     p: paletteFor(theme, o.colours), s: Math.min(trim[0], trim[1]) / 127, trim, sheet, theme, o, script: o.nameFont === "script",
     arch: o.frame === "arch" && trim[1] > trim[0],
     grow: o.fill === "fuller" ? 1.4 : 1,
+    labels: inv.labels,
   };
   const qr = inv.back.details.qrUrl
     ? await QRCode.toDataURL(inv.back.details.qrUrl, { margin: 1, width: 360, errorCorrectionLevel: "M", color: { dark: "#000000", light: "#ffffff" } })
     : null;
   const doc = (
     <Document title="Wedding invitation" creator="One Tap Invites" producer="One Tap Invites">
+      {o.cover && <CoverPage c={c} inv={inv} />}
       <Front c={c} inv={inv} />
       <Back c={c} inv={inv} qr={qr} />
       {inv.inserts.map((card) => <Insert key={card.event.id} c={c} card={card} />)}

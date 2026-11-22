@@ -62,7 +62,15 @@ export type Details = {
   qrUrl: string | null;
 };
 
+/** Headings printed on the cards (translated with everything else). */
+export type Labels = { celebrations: string; rsvp: string; scan: string; compliments: string; dress: string };
+
+/** The optional cover: a front page before the invitation, in the same look. */
+export type Cover = { title: string; first: string; joiner: string; second: string; date: string; place: string | null; monogram: string | null };
+
 export type Invitation = {
+  labels: Labels;
+  cover: Cover;
   front: FrontCard;
   /** the back of the invitation: the events (together layout) and the details */
   back: { events: EventCard[]; details: Details };
@@ -148,6 +156,8 @@ export function buildInvitation(w: CardWedding, all: CardEvent[], o: InvitationO
     : [];
 
   return {
+    labels: { celebrations: "The Celebrations", rsvp: "R.S.V.P.", scan: "Scan to RSVP", compliments: "With best compliments from", dress: "Dress" },
+    cover: { title: "The Wedding of", first: front.first, joiner: "&", second: front.second, date: front.date, place: front.place, monogram: front.monogram },
     front,
     back: {
       events: separate ? [] : events,

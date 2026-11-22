@@ -75,6 +75,8 @@ export default async function PrintCards({
           wordingHref={`/couple/site?${admin ? `wedding=${weddingId}&` : ""}family=${family}#wording`}
           hasDeadline={!!look.rsvpDeadline}
           savedConfig={look.printConfig ?? null}
+          wordsHref={`/couple/${family}/print/words?${admin ? `wedding=${weddingId}` : ""}`}
+          editedCounts={Object.fromEntries(Object.entries(look.printText ?? {}).map(([l, v]) => [l, Object.keys(v ?? {}).length]))}
           partnerConfig={seesSide(staff.access, otherSide(family)) ? looks[otherSide(family)].printConfig ?? null : null}
           events={evs.filter((e) => eventForSide(e.side, family)).map((e) => ({ id: e.id, label: eventLabel(e, sn), side: e.side, isPublished: e.isPublished }))}
         />

@@ -10,4 +10,5 @@ export async function ensureColumns() {
   await db.execute(sql`ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "duration_minutes" integer DEFAULT 180 NOT NULL`);
   await db.execute(sql`ALTER TABLE "families" ADD COLUMN IF NOT EXISTS "stay_sent" jsonb`);
   await db.execute(sql`ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "time_zone" text DEFAULT 'Asia/Kolkata' NOT NULL`);
+  await db.execute(sql`ALTER TABLE "wedding_sides" ADD COLUMN IF NOT EXISTS "print_text" jsonb`);
 }

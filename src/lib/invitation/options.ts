@@ -117,6 +117,10 @@ export const invitationSchema = z.object({
   photo: z.string().max(MAX_PHOTO_CHARS).regex(/^data:image\/(jpeg|png);base64,[A-Za-z0-9+/=]+$/).optional(),
   photoPlace: z.enum(["front", "back"]).default("front"),
   photoShape: z.enum(["arch", "circle"]).default("arch"),
+  /** the cards' language: English, or Gujarati / Hindi (words from the Card wording page) */
+  lang: z.enum(["en", "gu", "hi"]).default("en"),
+  /** a cover page before the invitation, in the same look */
+  cover: z.boolean().default(false),
 }).refine((o) => o.size !== "custom" || (o.customWidthMm !== undefined && o.customHeightMm !== undefined), {
   message: "a custom size needs a width and a height",
 });

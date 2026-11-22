@@ -108,6 +108,8 @@ export const weddingSides = pgTable("wedding_sides", {
   shareKey: text("share_key"),
   /** the print page's saved choices (size, design…), without the photo */
   printConfig: jsonb("print_config").$type<Record<string, unknown>>(),
+  /** the printed cards' words in Gujarati / Hindi, as the family edited them: lang → key → text (print only) */
+  printText: jsonb("print_text").$type<Record<string, Record<string, string>>>(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [primaryKey({ columns: [t.weddingId, t.side] })]);
 
