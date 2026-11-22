@@ -59,8 +59,10 @@ export const invitationSchema = z.object({
   customHeightMm: z.number().min(CUSTOM_MIN_MM).max(CUSTOM_MAX_MM).optional(),
   orientation: z.enum(["portrait", "landscape"]).default("portrait"),
   /** "together": invitation on the front, all events on the back.
-      "separate": invitation card plus one card per event (inserts). */
-  eventLayout: z.enum(["together", "separate"]).default("together"),
+      "separate": invitation card plus one card per event (inserts).
+      "folded": one sheet folded in half — outside, the cover ("To … From …") and the crest;
+      inside, the invitation on the left and the events on the right. */
+  eventLayout: z.enum(["together", "separate", "folded"]).default("together"),
   /** the events to print; left out, the version's own events on the site */
   eventIds: z.array(z.string().uuid()).max(30).optional(),
   /** "printer": exact size with 3 mm bleed. "home": cards on A4 sheets to cut out. */

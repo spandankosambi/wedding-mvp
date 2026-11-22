@@ -85,6 +85,25 @@ describe("cards in Gujarati and Hindi", () => {
     }
   }, 120_000);
 
+  it("prints a folded card: two open sheets, each two panels wide", async () => {
+    const sizes = (b: Buffer) => [...b.toString("latin1").matchAll(/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/g)].map((m) => [Math.round(+m[1]), Math.round(+m[2])]);
+    for (const lang of ["en", "gu"] as const) {
+      for (const output of ["printer", "home"] as const) {
+        const o = { ...opts(lang), envelope: "none" as const, eventLayout: "folded" as const, output };
+        const { inv, fields } = localize(w, evs, o, "https://x.test", lang);
+        if (lang === "gu") expect(inv.envelope.from).toBe("નિમંત્રક:");
+        else expect(inv.envelope.fromName).toContain("Kosambi");
+        if (lang === "gu") expect(fields.some((f) => f.key === "envelope.from")).toBe(true);
+        const pdf = await renderInvitationPdf(inv, o, "raj-mahal");
+        const pages = sizes(pdf);
+        expect(pages.length).toBe(2);
+        // 5 × 7 in panels → a 10 × 7 in sheet plus 3 mm bleed; at home, on landscape A4
+        expect(pages[0]).toEqual(output === "printer" ? [737, 522] : [842, 595]);
+        if (process.env.CARD_OUT) fs.writeFileSync(`${process.env.CARD_OUT}/folded-${lang}-${output}.pdf`, pdf);
+      }
+    }
+  }, 120_000);
+
   it("sizes the envelope to the card", () => {
     expect(envelopeFor({ size: "5x7", orientation: "portrait" }).mm).toEqual([184, 133]);
     expect(envelopeFor({ size: "a5", orientation: "landscape" }).name).toMatch(/^C5/);

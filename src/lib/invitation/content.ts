@@ -70,6 +70,8 @@ export type Labels = { celebrations: string; rsvp: string; scan: string; complim
 export type EnvelopeWords = {
   title: string; first: string; joiner: string; second: string; date: string;
   to: string; prefix: string; family: string; seal: string;
+  /** the folded card's cover: "From:", the hosts and their city */
+  from: string; fromName: string; fromPlace: string | null;
 };
 
 export type Invitation = {
@@ -164,6 +166,7 @@ export function buildInvitation(w: CardWedding, all: CardEvent[], o: InvitationO
     envelope: {
       title: "Wedding Invitation", first: front.first, joiner: "&", second: front.second, date: front.date,
       to: "To,", prefix: "Shri / Smt.", family: "& Family", seal: o.monogramText || defaultMonogram(bride, groom, o.version),
+      from: "From:", fromName: hosts, fromPlace: w.city,
     },
     front,
     back: {

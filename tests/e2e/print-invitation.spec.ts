@@ -182,6 +182,14 @@ test("setup and design — with the live preview on every page — then download
   await page.getByRole("button", { name: "2 · Design" }).click();
   await expect(page.getByTestId("envelope-note")).toContainText("A7");
   await expect(page.getByTestId("envelope-note")).toContainText("A3");
+
+  // a folded card: one sheet, both sides, opening to twice the card's width
+  await page.getByRole("button", { name: "1 · Setup" }).click();
+  await page.getByRole("radio", { name: /^A folded card/ }).click();
+  await expect(page.getByTestId("fold-note")).toContainText("flip on short edge");
+  await expect(page.getByTestId("print-summary")).toContainText("folds to 127 × 178 mm, opens to 254 × 178 mm");
+  // the two sides of the sheet, then the cut-and-fold envelope picked above
+  await expect(page.getByTestId("pdf-preview")).toHaveAttribute("data-pages", "3", { timeout: 30_000 });
 });
 
 test("wording typed in the print dialog before is offered to move to the site", async ({ page }) => {

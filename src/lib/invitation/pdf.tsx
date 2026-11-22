@@ -78,7 +78,9 @@ type Sheet = { page: [number, number]; x: number; y: number; bleed: number; mark
 
 /** Where the card sits on the PDF page, all in mm. */
 export function sheetFor(o: InvitationOptions): Sheet & { trim: [number, number] } {
-  const trim = trimSize(o);
+  const panel = trimSize(o);
+  // a folded card prints open: two panels side by side
+  const trim: [number, number] = o.eventLayout === "folded" ? [panel[0] * 2, panel[1]] : panel;
   const [w, h] = trim;
   if (o.output === "home") {
     const fits = (pw: number, ph: number) => w + 2 * (HOME_BLEED_MM + SLUG_MM) <= pw && h + 2 * (HOME_BLEED_MM + SLUG_MM) <= ph;
@@ -102,6 +104,8 @@ type Ctx = {
   grow: number;
   /** the cards' headings, in the card's language */
   labels: Invitation["labels"];
+  /** one half of a folded card's sheet: the Card draws its face, not a page of its own */
+  panel?: boolean;
 };
 const ink = (p: Palette, k?: Ink) => (k ? p[k === "hair" ? "hair" : k] : undefined);
 
@@ -180,12 +184,12 @@ function layout(c: Ctx, withToran: boolean) {
 
 /** One card: background to the bleed, frame and ornaments, content centred inside. */
 function Card({ c, children, toran = c.o.toran }: { c: Ctx; children: React.ReactNode; toran?: boolean }) {
+  const panel = !!c.panel;
   const { sheet, trim, p, o, theme, s } = c;
   const L = layout(c, toran);
   const cornerW = Math.min(pt(13), pt(Math.min(trim[0], trim[1]) * 0.1)) * Math.max(0.8, Math.min(1.2, s));
   const ci = L.inside + pt(1);
-  return (
-    <Page size={[pt(sheet.page[0]), pt(sheet.page[1])]} style={{ backgroundColor: sheet.marks ? "#ffffff" : p.bg }}>
+  const face = (
       <View style={{ position: "absolute", left: pt(sheet.x), top: pt(sheet.y), width: L.bleedW, height: L.bleedH, backgroundColor: p.bg }}>
         {/* a faint pattern behind everything, inside the frame */}
         {o.pattern !== "none" && (
@@ -224,6 +228,11 @@ function Card({ c, children, toran = c.o.toran }: { c: Ctx; children: React.Reac
           {children}
         </View>
       </View>
+  );
+  if (panel) return face;
+  return (
+    <Page size={[pt(sheet.page[0]), pt(sheet.page[1])]} style={{ backgroundColor: sheet.marks ? "#ffffff" : p.bg }}>
+      {face}
       {sheet.marks && <CropMarks sheet={sheet} trim={trim} />}
     </Page>
   );
@@ -479,6 +488,104 @@ function EnvelopePages({ c, inv }: { c: Ctx; inv: Invitation }) {
   );
 }
 
+/* ── the folded card ──────────────────────────────────────────── */
+
+/**
+ * The folded card's cover (panel 1): the couple and the date, "To, Shri /
+ * Smt. ____ & Family" with lines to write on, and "From:" the hosts and city.
+ */
+function FoldCover({ c: base, inv }: { c: Ctx; inv: Invitation }) {
+  const e = inv.envelope;
+  const o = base.o;
+  const top = topMotif(base.theme), div = dividerMotif(base.theme);
+  const names = `${e.first} ${e.joiner} ${e.second}`;
+  const nameBase = o.nameFont === "script" ? 30 : 24;
+  const nameFs = nameBase * Math.min(1, 24 / Math.max(names.length, 1));
+  const need = (70 * top.h) / top.w + 8 + 12 + nameFs * 1.3 + 22 + 12 + 34 + 18 + 15 + 15 + 15 + 30 + 14 + 13 + (e.fromPlace ? 13 : 0);
+  const k = Math.max(0.55, Math.min(base.grow, contentHeight(base, o.toran) / (need * base.s)));
+  const c = { ...base, s: base.s * k };
+  const rule = { borderBottomWidth: 0.6, borderBottomColor: c.p.soft, height: 15 * c.s };
+  return (
+    <Card c={base}>
+      <Draw m={top} width={70 * c.s} p={c.p} style={{ marginBottom: 8 * c.s }} />
+      <Kicker c={c} size={8}>{e.title}</Kicker>
+      <Tx style={o.nameFont === "script"
+        ? { fontFamily: "GreatVibes", fontWeight: 400, fontSize: nameFs * c.s, color: c.p.accent, lineHeight: 1.25, marginTop: 3 * c.s }
+        : { fontWeight: 700, fontSize: nameFs * c.s, lineHeight: 1.15, marginTop: 4 * c.s }}>{names}</Tx>
+      <Draw m={div} width={46 * c.s} p={c.p} style={{ marginVertical: 6 * c.s }} />
+      <Kicker c={c} size={7}>{e.date}</Kicker>
+      <View style={{ width: "86%", marginTop: 26 * c.s, alignItems: "stretch", textAlign: "left" }}>
+        <Tx style={{ fontStyle: "italic", fontSize: 11 * c.s, color: c.p.accent, marginBottom: 2 * c.s }}>{e.to}</Tx>
+        <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
+          <Tx style={{ fontSize: 10.5 * c.s, marginRight: 4 * c.s, marginBottom: 2 * c.s }}>{e.prefix}</Tx>
+          <View style={{ ...rule, flexGrow: 1 }} />
+        </View>
+        <View style={{ ...rule, marginTop: 5 * c.s }} />
+        <View style={{ flexDirection: "row", alignItems: "flex-end", marginTop: 5 * c.s }}>
+          <View style={{ ...rule, flexGrow: 1 }} />
+          <Tx style={{ fontSize: 10.5 * c.s, marginLeft: 4 * c.s, marginBottom: 2 * c.s }}>{e.family}</Tx>
+        </View>
+      </View>
+      <View style={{ width: "86%", marginTop: 24 * c.s, alignItems: "flex-end", textAlign: "right" }}>
+        <Tx style={{ fontStyle: "italic", fontSize: 9.5 * c.s, color: c.p.accent }}>{e.from}</Tx>
+        <Tx style={{ fontWeight: 600, fontSize: 10 * c.s, marginTop: 1.5 * c.s }}>{e.fromName}</Tx>
+        {e.fromPlace ? <Tx style={{ fontSize: 9.5 * c.s, color: c.p.soft }}>{e.fromPlace}</Tx> : null}
+      </View>
+    </Card>
+  );
+}
+
+/** The folded card's back (panel 4): the monogram crest, quiet. */
+function FoldBack({ c, inv }: { c: Ctx; inv: Invitation }) {
+  const size = Math.min(contentWidth(c) * 0.5, contentHeight(c, false) * 0.4);
+  const div = dividerMotif(c.theme);
+  return (
+    <Card c={c} toran={false}>
+      <Crest c={c} text={inv.envelope.seal} size={size} />
+      <Draw m={div} width={40 * c.s} p={c.p} style={{ marginTop: 6 * c.s }} />
+    </Card>
+  );
+}
+
+/** Crop marks for the open sheet, and short dashes above and below the fold. */
+function FoldMarks({ sheet }: { sheet: Sheet & { trim: [number, number] } }) {
+  const x = sheet.x + sheet.bleed + sheet.trim[0] / 2;
+  const top = sheet.y + sheet.bleed, bottom = top + sheet.trim[1];
+  const gap = sheet.bleed + 1, len = 6;
+  return (
+    <Svg style={{ position: "absolute", left: 0, top: 0 }} width={pt(sheet.page[0])} height={pt(sheet.page[1])}>
+      <SvgLine x1={pt(x)} y1={pt(top - gap - len)} x2={pt(x)} y2={pt(top - gap)} strokeWidth={0.3} stroke="#000000" strokeDasharray="1.5,1.2" />
+      <SvgLine x1={pt(x)} y1={pt(bottom + gap)} x2={pt(x)} y2={pt(bottom + gap + len)} strokeWidth={0.3} stroke="#000000" strokeDasharray="1.5,1.2" />
+    </Svg>
+  );
+}
+
+/**
+ * One sheet, printed both sides and folded in half. Outside: the back
+ * (crest) on the left, the cover on the right. Inside: the invitation on the
+ * left, the celebrations and details on the right. Each panel is the card size.
+ */
+function FoldedPages({ c, inv, qr }: { c: Ctx; inv: Invitation; qr: string | null }) {
+  const spread = sheetFor(c.o);
+  const w = c.trim[0];
+  const left = { ...c, sheet: spread, panel: true };
+  const right = { ...c, sheet: { ...spread, x: spread.x + w }, panel: true };
+  const page = (a: React.ReactNode, b: React.ReactNode) => (
+    <Page size={[pt(spread.page[0]), pt(spread.page[1])]} style={{ backgroundColor: spread.marks ? "#ffffff" : c.p.bg }}>
+      {a}
+      {b}
+      {spread.marks && <CropMarks sheet={spread} trim={spread.trim} />}
+      {spread.marks && <FoldMarks sheet={spread} />}
+    </Page>
+  );
+  return (
+    <>
+      {page(<FoldBack c={left} inv={inv} />, <FoldCover c={right} inv={inv} />)}
+      {page(<Front c={left} inv={inv} />, <Back c={right} inv={inv} qr={qr} always />)}
+    </>
+  );
+}
+
 /* ── back and event cards ─────────────────────────────────────── */
 
 function EventBlock({ c, e, width }: { c: Ctx; e: EventCard; width: string }) {
@@ -569,12 +676,12 @@ function DetailsBlock({ c, d, qr }: { c: Ctx; d: Details; qr: string | null }) {
   );
 }
 
-function Back({ c, inv, qr }: { c: Ctx; inv: Invitation; qr: string | null }) {
+function Back({ c, inv, qr, always = false }: { c: Ctx; inv: Invitation; qr: string | null; always?: boolean }) {
   const evs = inv.back.events;
   const d = inv.back.details;
   const photo = c.o.photo && c.o.photoPlace === "back" ? c.o.photo : null;
   const hasDetails = d.rsvp.length || d.replyBy || d.compliments.length || d.note || qr;
-  if (!evs.length && !hasDetails && !photo) return null;
+  if (!evs.length && !hasDetails && !photo) return always ? <Card c={c} toran={false}>{null}</Card> : null;
   // shrink the type so a long programme still fits the back of the card
   const ratio = c.trim[0] / c.trim[1];
   const cols = (ratio > 1.15 && evs.length > 2) || (ratio > 0.95 && evs.length > 3) ? 2 : 1;
@@ -632,7 +739,7 @@ function Insert({ c: base, card }: { c: Ctx; card: InsertCard }) {
 export async function renderInvitationPdf(inv: Invitation, o: InvitationOptions, theme: Theme): Promise<Buffer> {
   registerFonts();
   const sheet = sheetFor(o);
-  const trim = sheet.trim;
+  const trim = trimSize(o); // one panel of a folded card
   const c: Ctx = {
     p: paletteFor(theme, o.colours), s: Math.min(trim[0], trim[1]) / 127, trim, sheet, theme, o, script: o.nameFont === "script",
     arch: o.frame === "arch" && trim[1] > trim[0],
@@ -644,8 +751,12 @@ export async function renderInvitationPdf(inv: Invitation, o: InvitationOptions,
     : null;
   const doc = (
     <Document title="Wedding invitation" creator="One Tap Invites" producer="One Tap Invites">
-      <Front c={c} inv={inv} />
-      <Back c={c} inv={inv} qr={qr} />
+      {o.eventLayout === "folded" ? <FoldedPages c={c} inv={inv} qr={qr} /> : (
+        <>
+          <Front c={c} inv={inv} />
+          <Back c={c} inv={inv} qr={qr} />
+        </>
+      )}
       {inv.inserts.map((card) => <Insert key={card.event.id} c={c} card={card} />)}
       {o.envelope !== "none" && <EnvelopePages c={c} inv={inv} />}
     </Document>

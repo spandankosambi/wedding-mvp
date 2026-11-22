@@ -355,7 +355,8 @@ export function PrintInvitation(props: Props) {
     || (prints("closingLine") && !!props.wording.closingLine) || (form.replyBy && props.hasDeadline);
   const separate = form.eventLayout === "separate";
   const backPhoto = !!form.photo && form.photoPlace === "back";
-  const pages = 1 + ((!separate && chosen.length) || details || backPhoto ? 1 : 0) + (separate ? chosen.length : 0);
+  const folded = form.eventLayout === "folded";
+  const pages = folded ? 2 : 1 + ((!separate && chosen.length) || details || backPhoto ? 1 : 0) + (separate ? chosen.length : 0);
   const [tw, th] = customOk ? trimSize(options) : [0, 0];
   const palette = paletteFor(props.theme, form.colours);
   const portrait = customOk && isPortrait(options);
@@ -441,7 +442,9 @@ export function PrintInvitation(props: Props) {
   }
 
   const summary = customOk
-    ? `${pages} ${pages === 1 ? "page" : "pages"} · card ${tw} × ${th} mm${form.output === "printer" ? ` (${tw + 2 * BLEED_MM} × ${th + 2 * BLEED_MM} mm with bleed)` : " on A4"}${chosen.length === 0 ? " · no events selected" : ""}`
+    ? folded
+      ? `2 pages, printed on both sides of one sheet · folds to ${tw} × ${th} mm, opens to ${2 * tw} × ${th} mm${form.output === "printer" ? ` (${2 * tw + 2 * BLEED_MM} × ${th + 2 * BLEED_MM} mm with bleed)` : ""}${chosen.length === 0 ? " · no events selected" : ""}`
+      : `${pages} ${pages === 1 ? "page" : "pages"} · card ${tw} × ${th} mm${form.output === "printer" ? ` (${tw + 2 * BLEED_MM} × ${th + 2 * BLEED_MM} mm with bleed)` : " on A4"}${chosen.length === 0 ? " · no events selected" : ""}`
     : "Enter a custom size";
 
   const go = (to: Step) => { remember(); setStep(to); };
@@ -609,10 +612,17 @@ export function PrintInvitation(props: Props) {
 
                 <fieldset>
                   <legend className={label}>How should the events be printed?</legend>
-                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <div className="mt-2 grid gap-2 sm:grid-cols-3">
                     <Choice name="layout" value="together" current={form.eventLayout} onPick={(v) => set("eventLayout", v)} title="On the back of the card" hint="Invitation on the front, all events listed on the back" />
                     <Choice name="layout" value="separate" current={form.eventLayout} onPick={(v) => set("eventLayout", v)} title="A separate card for each event" hint="Invitation card plus one insert card per event" />
+                    <Choice name="layout" value="folded" current={form.eventLayout} onPick={(v) => set("eventLayout", v)} title="A folded card" hint="One sheet folded in half: a cover with To and From outside, the invitation and events inside" />
                   </div>
+                  {form.eventLayout === "folded" && (
+                    <p className="mt-2 text-xs text-neutral-500" data-testid="fold-note">
+                      Each half is the card size you picked, so the sheet opens to twice its width. Print both pages on one sheet, double-sided
+                      (choose &ldquo;flip on short edge&rdquo;), then fold down the middle: the crest is the back, the To and From cover the front.
+                    </p>
+                  )}
                   <p className="mt-3 text-xs text-neutral-500">Events on this card:</p>
                   <div className="mt-1.5 flex flex-wrap gap-2">
                     {props.events.map((e) => {
