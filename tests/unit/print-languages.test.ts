@@ -104,6 +104,14 @@ describe("cards in Gujarati and Hindi", () => {
     }
   }, 120_000);
 
+  it("a landscape card asked to fold prints flat instead", async () => {
+    const o = { ...opts("en"), envelope: "none" as const, eventLayout: "folded" as const, orientation: "landscape" as const };
+    const { inv } = localize(w, evs, o, "https://x.test", "en");
+    const pdf = await renderInvitationPdf(inv, o, "raj-mahal");
+    const boxes = [...pdf.toString("latin1").matchAll(/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/g)].map((m) => Math.round(+m[1]));
+    expect(boxes.every((wd) => wd < 600)).toBe(true); // 7 in wide plus bleed, not 14
+  }, 60_000);
+
   it("sizes the envelope to the card", () => {
     expect(envelopeFor({ size: "5x7", orientation: "portrait" }).mm).toEqual([184, 133]);
     expect(envelopeFor({ size: "a5", orientation: "landscape" }).name).toMatch(/^C5/);

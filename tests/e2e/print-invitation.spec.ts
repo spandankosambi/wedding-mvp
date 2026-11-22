@@ -153,7 +153,7 @@ test("setup and design — with the live preview on every page — then download
 
   // the arch is for portrait cards only
   await dialog.getByRole("button", { name: "1 · Setup" }).click();
-  await dialog.getByRole("radio", { name: "landscape" }).click();
+  await dialog.getByRole("radio", { name: "landscape", exact: true }).click();
   await dialog.getByRole("button", { name: "2 · Design" }).click();
   await expect(dialog.getByText("Arch frame", { exact: true })).toHaveCount(0);
   await expect(dialog.getByText(/The arch frame is for portrait cards/)).toBeVisible();
@@ -167,7 +167,7 @@ test("setup and design — with the live preview on every page — then download
   await page.getByLabel("Custom width").fill("6");
   await page.getByLabel("Custom height").fill("9");
   await expect(page.getByTestId("print-summary")).toContainText("card 228.6 × 152.4 mm"); // still landscape, as left
-  await page.getByRole("radio", { name: "portrait" }).click();
+  await page.getByRole("radio", { name: "portrait", exact: true }).click();
   await expect(page.getByTestId("print-summary")).toContainText("card 152.4 × 228.6 mm");
 
   // the envelope is sized to the card: bought ones, or a sheet to cut and fold
@@ -190,6 +190,17 @@ test("setup and design — with the live preview on every page — then download
   await expect(page.getByTestId("print-summary")).toContainText("folds to 127 × 178 mm, opens to 254 × 178 mm");
   // the two sides of the sheet, then the cut-and-fold envelope picked above
   await expect(page.getByTestId("pdf-preview")).toHaveAttribute("data-pages", "3", { timeout: 30_000 });
+
+  // landscape cards can't fold side by side: the choice turns off, with the reason
+  await page.getByRole("button", { name: "1 · Setup" }).click();
+  await page.getByRole("radiogroup", { name: "Orientation" }).getByRole("radio", { name: "landscape", exact: true }).click();
+  const fold = page.getByRole("radio", { name: /^A folded card/ });
+  await expect(fold).toBeDisabled();
+  await expect(fold).not.toBeChecked();
+  await expect(page.getByText(/Portrait cards only/)).toBeVisible();
+  await expect(page.getByRole("radio", { name: /^On the back of the card/ })).toBeChecked();
+  await page.getByRole("radiogroup", { name: "Orientation" }).getByRole("radio", { name: "portrait", exact: true }).click();
+  await expect(fold).toBeEnabled();
 });
 
 test("wording typed in the print dialog before is offered to move to the site", async ({ page }) => {

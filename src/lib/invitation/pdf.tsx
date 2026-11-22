@@ -738,6 +738,11 @@ function Insert({ c: base, card }: { c: Ctx; card: InsertCard }) {
 /** The print-ready PDF: front, back (events and/or details), then one card per event. */
 export async function renderInvitationPdf(inv: Invitation, o: InvitationOptions, theme: Theme): Promise<Buffer> {
   registerFonts();
+  // folded cards are portrait or square panels; a landscape one prints as a flat card
+  if (o.eventLayout === "folded") {
+    const [pw, ph] = trimSize(o);
+    if (pw > ph) o = { ...o, eventLayout: "together" };
+  }
   const sheet = sheetFor(o);
   const trim = trimSize(o); // one panel of a folded card
   const c: Ctx = {

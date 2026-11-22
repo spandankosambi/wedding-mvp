@@ -121,13 +121,13 @@ const STEPS = ["Setup", "Design"] as const;
 type Step = 1 | 2;
 const label = "text-xs font-medium uppercase tracking-wide text-neutral-500";
 
-function Choice<T extends string>({ name, value, current, onPick, title, hint }: {
-  name: string; value: T; current: T; onPick: (v: T) => void; title: string; hint?: string;
+function Choice<T extends string>({ name, value, current, onPick, title, hint, disabled = false }: {
+  name: string; value: T; current: T; onPick: (v: T) => void; title: string; hint?: string; disabled?: boolean;
 }) {
-  const on = value === current;
+  const on = value === current && !disabled;
   return (
-    <label className={`flex cursor-pointer gap-2 rounded-xl border p-3 text-sm transition-colors ${on ? "border-stone-800 bg-white shadow-sm" : "border-neutral-200 bg-white/60 hover:border-neutral-300"}`}>
-      <input type="radio" name={name} checked={on} onChange={() => onPick(value)} className="mt-0.5 h-4 w-4 shrink-0" />
+    <label className={`flex gap-2 rounded-xl border p-3 text-sm transition-colors ${disabled ? "cursor-not-allowed border-neutral-200 bg-neutral-50 opacity-60" : on ? "cursor-pointer border-stone-800 bg-white shadow-sm" : "cursor-pointer border-neutral-200 bg-white/60 hover:border-neutral-300"}`}>
+      <input type="radio" name={name} checked={on} disabled={disabled} onChange={() => onPick(value)} className="mt-0.5 h-4 w-4 shrink-0" />
       <span>
         <span className="font-medium text-neutral-800">{title}</span>
         {hint && <span className="mt-0.5 block text-xs text-neutral-500">{hint}</span>}
@@ -319,6 +319,11 @@ export function PrintInvitation(props: Props) {
   const customOk = form.size !== "custom" || [customW, customH].every((n) => n >= CUSTOM_MIN_MM && n <= CUSTOM_MAX_MM);
   const sizeInfo = CARD_SIZES.find((s) => s.id === form.size);
   const square = form.size === "custom" ? customW === customH : sizeInfo ? sizeInfo.mm[0] === sizeInfo.mm[1] : false;
+  // a folded card is portrait (or square) panels side by side: landscape ones open too long and narrow
+  const landscape = !square && form.orientation === "landscape";
+  useEffect(() => {
+    if (landscape && form.eventLayout === "folded") setForm((f) => ({ ...f, eventLayout: "together" }));
+  }, [landscape, form.eventLayout]);
 
   // only what the site's wording doesn't already say
   const toMove = moved && (Object.keys(moved) as (keyof CardWording)[]).filter((k) => moved[k] && !props.wording[k]);
@@ -615,7 +620,10 @@ export function PrintInvitation(props: Props) {
                   <div className="mt-2 grid gap-2 sm:grid-cols-3">
                     <Choice name="layout" value="together" current={form.eventLayout} onPick={(v) => set("eventLayout", v)} title="On the back of the card" hint="Invitation on the front, all events listed on the back" />
                     <Choice name="layout" value="separate" current={form.eventLayout} onPick={(v) => set("eventLayout", v)} title="A separate card for each event" hint="Invitation card plus one insert card per event" />
-                    <Choice name="layout" value="folded" current={form.eventLayout} onPick={(v) => set("eventLayout", v)} title="A folded card" hint="One sheet folded in half: a cover with To and From outside, the invitation and events inside" />
+                    <Choice name="layout" value="folded" current={form.eventLayout} onPick={(v) => set("eventLayout", v)} title="A folded card" disabled={landscape}
+                      hint={landscape
+                        ? "Portrait cards only. Folded side by side, a landscape card opens into a long, narrow strip that doesn't fit standard paper or envelopes. Switch the orientation to portrait to use it."
+                        : "One sheet folded in half: a cover with To and From outside, the invitation and events inside"} />
                   </div>
                   {form.eventLayout === "folded" && (
                     <p className="mt-2 text-xs text-neutral-500" data-testid="fold-note">
