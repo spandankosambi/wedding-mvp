@@ -187,3 +187,40 @@ export function buildInvitation(w: CardWedding, all: CardEvent[], o: InvitationO
 export function fileName(o: Pick<InvitationOptions, "version" | "size" | "eventLayout">): string {
   return `invitation-${o.version}-${o.size}${o.eventLayout === "separate" ? "-with-event-cards" : ""}.pdf`;
 }
+
+const SIZE_TAG: Record<string, string> = {
+  "5x7": "5x7in", a5: "A5", "5.5x8.5": "5.5x8.5in", "6x6": "6x6in", "5x5": "5x5in", dl: "DL", "4.25x5.5": "4.25x5.5in", a4: "A4",
+};
+const LANG_TAG = { en: "English", gu: "Gujarati", hi: "Hindi" } as const;
+/** "Spandan Kosambi" → "Spandan"; letters and digits only, so every system keeps the name. */
+const firstName = (name: string) =>
+  (name.trim().split(/\s+/)[0] ?? "").normalize("NFKD").replace(/[^A-Za-z0-9]/g, "");
+
+/**
+ * The downloads' names, the couple first (this side's own first), then what
+ * the file is and how it prints:
+ *   Spandan-Pooja_Groom-side_Invitation_A5_Folded_Gujarati_Print-shop.pdf
+ *   Spandan-Pooja_Groom-side_Envelope_C5_Print-on-A3.pdf
+ */
+export function downloadName(
+  part: "card" | "envelope",
+  o: Pick<InvitationOptions, "version" | "size" | "customWidthMm" | "customHeightMm" | "orientation" | "eventLayout" | "lang" | "output">,
+  names: { bride: string; groom: string },
+  envelope?: { name: string; paper: string },
+): string {
+  const [own, other] = o.version === "groom" ? [names.groom, names.bride] : [names.bride, names.groom];
+  const couple = [firstName(own), firstName(other)].filter(Boolean).join("-") || "Wedding";
+  const side = o.version === "groom" ? "Groom-side" : "Bride-side";
+  if (part === "envelope") {
+    const env = (envelope?.name.split("·")[0] ?? "").trim().replace(/\s*×\s*/g, "x").replace(/\s+/g, "") || "Envelope";
+    const paper = (envelope?.paper.split(" ")[0] ?? "").replace(/[^A-Za-z0-9]/g, "");
+    return [couple, side, "Envelope", env, paper ? `Print-on-${paper}` : ""].filter(Boolean).join("_") + ".pdf";
+  }
+  const size = o.size === "custom"
+    ? `${Math.round(o.customWidthMm ?? 127)}x${Math.round(o.customHeightMm ?? 178)}mm`
+    : SIZE_TAG[o.size] ?? o.size;
+  const turned = o.orientation === "landscape" && o.size !== "custom" ? "Landscape" : "";
+  const layout = o.eventLayout === "folded" ? "Folded" : o.eventLayout === "separate" ? "With-event-cards" : "";
+  return [couple, side, "Invitation", size, turned, layout, LANG_TAG[o.lang], o.output === "home" ? "Home-print" : "Print-shop"]
+    .filter(Boolean).join("_") + ".pdf";
+}

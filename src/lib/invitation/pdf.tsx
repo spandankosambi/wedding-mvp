@@ -7,7 +7,7 @@ import {
 import type { Style } from "@react-pdf/stylesheet";
 import type { Theme } from "@/themes/catalog";
 import type { Invitation, EventCard, InsertCard, Details, Line } from "./content";
-import { BLEED_MM, SAFE_MM, canFold, foldedSheet, panelSize, trimSize, type InvitationOptions } from "./options";
+import { SAFE_MM, canFold, panelSize, sheetFor, type InvitationOptions, type PrintSheet } from "./options";
 import { dieLine, envelopeFor, flatSheet } from "./envelope";
 import { backgroundPattern, borderBand, icon, symbol, isGlyph, SYMBOL_GLYPHS, type DrawnSymbol } from "./decor";
 import {
@@ -70,29 +70,7 @@ function registerFonts() {
 
 /* ── geometry ─────────────────────────────────────────────────── */
 const pt = (mm: number) => (mm * 72) / 25.4;
-const A4: [number, number] = [210, 297];
-const HOME_BLEED_MM = 2;
-const SLUG_MM = 9; // room outside the bleed for crop marks
-
-type Sheet = { page: [number, number]; x: number; y: number; bleed: number; marks: boolean };
-
-/** Where the card sits on the PDF page, all in mm. */
-export function sheetFor(o: InvitationOptions): Sheet & { trim: [number, number] } {
-  // a folded card prints open: the size picked, two halves side by side
-  const trim: [number, number] = o.eventLayout === "folded" ? foldedSheet(o) : trimSize(o);
-  const [w, h] = trim;
-  if (o.output === "home") {
-    const fits = (pw: number, ph: number) => w + 2 * (HOME_BLEED_MM + SLUG_MM) <= pw && h + 2 * (HOME_BLEED_MM + SLUG_MM) <= ph;
-    const page: [number, number] | null = fits(A4[0], A4[1]) ? A4 : fits(A4[1], A4[0]) ? [A4[1], A4[0]] : null;
-    if (page) {
-      return { trim, page, x: (page[0] - w) / 2 - HOME_BLEED_MM, y: (page[1] - h) / 2 - HOME_BLEED_MM, bleed: HOME_BLEED_MM, marks: true };
-    }
-    // as big as the sheet itself: print it as it is
-    return { trim, page: [w, h], x: 0, y: 0, bleed: 0, marks: false };
-  }
-  const slug = o.cropMarks ? SLUG_MM : 0;
-  return { trim, page: [w + 2 * (BLEED_MM + slug), h + 2 * (BLEED_MM + slug)], x: slug, y: slug, bleed: BLEED_MM, marks: o.cropMarks };
-}
+type Sheet = PrintSheet;
 
 /* ── drawing context ──────────────────────────────────────────── */
 type Ctx = {

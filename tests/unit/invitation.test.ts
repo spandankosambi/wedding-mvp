@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { invitationSchema, trimSize } from "@/lib/invitation/options";
-import { buildInvitation, eventsFor, fileName, type CardEvent } from "@/lib/invitation/content";
-import { renderInvitationPdf, sheetFor } from "@/lib/invitation/pdf";
+import { invitationSchema, sheetFor, trimSize } from "@/lib/invitation/options";
+import { buildInvitation, downloadName, eventsFor, fileName, type CardEvent } from "@/lib/invitation/content";
+import { renderInvitationPdf } from "@/lib/invitation/pdf";
 
 const o = (over: Record<string, unknown> = {}) => invitationSchema.parse(over);
 const d = (s: string) => new Date(s);
@@ -90,6 +90,13 @@ describe("wording", () => {
     expect(groom.back.details).toMatchObject({ rsvp: ["Rajesh +91 90000 00000"], compliments: ["Kosambi family"] });
     expect(buildInvitation(wedding, events, o({ qr: false, replyBy: false }), "u").back.details).toMatchObject({ qrUrl: null, replyBy: null });
     expect(fileName(o({ version: "groom", size: "a5", eventLayout: "separate" }))).toBe("invitation-groom-a5-with-event-cards.pdf");
+    const names = { bride: "Pooja Kumari", groom: "Spandan Kosambi" };
+    expect(downloadName("card", o({ version: "groom", size: "a5", eventLayout: "folded", lang: "gu" }), names))
+      .toBe("Spandan-Pooja_Groom-side_Invitation_A5_Folded_Gujarati_Print-shop.pdf");
+    expect(downloadName("card", o({ version: "bride", size: "custom", customWidthMm: 120, customHeightMm: 170, output: "home" }), names))
+      .toBe("Pooja-Spandan_Bride-side_Invitation_120x170mm_English_Home-print.pdf");
+    expect(downloadName("envelope", o({ version: "groom" }), names, { name: "C5 · 162 × 229 mm", paper: "A3 (297 × 420 mm)" }))
+      .toBe("Spandan-Pooja_Groom-side_Envelope_C5_Print-on-A3.pdf");
   });
   it("the arch frame is only for portrait cards", async () => {
     const { isPortrait } = await import("@/lib/invitation/options");

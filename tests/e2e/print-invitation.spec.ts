@@ -142,14 +142,23 @@ test("setup and design — with the live preview on every page — then download
     page.waitForEvent("download"),
     dialog.getByRole("button", { name: "Download PDF" }).click(),
   ]);
-  expect(download.suggestedFilename()).toBe("invitation-groom-a5-with-event-cards.pdf");
+  // named for the couple (this side's own first), the side, what it is and how it prints
+  expect(download.suggestedFilename()).toBe("Arjun-Ananya_Groom-side_Invitation_A5_With-event-cards_English_Print-shop.pdf");
+  // the press prints their card for five seconds, with the paper to print on
+  const press = page.getByTestId("print-press");
+  await expect(press).toBeVisible();
+  await expect(press.getByRole("img", { name: "Your card" })).toBeVisible();
+  if (shots) { await page.waitForTimeout(1500); await page.screenshot({ path: `${shots}/press-1.png` }); await page.waitForTimeout(2200); await page.screenshot({ path: `${shots}/press-2.png` }); }
+  await expect(page.getByTestId("press-paper")).toContainText("Invitation: print on 154 × 216 mm card stock, trimmed to 148 × 210 mm");
+  await expect(press).toBeHidden({ timeout: 7_000 });
+  await expect(page.getByTestId("paper-sizes")).toContainText("Invitation: 154 × 216 mm card stock, trimmed to 148 × 210 mm");
   const file = await download.path();
   const pdf = fs.readFileSync(file!).toString("latin1");
   expect(pdf.startsWith("%PDF")).toBe(true);
   expect(pdf.match(/\/Type \/Page\b/g)).toHaveLength(6);
   expect(pdf).toContain("Tiro"); // the site's Devanagari invocation is printed
   if (shots) fs.copyFileSync(file!, `${shots}/downloaded.pdf`);
-  await expect(dialog.getByRole("status").last()).toContainText("Downloaded invitation-groom-a5-with-event-cards.pdf");
+  await expect(dialog.getByRole("status").last()).toContainText("Downloaded Arjun-Ananya_Groom-side_Invitation_A5_With-event-cards_English_Print-shop.pdf");
 
   // the arch is for portrait cards only
   await dialog.getByRole("button", { name: "1 · Setup" }).click();
@@ -177,7 +186,7 @@ test("setup and design — with the live preview on every page — then download
   await page.getByRole("radio", { name: /^Cut-and-fold/ }).click();
   await expect(page.getByTestId("envelope-note")).toContainText("161 × 237 mm envelope");
   await expect(page.getByTestId("envelope-paper")).toHaveText("A3 (297 × 420 mm)");
-  await expect(page.getByTestId("envelope-summary")).toContainText("print on A3 (297 × 420 mm)");
+  await expect(page.getByTestId("envelope-summary")).toContainText("A3 (297 × 420 mm) card stock");
   await page.getByRole("button", { name: "1 · Setup" }).click();
   await page.getByRole("combobox", { name: "Card size" }).selectOption("5x7");
   await page.getByRole("button", { name: "2 · Design" }).click();
@@ -191,17 +200,21 @@ test("setup and design — with the live preview on every page — then download
   await expect(page.getByTestId("print-summary")).toContainText("opens to 178 × 127 mm, folds to 89 × 127 mm");
   // the two sides of the sheet, then the cut-and-fold envelope picked above — now small enough for A4
   await expect(page.getByTestId("pdf-preview")).toHaveAttribute("data-pages", "3", { timeout: 30_000 });
-  await expect(page.getByTestId("envelope-summary")).toContainText("print on A4 (210 × 297 mm)");
+  await expect(page.getByTestId("envelope-summary")).toContainText("A4 (210 × 297 mm) card stock");
 
-  // Download PDF: two files, the cards and the envelope, and a note for 5 seconds on the envelope's paper
+  // Download PDF: two files, the cards and the envelope; the press names both papers
   const files: string[] = [];
   page.on("download", (d) => files.push(d.suggestedFilename()));
   await page.getByRole("button", { name: "2 · Design" }).click();
   await page.getByRole("button", { name: "Download PDF" }).click();
-  const toast = page.getByTestId("envelope-toast");
-  await expect(toast).toHaveText("Envelope PDF downloaded. Print it on A4 (210 × 297 mm) card stock.", { timeout: 60_000 });
-  await expect.poll(() => files.sort(), { timeout: 10_000 }).toEqual(["envelope-groom-5x7.pdf", "invitation-groom-5x7.pdf"]);
-  await expect(toast).toBeHidden({ timeout: 7_000 });
+  const paper = page.getByTestId("press-paper");
+  await expect(paper).toContainText("Invitation: print on 184 × 133 mm card stock, trimmed to 178 × 127 mm", { timeout: 60_000 });
+  await expect(paper).toContainText("Envelope: print on A4 (210 × 297 mm) card stock");
+  await expect.poll(() => files.sort(), { timeout: 10_000 }).toEqual([
+    "Arjun-Ananya_Groom-side_Envelope_97x135mm_Print-on-A4.pdf",
+    "Arjun-Ananya_Groom-side_Invitation_5x7in_Folded_English_Print-shop.pdf",
+  ]);
+  await expect(page.getByTestId("print-press")).toBeHidden({ timeout: 7_000 });
 
   // landscape cards can't fold side by side: the choice turns off, with the reason
   await page.getByRole("button", { name: "1 · Setup" }).click();

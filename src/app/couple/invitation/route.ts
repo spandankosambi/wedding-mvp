@@ -6,7 +6,8 @@ import { allows } from "@/lib/access";
 import { sharePath } from "@/lib/share";
 import { appOrigin } from "@/lib/origin";
 import { invitationSchema } from "@/lib/invitation/options";
-import { fileName } from "@/lib/invitation/content";
+import { downloadName } from "@/lib/invitation/content";
+import { envelopeFor, flatSheet } from "@/lib/invitation/envelope";
 import { localizeCards } from "@/lib/invitation/machine";
 import { renderInvitationPdf } from "@/lib/invitation/pdf";
 import { getLook, withLook, wordingOf } from "@/lib/looks";
@@ -62,10 +63,15 @@ export async function POST(req: Request) {
   const part = body.part === "card" || body.part === "envelope" ? body.part : "all";
   if (part === "envelope" && o.envelope === "none") return Response.json({ error: "no envelope" }, { status: 400 });
   const pdf = await renderInvitationPdf(inv, o, look.theme, part);
+  const names = { bride: wedding.brideName, groom: wedding.groomName };
+  const env = envelopeFor(o);
+  const name = part === "envelope"
+    ? downloadName("envelope", o, names, { name: env.name, paper: flatSheet(env.mm).label })
+    : downloadName("card", o, names);
   return new Response(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${part === "envelope" ? `envelope-${o.version}-${o.size}.pdf` : fileName(o)}"`,
+      "Content-Disposition": `attachment; filename="${name}"`,
       "Cache-Control": "no-store",
     },
   });

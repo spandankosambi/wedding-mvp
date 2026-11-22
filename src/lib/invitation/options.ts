@@ -171,3 +171,42 @@ export function isPortrait(o: Pick<InvitationOptions, "size" | "customWidthMm" |
   const [w, h] = trimSize(o);
   return h > w;
 }
+
+/* ── the paper each PDF prints on ─────────────────────────────── */
+
+const A4_MM: [number, number] = [210, 297];
+const HOME_BLEED_MM = 2;
+const SLUG_MM = 9; // room outside the bleed for crop marks
+
+export type PrintSheet = { page: [number, number]; x: number; y: number; bleed: number; marks: boolean };
+
+/** Where the card sits on the PDF page, all in mm. */
+export function sheetFor(o: Pick<InvitationOptions, "size" | "customWidthMm" | "customHeightMm" | "orientation" | "eventLayout" | "output" | "cropMarks">): PrintSheet & { trim: [number, number] } {
+  // a folded card prints open: the size picked, two halves side by side
+  const trim: [number, number] = o.eventLayout === "folded" ? foldedSheet(o) : trimSize(o);
+  const [w, h] = trim;
+  if (o.output === "home") {
+    const fits = (pw: number, ph: number) => w + 2 * (HOME_BLEED_MM + SLUG_MM) <= pw && h + 2 * (HOME_BLEED_MM + SLUG_MM) <= ph;
+    const page: [number, number] | null = fits(A4_MM[0], A4_MM[1]) ? A4_MM : fits(A4_MM[1], A4_MM[0]) ? [A4_MM[1], A4_MM[0]] : null;
+    if (page) {
+      return { trim, page, x: (page[0] - w) / 2 - HOME_BLEED_MM, y: (page[1] - h) / 2 - HOME_BLEED_MM, bleed: HOME_BLEED_MM, marks: true };
+    }
+    // as big as the sheet itself: print it as it is
+    return { trim, page: [w, h], x: 0, y: 0, bleed: 0, marks: false };
+  }
+  const slug = o.cropMarks ? SLUG_MM : 0;
+  return { trim, page: [w + 2 * (BLEED_MM + slug), h + 2 * (BLEED_MM + slug)], x: slug, y: slug, bleed: BLEED_MM, marks: o.cropMarks };
+}
+
+const mmText = (n: number) => `${Math.round(n * 10) / 10}`;
+
+/** What the invitation PDF prints on, in words: "A4 (210 × 297 mm)" at home, the sheet and its trim at a print shop. */
+export function cardPaper(o: Parameters<typeof sheetFor>[0]): string {
+  const s = sheetFor(o);
+  const [pw, ph] = s.page;
+  const isA4 = Math.min(pw, ph) === 210 && Math.max(pw, ph) === 297;
+  if (o.output === "home") {
+    return isA4 ? `A4 (210 × 297 mm), then cut along the marks` : `${mmText(pw)} × ${mmText(ph)} mm`;
+  }
+  return `${mmText(pw)} × ${mmText(ph)} mm card stock, trimmed to ${mmText(s.trim[0])} × ${mmText(s.trim[1])} mm`;
+}

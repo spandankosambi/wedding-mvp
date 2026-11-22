@@ -2,14 +2,14 @@
 
 import { sideNamesOf } from "@/lib/side-names";
 import { CARD_LANGS, langLabel, langNative, type CardLang, type OtherLang } from "@/lib/invitation/langs";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adoptCardWordingAction, savePrintConfigAction } from "./actions";
 import { eventForSide, type Side } from "@/lib/sides";
 import type { Theme } from "@/themes/catalog";
 import {
   BLEED_MM, CARD_SIZES, CUSTOM_MAX_MM, CUSTOM_MIN_MM, MAX_PHOTO_CHARS, MM_PER_INCH, MONOGRAM_STYLES,
-  defaultMonogram, foldedSheet, isPortrait, panelSize, trimSize, type InvitationOptions, type MonogramStyle, type SizeId,
+  cardPaper, defaultMonogram, foldedSheet, isPortrait, panelSize, trimSize, type InvitationOptions, type MonogramStyle, type SizeId,
   OMITTABLE, type Omittable,
 } from "@/lib/invitation/options";
 import { envelopeFor, flatSheet } from "@/lib/invitation/envelope";
@@ -257,6 +257,55 @@ function PdfPages({ pdf }: { pdf: Blob | null }) {
   return <div ref={holder} data-testid="pdf-preview" data-pages={pages} className="space-y-0" />;
 }
 
+/* ── Download PDF: the printing press ─────────────────────────── */
+
+/**
+ * For five seconds after Download PDF, the page blurs and a little press
+ * prints the card the family designed (the preview's first page), then says
+ * what paper each file goes on. A click closes it sooner.
+ */
+function PrintPress({ image, card, envelope, onClose }: { image: string | null; card: string; envelope: string | null; onClose: () => void }) {
+  useEffect(() => {
+    const id = setTimeout(onClose, 5000);
+    return () => clearTimeout(id);
+  }, [onClose]);
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Your PDFs are downloading" data-testid="print-press" onClick={onClose}
+      className="press-overlay fixed inset-0 z-[60] flex items-center justify-center bg-stone-950/45 p-4 backdrop-blur-md">
+      <div className="w-full max-w-sm text-center">
+        {/* the press: housing, rollers, and the sheet coming out */}
+        <div className="relative mx-auto w-64">
+          <div className="relative z-10 rounded-t-2xl bg-gradient-to-b from-stone-700 to-stone-900 px-4 pb-3 pt-3 shadow-xl">
+            <p className="font-serif text-[10px] uppercase tracking-[0.35em] text-amber-200/90">One Tap Press</p>
+            <div className="mt-2 flex justify-center gap-1">
+              <span className="press-roller block h-5 w-24 rounded-full shadow-inner" />
+              <span className="press-roller block h-5 w-24 rounded-full shadow-inner" />
+            </div>
+          </div>
+          <div className="relative z-10 mx-auto h-2 w-56 rounded-b bg-stone-950" />
+          <div className="relative mx-auto -mt-0.5 w-48 overflow-hidden">
+            <div className="press-sheet relative">
+              {image
+                ? <img src={image} alt="Your card" className="block w-full rounded-b-sm shadow-2xl ring-1 ring-black/10" />
+                : <div className="aspect-[5/7] w-full rounded-b-sm bg-amber-50 shadow-2xl" />}
+              <span className="press-ink pointer-events-none absolute inset-x-0 top-0 h-full bg-gradient-to-b from-white/70 via-white/10 to-transparent" />
+            </div>
+          </div>
+        </div>
+        {/* then: what to print it on */}
+        <div className="press-done mx-auto mt-5 rounded-2xl bg-white px-5 py-4 text-left shadow-2xl ring-1 ring-black/5" data-testid="press-paper">
+          <p className="font-medium text-stone-900">Your PDFs are downloading</p>
+          <dl className="mt-2 space-y-1.5 text-sm">
+            <div><dt className="inline font-medium text-stone-700">Invitation: </dt><dd className="inline text-stone-600">print on {card}</dd></div>
+            {envelope && <div><dt className="inline font-medium text-stone-700">Envelope: </dt><dd className="inline text-stone-600">print on {envelope} card stock</dd></div>}
+          </dl>
+          <p className="mt-2 text-xs text-stone-400">These sizes stay next to Download PDF.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** The print page: the questions, the design, a live preview, the PDF. */
 export function PrintInvitation(props: Props) {
   const names = sideNamesOf(props); // "Pooja", "Spandan"
@@ -266,12 +315,8 @@ export function PrintInvitation(props: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-  useEffect(() => {
-    if (!toast) return;
-    const id = setTimeout(() => setToast(null), 5000);
-    return () => clearTimeout(id);
-  }, [toast]);
+  const [press, setPress] = useState<{ image: string | null } | null>(null);
+  const closePress = useCallback(() => setPress(null), []);
   const [preview, setPreview] = useState<{ key: string; blob: Blob; name: string } | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -432,6 +477,11 @@ export function PrintInvitation(props: Props) {
   async function download() {
     setBusy(true); setError(null); setDone(null);
     remember();
+    // the press prints the card they designed: the preview's first page
+    const first = document.querySelector<HTMLCanvasElement>('[data-testid="pdf-preview"] canvas');
+    let image: string | null = null;
+    try { image = first ? first.toDataURL("image/png") : null; } catch { /* drawn without it */ }
+    setPress({ image });
     try {
       const save = (made: { blob: Blob; name: string }) => {
         const url = URL.createObjectURL(made.blob);
@@ -449,9 +499,9 @@ export function PrintInvitation(props: Props) {
         save(card);
         setTimeout(() => save(env), 400); // a moment apart, so the browser keeps both
         setDone(`${card.name} and ${env.name}`);
-        setToast(`Envelope PDF downloaded. Print it on ${envelopePaper} card stock.`);
       }
     } catch (e) {
+      setPress(null);
       setError(e instanceof Error && e.message !== "failed" ? `Couldn't make the PDF: ${e.message}` : "Couldn't make the PDF. Please try again.");
     } finally {
       setBusy(false);
@@ -469,6 +519,7 @@ export function PrintInvitation(props: Props) {
   }
 
   // the paper the cut-and-fold envelope prints on, e.g. "A3 (297 × 420 mm)"
+  const invitationPaper = customOk ? cardPaper(options) : "";
   const envelopePaper = customOk ? flatSheet(envelopeFor({ size: form.size, orientation: form.orientation, customWidthMm: customW, customHeightMm: customH, eventLayout: form.eventLayout }).mm).label : "";
   const summary = customOk
     ? folded
@@ -899,10 +950,15 @@ export function PrintInvitation(props: Props) {
         </div>
 
         <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200 pt-5">
-          <p className="text-xs text-neutral-500" data-testid="print-summary">
-            {summary}
-            {customOk && form.envelope !== "none" && <> · <span data-testid="envelope-summary">envelope: a separate PDF, print on {envelopePaper}</span></>}
-          </p>
+          <div>
+            <p className="text-xs text-neutral-500" data-testid="print-summary">{summary}</p>
+            {customOk && (
+              <p className="mt-1.5 inline-block rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs text-stone-700 ring-1 ring-amber-200" data-testid="paper-sizes">
+                <b>Paper</b> · Invitation: {invitationPaper}
+                {form.envelope !== "none" && <> · <span data-testid="envelope-summary">Envelope (a separate PDF): {envelopePaper} card stock</span></>}
+              </p>
+            )}
+          </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={saveConfig} disabled={saving || !customOk} className="portal-button-secondary">{saving ? "Saving…" : "Save configuration"}</button>
             {step > 1 && <button type="button" onClick={() => go((step - 1) as Step)} className="portal-button-secondary">← Back</button>}
@@ -920,11 +976,8 @@ export function PrintInvitation(props: Props) {
         {savedNote && <p className="mt-3 text-right text-xs text-emerald-700" role="status">{savedNote}</p>}
         {done && <p className="mt-3 text-right text-xs text-emerald-700" role="status">Downloaded {done}. Change anything to make another version.</p>}
         {error && <p className="mt-3 text-right text-xs text-red-700" role="alert">{error}</p>}
-        {toast && (
-          <div role="status" data-testid="envelope-toast"
-            className="fixed bottom-6 left-1/2 z-50 max-w-sm -translate-x-1/2 rounded-xl bg-stone-900 px-4 py-3 text-sm text-white shadow-lg">
-            {toast}
-          </div>
+        {press && customOk && (
+          <PrintPress image={press.image} card={invitationPaper} envelope={form.envelope !== "none" ? envelopePaper : null} onClose={closePress} />
         )}
       </div>
     </section>
