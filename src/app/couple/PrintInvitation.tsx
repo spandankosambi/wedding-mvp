@@ -9,7 +9,7 @@ import { eventForSide, type Side } from "@/lib/sides";
 import type { Theme } from "@/themes/catalog";
 import {
   BLEED_MM, CARD_SIZES, CUSTOM_MAX_MM, CUSTOM_MIN_MM, MAX_PHOTO_CHARS, MM_PER_INCH, MONOGRAM_STYLES,
-  cardPaper, defaultMonogram, foldedSheet, isPortrait, panelSize, trimSize, type InvitationOptions, type MonogramStyle, type SizeId,
+  cardPrintLine, defaultMonogram, foldedSheet, isPortrait, paperName, panelSize, trimSize, type InvitationOptions, type MonogramStyle, type SizeId,
   OMITTABLE, type Omittable,
 } from "@/lib/invitation/options";
 import { envelopeFor, flatSheet } from "@/lib/invitation/envelope";
@@ -264,7 +264,7 @@ function PdfPages({ pdf }: { pdf: Blob | null }) {
  * prints the card the family designed (the preview's first page), then says
  * what paper each file goes on. A click closes it sooner.
  */
-function PrintPress({ image, card, envelope, onClose }: { image: string | null; card: string; envelope: string | null; onClose: () => void }) {
+function PrintPress({ image, steps, onClose }: { image: string | null; steps: string[]; onClose: () => void }) {
   useEffect(() => {
     const id = setTimeout(onClose, 20_000);
     return () => clearTimeout(id);
@@ -295,11 +295,10 @@ function PrintPress({ image, card, envelope, onClose }: { image: string | null; 
         {/* then: what to print it on */}
         <div className="press-done mx-auto mt-5 rounded-2xl bg-white px-5 py-4 text-left shadow-2xl ring-1 ring-black/5" data-testid="press-paper">
           <p className="font-medium text-stone-900">Your PDFs are downloading</p>
-          <dl className="mt-2 space-y-1.5 text-sm">
-            <div><dt className="inline font-medium text-stone-700">Invitation: </dt><dd className="inline text-stone-600">print on {card}</dd></div>
-            {envelope && <div><dt className="inline font-medium text-stone-700">Envelope: </dt><dd className="inline text-stone-600">print on {envelope} card stock</dd></div>}
-          </dl>
-          <p className="mt-2 text-xs text-stone-400">These sizes stay next to Download PDF. Click anywhere to close.</p>
+          <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-stone-700">
+            {steps.map((s) => <li key={s}>{s}</li>)}
+          </ul>
+          <p className="mt-2 text-xs text-stone-400">This stays next to Download PDF. Click anywhere to close.</p>
         </div>
       </div>
     </div>
@@ -416,7 +415,6 @@ export function PrintInvitation(props: Props) {
   const folded = form.eventLayout === "folded";
   const pages = folded ? 2 : 1 + ((!separate && chosen.length) || details || backPhoto ? 1 : 0) + (separate ? chosen.length : 0);
   const [tw, th] = customOk ? trimSize(options) : [0, 0];
-  const [fw, fh] = customOk ? panelSize({ ...options, eventLayout: "folded" }) : [0, 0];
   const [ow, oh] = customOk ? foldedSheet(options) : [0, 0];
   const palette = paletteFor(props.theme, form.colours);
   const portrait = customOk && isPortrait(options);
@@ -519,12 +517,21 @@ export function PrintInvitation(props: Props) {
   }
 
   // the paper the cut-and-fold envelope prints on, e.g. "A3 (297 × 420 mm)"
-  const invitationPaper = customOk ? cardPaper(options) : "";
-  const envelopePaper = customOk ? flatSheet(envelopeFor({ size: form.size, orientation: form.orientation, customWidthMm: customW, customHeightMm: customH, eventLayout: form.eventLayout }).mm).label : "";
+  // how to print, in plain words: the invitation, then the envelope
+  const hasBack = folded || !!((!separate && chosen.length) || details || backPhoto);
+  const envSheet = customOk ? flatSheet(envelopeFor({ size: form.size, orientation: form.orientation, customWidthMm: customW, customHeightMm: customH, eventLayout: form.eventLayout }).mm) : null;
+  const printSteps = customOk
+    ? [
+        cardPrintLine(options, hasBack, separate ? chosen.length : 0),
+        ...(form.envelope !== "none" && envSheet
+          ? [`Print the envelope on ${envSheet.name === "custom" ? `a ${envSheet.mm[0]} × ${envSheet.mm[1]} mm sheet of` : envSheet.name} paper`]
+          : []),
+      ]
+    : [];
   const summary = customOk
     ? folded
-      ? `2 pages, printed on both sides of one sheet · opens to ${ow} × ${oh} mm, folds to ${fw} × ${fh} mm${form.output === "printer" ? ` (sheet ${ow + 2 * BLEED_MM} × ${oh + 2 * BLEED_MM} mm with bleed)` : ""}${chosen.length === 0 ? " · no events selected" : ""}`
-      : `${pages} ${pages === 1 ? "page" : "pages"} · card ${tw} × ${th} mm${form.output === "printer" ? ` (${tw + 2 * BLEED_MM} × ${th + 2 * BLEED_MM} mm with bleed)` : " on A4"}${chosen.length === 0 ? " · no events selected" : ""}`
+      ? `Folded card · 2 pages · ${paperName([ow, oh])} folded in half${chosen.length === 0 ? " · no events selected" : ""}`
+      : `${pages} ${pages === 1 ? "page" : "pages"} · ${paperName([tw, th])} card${chosen.length === 0 ? " · no events selected" : ""}`
     : "Enter a custom size";
 
   const go = (to: Step) => { remember(); setStep(to); };
@@ -908,7 +915,7 @@ export function PrintInvitation(props: Props) {
                     const sheet = flatSheet(env.mm);
                     return (
                       <p className="mt-2 text-xs text-neutral-500" data-testid="envelope-note">
-                        Makes a <b>{env.name}</b> envelope. Print it on <b data-testid="envelope-paper">{sheet.label}</b> card stock
+                        Makes a <b>{env.name}</b> envelope. Print it on <b data-testid="envelope-paper">{sheet.name === "custom" ? `a ${sheet.mm[0]} × ${sheet.mm[1]} mm sheet of` : sheet.name}</b> paper
                         {sheet.name === "A4" ? " (any home printer)" : sheet.name === "A3" ? " (most print shops do A3)" : " (at a print shop)"}, cut along the solid line and fold along the dashes.
                         Your monogram seal sits on the flap. Download PDF gives you two files: the cards, and the envelope.
                       </p>
@@ -953,10 +960,9 @@ export function PrintInvitation(props: Props) {
           <div>
             <p className="text-xs text-neutral-500" data-testid="print-summary">{summary}</p>
             {customOk && (
-              <p className="mt-1.5 inline-block rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs text-stone-700 ring-1 ring-amber-200" data-testid="paper-sizes">
-                <b>Paper</b> · Invitation: {invitationPaper}
-                {form.envelope !== "none" && <> · <span data-testid="envelope-summary">Envelope (a separate PDF): {envelopePaper} card stock</span></>}
-              </p>
+              <ul className="mt-1.5 inline-block list-disc rounded-lg bg-amber-50 py-1.5 pl-6 pr-3 text-xs text-stone-700 ring-1 ring-amber-200" data-testid="paper-sizes">
+                {printSteps.map((s) => <li key={s}>{s}</li>)}
+              </ul>
             )}
           </div>
           <div className="flex flex-wrap gap-2">
@@ -977,7 +983,7 @@ export function PrintInvitation(props: Props) {
         {done && <p className="mt-3 text-right text-xs text-emerald-700" role="status">Downloaded {done}. Change anything to make another version.</p>}
         {error && <p className="mt-3 text-right text-xs text-red-700" role="alert">{error}</p>}
         {press && customOk && (
-          <PrintPress image={press.image} card={invitationPaper} envelope={form.envelope !== "none" ? envelopePaper : null} onClose={closePress} />
+          <PrintPress image={press.image} steps={printSteps} onClose={closePress} />
         )}
       </div>
     </section>

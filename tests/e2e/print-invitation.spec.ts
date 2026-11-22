@@ -96,7 +96,7 @@ test("setup and design — with the live preview on every page — then download
   await dialog.getByRole("combobox", { name: "Card size" }).selectOption("a5");
   await dialog.getByText("A separate card for each event", { exact: true }).click();
   await dialog.getByRole("button", { name: "Haldi" }).click(); // leave one out
-  await expect(dialog.getByTestId("print-summary")).toContainText("6 pages · card 148 × 210 mm (154 × 216 mm with bleed)");
+  await expect(dialog.getByTestId("print-summary")).toContainText("6 pages · A5 card");
   // (the first preview also waits for the dev server to build the PDF viewer)
   await expect(status).toHaveText("Up to date", { timeout: 90_000 });
   await expect(preview).toHaveAttribute("data-pages", "6", { timeout: 30_000 });
@@ -149,13 +149,13 @@ test("setup and design — with the live preview on every page — then download
   await expect(press).toBeVisible();
   await expect(press.getByRole("img", { name: "Your card" })).toBeVisible();
   if (shots) { await page.waitForTimeout(1500); await page.screenshot({ path: `${shots}/press-1.png` }); await page.waitForTimeout(2200); await page.screenshot({ path: `${shots}/press-2.png` }); }
-  await expect(page.getByTestId("press-paper")).toContainText("Invitation: print on 154 × 216 mm card stock, trimmed to 148 × 210 mm");
+  await expect(page.getByTestId("press-paper")).toContainText("Print the invitation on A5 paper, double-sided (flip on long edge); the event cards single-sided");
   // it stays up to 20 seconds; a click anywhere closes it sooner
   await page.waitForTimeout(6_000);
   await expect(press).toBeVisible();
   await press.click({ position: { x: 10, y: 10 } });
   await expect(press).toBeHidden();
-  await expect(page.getByTestId("paper-sizes")).toContainText("Invitation: 154 × 216 mm card stock, trimmed to 148 × 210 mm");
+  await expect(page.getByTestId("paper-sizes")).toContainText("Print the invitation on A5 paper, double-sided (flip on long edge); the event cards single-sided");
   const file = await download.path();
   const pdf = fs.readFileSync(file!).toString("latin1");
   expect(pdf.startsWith("%PDF")).toBe(true);
@@ -179,9 +179,9 @@ test("setup and design — with the live preview on every page — then download
   await page.getByRole("combobox", { name: "Card size" }).selectOption("custom");
   await page.getByLabel("Custom width").fill("6");
   await page.getByLabel("Custom height").fill("9");
-  await expect(page.getByTestId("print-summary")).toContainText("card 228.6 × 152.4 mm"); // still landscape, as left
+  await expect(page.getByTestId("print-summary")).toContainText("228.6 × 152.4 mm card"); // still landscape, as left
   await page.getByRole("radio", { name: "portrait", exact: true }).click();
-  await expect(page.getByTestId("print-summary")).toContainText("card 152.4 × 228.6 mm");
+  await expect(page.getByTestId("print-summary")).toContainText("152.4 × 228.6 mm card");
 
   // the envelope is sized to the card: bought ones, or a sheet to cut and fold
   await page.getByRole("button", { name: "2 · Design" }).click();
@@ -189,8 +189,8 @@ test("setup and design — with the live preview on every page — then download
   await expect(page.getByRole("radio", { name: /^Print on envelopes/ })).toHaveCount(0);
   await page.getByRole("radio", { name: /^Cut-and-fold/ }).click();
   await expect(page.getByTestId("envelope-note")).toContainText("161 × 237 mm envelope");
-  await expect(page.getByTestId("envelope-paper")).toHaveText("A3 (297 × 420 mm)");
-  await expect(page.getByTestId("envelope-summary")).toContainText("A3 (297 × 420 mm) card stock");
+  await expect(page.getByTestId("envelope-paper")).toHaveText("A3");
+  await expect(page.getByTestId("paper-sizes")).toContainText("Print the envelope on A3 paper");
   await page.getByRole("button", { name: "1 · Setup" }).click();
   await page.getByRole("combobox", { name: "Card size" }).selectOption("5x7");
   await page.getByRole("button", { name: "2 · Design" }).click();
@@ -201,10 +201,10 @@ test("setup and design — with the live preview on every page — then download
   await page.getByRole("button", { name: "1 · Setup" }).click();
   await page.getByRole("radio", { name: /^A folded card/ }).click();
   await expect(page.getByTestId("fold-note")).toContainText("flip on short edge");
-  await expect(page.getByTestId("print-summary")).toContainText("opens to 178 × 127 mm, folds to 89 × 127 mm");
+  await expect(page.getByTestId("print-summary")).toContainText("Folded card · 2 pages · 5 × 7 in folded in half");
   // the two sides of the sheet, then the cut-and-fold envelope picked above — now small enough for A4
   await expect(page.getByTestId("pdf-preview")).toHaveAttribute("data-pages", "3", { timeout: 30_000 });
-  await expect(page.getByTestId("envelope-summary")).toContainText("A4 (210 × 297 mm) card stock");
+  await expect(page.getByTestId("paper-sizes")).toContainText("Print the envelope on A4 paper");
 
   // Download PDF: two files, the cards and the envelope; the press names both papers
   const files: string[] = [];
@@ -212,8 +212,8 @@ test("setup and design — with the live preview on every page — then download
   await page.getByRole("button", { name: "2 · Design" }).click();
   await page.getByRole("button", { name: "Download PDF" }).click();
   const paper = page.getByTestId("press-paper");
-  await expect(paper).toContainText("Invitation: print on 184 × 133 mm card stock, trimmed to 178 × 127 mm", { timeout: 60_000 });
-  await expect(paper).toContainText("Envelope: print on A4 (210 × 297 mm) card stock");
+  await expect(paper).toContainText("Print the invitation on 5 × 7 in paper, double-sided (flip on short edge)", { timeout: 60_000 });
+  await expect(paper).toContainText("Print the envelope on A4 paper");
   await expect.poll(() => files.sort(), { timeout: 10_000 }).toEqual([
     "Arjun-Ananya_Groom-side_Envelope_97x135mm_Print-on-A4.pdf",
     "Arjun-Ananya_Groom-side_Invitation_5x7in_Folded_English_Print-shop.pdf",

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import { localize } from "@/lib/invitation/i18n";
 import { envelopeFor, flatSheet } from "@/lib/invitation/envelope";
-import { panelSize } from "@/lib/invitation/options";
+import { cardPrintLine, panelSize } from "@/lib/invitation/options";
 import { renderInvitationPdf } from "@/lib/invitation/pdf";
 import { invitationSchema } from "@/lib/invitation/options";
 import { transliterate } from "@/lib/invitation/translit";
@@ -134,6 +134,16 @@ describe("cards in Gujarati and Hindi", () => {
     expect(pages(await renderInvitationPdf(inv, o, "raj-mahal", "card"))).toBe(2);
     expect(pages(await renderInvitationPdf(inv, o, "raj-mahal", "envelope"))).toBe(1);
   }, 60_000);
+
+  it("says how to print in plain words", () => {
+    const a4 = invitationSchema.parse({ size: "a4", eventLayout: "folded" });
+    expect(cardPrintLine(a4, true)).toBe("Print the invitation on A4 paper, double-sided (flip on short edge)");
+    expect(cardPrintLine({ ...a4, output: "home" }, true)).toBe("Print the invitation on A4 paper, double-sided (flip on short edge)");
+    const a5 = invitationSchema.parse({ size: "a5" });
+    expect(cardPrintLine(a5, true)).toBe("Print the invitation on A5 paper, double-sided (flip on long edge)");
+    expect(cardPrintLine({ ...a5, output: "home" }, true)).toBe("Print the invitation on A4 paper, double-sided (flip on long edge), then cut along the marks");
+    expect(cardPrintLine(invitationSchema.parse({ size: "5x7" }), false)).toBe("Print the invitation on 5 × 7 in paper");
+  });
 
   it("puts every envelope on the smallest sheet it fits", () => {
     const paper = (size: string, eventLayout: "together" | "folded" = "together") =>

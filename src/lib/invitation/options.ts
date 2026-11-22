@@ -210,3 +210,31 @@ export function cardPaper(o: Parameters<typeof sheetFor>[0]): string {
   }
   return `${mmText(pw)} × ${mmText(ph)} mm card stock, trimmed to ${mmText(s.trim[0])} × ${mmText(s.trim[1])} mm`;
 }
+
+const STANDARD_PAPER: [string, [number, number]][] = [["A3", [297, 420]], ["A4", [210, 297]], ["A5", [148, 210]], ["A6", [105, 148]], ["DL", [99, 210]]];
+
+/** A size's everyday name: "A4", "5 × 7 in", else "120 × 170 mm". */
+export function paperName([w, h]: [number, number]): string {
+  const a = Math.min(w, h), b = Math.max(w, h);
+  const near = (x: number, y: number) => Math.abs(x - y) <= 1.5;
+  const std = STANDARD_PAPER.find(([, [pw, ph]]) => near(a, pw) && near(b, ph));
+  if (std) return std[0];
+  const named = CARD_SIZES.find((s) => near(a, Math.min(...s.mm)) && near(b, Math.max(...s.mm)));
+  if (named) return named.label;
+  return `${Math.round(w * 10) / 10} × ${Math.round(h * 10) / 10} mm`;
+}
+
+/**
+ * How to print the invitation PDF, in one line:
+ * "Print the invitation on A4 paper, double-sided (flip on short edge)".
+ * `twoSided`: the card has a back (or is folded).
+ */
+export function cardPrintLine(o: Parameters<typeof sheetFor>[0], twoSided: boolean, eventCards = 0): string {
+  const s = sheetFor(o);
+  const onA4Sheet = o.output === "home" && s.marks && paperName(s.page) === "A4" && paperName(s.trim) !== "A4";
+  const paper = onA4Sheet ? "A4" : paperName(s.trim);
+  const edge = s.page[0] > s.page[1] ? "short" : "long";
+  const sides = twoSided ? `, double-sided (flip on ${edge} edge)` : "";
+  const cards = eventCards ? (twoSided ? "; the event cards single-sided" : "") : "";
+  return `Print the invitation on ${paper} paper${sides}${cards}${onA4Sheet ? ", then cut along the marks" : ""}`;
+}
