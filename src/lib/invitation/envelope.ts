@@ -38,20 +38,40 @@ export function envelopeFor(o: Pick<InvitationOptions, "size" | "customWidthMm" 
   return { name: `${short} × ${long} mm`, mm: [long, short] };
 }
 
-/** The cut-and-fold template's parts, in mm: the front panel and its flaps. */
-export function dieLine(env: [number, number]) {
+/**
+ * The cut-and-fold template's parts, in mm: the front panel and its flaps.
+ * `t` runs from compact (0: 15 mm side flaps, shallow top and bottom) to
+ * roomy (1: classic proportions), so a template can shrink to fit a sheet.
+ */
+export function dieLine(env: [number, number], t = 1) {
   const [W, H] = env;
-  const side = Math.round(W * 0.16);
-  const top = Math.round(H * 0.55);
-  const bottom = Math.round(H * 0.62);
+  const lerp = (a: number, b: number) => a + (b - a) * t;
+  const side = Math.round(lerp(15, Math.max(15, W * 0.16)));
+  const top = Math.round(H * lerp(0.42, 0.55));
+  const bottom = Math.round(H * lerp(0.5, 0.62));
   return { W, H, side, top, bottom, width: W + 2 * side, height: H + top + bottom };
 }
 
-/** The smallest common sheet the flat template fits on, with a margin; or its own size. */
-export function flatSheet(env: [number, number]): { name: string; mm: [number, number] } {
-  const d = dieLine(env);
-  const m = 8;
-  const sheets: [string, [number, number]][] = [["A4", [210, 297]], ["A4", [297, 210]], ["A3", [297, 420]], ["A3", [420, 297]]];
-  for (const [name, [w, h]] of sheets) if (d.width + 2 * m <= w && d.height + 2 * m <= h) return { name, mm: [w, h] };
-  return { name: "custom", mm: [d.width + 2 * m, d.height + 2 * m] };
+export const FLAT_MARGIN_MM = 5;
+
+/** Sheets a template can go on, smallest first: home printers do A4, print shops the rest. */
+const SHEETS: [string, [number, number]][] = [["A4", [210, 297]], ["A3", [297, 420]], ["SRA3", [320, 450]], ["A2", [420, 594]]];
+
+/**
+ * The smallest sheet the cut-and-fold template fits on (either way round),
+ * with its flaps as roomy as that sheet allows; past A2, a sheet of its own size.
+ */
+export function flatSheet(env: [number, number]): { name: string; mm: [number, number]; t: number; label: string } {
+  const m = 2 * FLAT_MARGIN_MM;
+  for (const [name, [a, b]] of SHEETS) {
+    for (const [w, h] of [[a, b], [b, a]] as [number, number][]) {
+      for (let t = 1; t >= -0.001; t -= 0.05) {
+        const d = dieLine(env, t);
+        if (d.width + m <= w && d.height + m <= h) return { name, mm: [w, h], t: Math.max(0, t), label: `${name} (${Math.min(w, h)} × ${Math.max(w, h)} mm)` };
+      }
+    }
+  }
+  const d = dieLine(env, 0);
+  const mm: [number, number] = [Math.ceil(d.width + m), Math.ceil(d.height + m)];
+  return { name: "custom", mm, t: 0, label: `a ${mm[0]} × ${mm[1]} mm sheet` };
 }

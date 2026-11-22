@@ -176,7 +176,8 @@ test("setup and design — with the live preview on every page — then download
   await expect(page.getByRole("radio", { name: /^Print on envelopes/ })).toHaveCount(0);
   await page.getByRole("radio", { name: /^Cut-and-fold/ }).click();
   await expect(page.getByTestId("envelope-note")).toContainText("161 × 237 mm envelope");
-  await expect(page.getByTestId("envelope-note")).toContainText("a large sheet");
+  await expect(page.getByTestId("envelope-paper")).toHaveText("A3 (297 × 420 mm)");
+  await expect(page.getByTestId("envelope-summary")).toContainText("print on A3 (297 × 420 mm)");
   await page.getByRole("button", { name: "1 · Setup" }).click();
   await page.getByRole("combobox", { name: "Card size" }).selectOption("5x7");
   await page.getByRole("button", { name: "2 · Design" }).click();
@@ -188,8 +189,19 @@ test("setup and design — with the live preview on every page — then download
   await page.getByRole("radio", { name: /^A folded card/ }).click();
   await expect(page.getByTestId("fold-note")).toContainText("flip on short edge");
   await expect(page.getByTestId("print-summary")).toContainText("opens to 178 × 127 mm, folds to 89 × 127 mm");
-  // the two sides of the sheet, then the cut-and-fold envelope picked above
+  // the two sides of the sheet, then the cut-and-fold envelope picked above — now small enough for A4
   await expect(page.getByTestId("pdf-preview")).toHaveAttribute("data-pages", "3", { timeout: 30_000 });
+  await expect(page.getByTestId("envelope-summary")).toContainText("print on A4 (210 × 297 mm)");
+
+  // Download PDF: two files, the cards and the envelope, and a note for 5 seconds on the envelope's paper
+  const files: string[] = [];
+  page.on("download", (d) => files.push(d.suggestedFilename()));
+  await page.getByRole("button", { name: "2 · Design" }).click();
+  await page.getByRole("button", { name: "Download PDF" }).click();
+  const toast = page.getByTestId("envelope-toast");
+  await expect(toast).toHaveText("Envelope PDF downloaded. Print it on A4 (210 × 297 mm) card stock.", { timeout: 60_000 });
+  await expect.poll(() => files.sort(), { timeout: 10_000 }).toEqual(["envelope-groom-5x7.pdf", "invitation-groom-5x7.pdf"]);
+  await expect(toast).toBeHidden({ timeout: 7_000 });
 
   // landscape cards can't fold side by side: the choice turns off, with the reason
   await page.getByRole("button", { name: "1 · Setup" }).click();

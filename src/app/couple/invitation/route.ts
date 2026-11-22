@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 /** The couple's printable invitation cards, as a PDF download. */
 export async function POST(req: Request) {
   const staff = await requireRole(["committee", "couple", "admin"]);
-  let body: { weddingId?: unknown; options?: unknown };
+  let body: { weddingId?: unknown; options?: unknown; part?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -58,11 +58,14 @@ export async function POST(req: Request) {
   // in Gujarati or Hindi: the family's words from the Card wording page, else our draft
   const words = o.lang === "en" ? {} : look.printText?.[o.lang] ?? {};
   const { inv } = await localizeCards(withLook(card, look), evs, o, `${await appOrigin()}${sharePath(wedding.slug, o.version, look.shareKey)}`, o.lang, words);
-  const pdf = await renderInvitationPdf(inv, o, look.theme);
+  // the preview gets everything; the download, the cards and the envelope as two files
+  const part = body.part === "card" || body.part === "envelope" ? body.part : "all";
+  if (part === "envelope" && o.envelope === "none") return Response.json({ error: "no envelope" }, { status: 400 });
+  const pdf = await renderInvitationPdf(inv, o, look.theme, part);
   return new Response(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${fileName(o)}"`,
+      "Content-Disposition": `attachment; filename="${part === "envelope" ? `envelope-${o.version}-${o.size}.pdf` : fileName(o)}"`,
       "Cache-Control": "no-store",
     },
   });

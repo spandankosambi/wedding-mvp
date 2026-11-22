@@ -126,6 +126,26 @@ describe("cards in Gujarati and Hindi", () => {
     expect(boxes).toEqual([[859, 612], [859, 612]]); // 297 × 210 mm plus 3 mm bleed a side
   }, 60_000);
 
+  it("downloads the cards and the envelope as two files", async () => {
+    const pages = (b: Buffer) => (b.toString("latin1").match(/\/Type \/Page\b/g) ?? []).length;
+    const o = { ...opts("en"), envelope: "flat" as const };
+    const { inv } = localize(w, evs, o, "https://x.test", "en");
+    expect(pages(await renderInvitationPdf(inv, o, "raj-mahal", "all"))).toBe(3);
+    expect(pages(await renderInvitationPdf(inv, o, "raj-mahal", "card"))).toBe(2);
+    expect(pages(await renderInvitationPdf(inv, o, "raj-mahal", "envelope"))).toBe(1);
+  }, 60_000);
+
+  it("puts every envelope on the smallest sheet it fits", () => {
+    const paper = (size: string, eventLayout: "together" | "folded" = "together") =>
+      flatSheet(envelopeFor({ size: size as "5x7", orientation: "portrait", eventLayout }).mm).label;
+    expect(paper("a5")).toBe("A3 (297 × 420 mm)"); // C5: was over A3 before
+    expect(paper("5x5")).toBe("A4 (210 × 297 mm)");
+    expect(paper("4.25x5.5")).toBe("A4 (210 × 297 mm)");
+    expect(paper("a4")).toBe("A2 (420 × 594 mm)"); // C4 needs a big sheet
+    expect(paper("a4", "folded")).toBe("A3 (297 × 420 mm)"); // A4 folds to A5: a C5
+    expect(paper("5x7", "folded")).toBe("A4 (210 × 297 mm)");
+  });
+
   it("sizes the envelope to the card", () => {
     expect(envelopeFor({ size: "5x7", orientation: "portrait" }).mm).toEqual([184, 133]);
     expect(envelopeFor({ size: "a5", orientation: "landscape" }).name).toMatch(/^C5/);

@@ -376,7 +376,7 @@ function EnvelopeFront({ c, inv, w, h, x, y }: { c: Ctx; inv: Invitation; w: num
   const nameSize = (o.nameFont === "script" ? 22 : 18) * k;
   const names = `${e.first} ${e.joiner} ${e.second}`;
   const fitName = nameSize * Math.min(1, 30 / Math.max(names.length, 1));
-  const toW = square ? w * 0.72 : w * 0.5;
+  const toW = square ? w * 0.56 : w * 0.5;
   const rule = { borderBottomWidth: 0.6, borderBottomColor: p.soft, height: 15 * k };
   return (
     <View style={{ position: "absolute", left: x, top: y, width: w, height: h }}>
@@ -407,6 +407,14 @@ function EnvelopeFront({ c, inv, w, h, x, y }: { c: Ctx; inv: Invitation; w: num
         <View style={{ ...rule, marginTop: 4 * k }} />
         <View style={{ ...rule, marginTop: 4 * k }} />
       </View>
+      {/* "From:" the hosts and their city, lower left */}
+      {(
+        <View style={{ position: "absolute", width: w - toW - 2 * (inset + corner) - 10 * k, left: inset + corner * 0.9, bottom: inset + pt(7) * k, color: p.ink, fontFamily: "Cormorant", fontWeight: 500 }}>
+          <Tx style={{ fontStyle: "italic", fontSize: 9 * k, color: p.accent }}>{e.from}</Tx>
+          <Tx style={{ fontWeight: 600, fontSize: 9 * k, marginTop: 1 * k }}>{e.fromName}</Tx>
+          {e.fromPlace ? <Tx style={{ fontSize: 8.5 * k, color: p.soft }}>{e.fromPlace}</Tx> : null}
+        </View>
+      )}
     </View>
   );
 }
@@ -427,9 +435,9 @@ function Seal({ c, inv, size, x, y, flip = false }: { c: Ctx; inv: Invitation; s
 function EnvelopePages({ c, inv }: { c: Ctx; inv: Invitation }) {
   const env = envelopeFor(c.o).mm;
   const p = c.p;
-  const d = dieLine(env);
-  const sheet = flatSheet(env).mm;
-  const [SW, SH] = sheet.map(pt);
+  const fit = flatSheet(env);
+  const d = dieLine(env, fit.t);
+  const [SW, SH] = fit.mm.map(pt);
   const ox = (SW - pt(d.width)) / 2, oy = (SH - pt(d.height)) / 2;
   const X = (mm: number) => ox + pt(mm), Y = (mm: number) => oy + pt(mm);
   const L = d.side, R = d.side + d.W, T = d.top, B = d.top + d.H, mid = d.side + d.W / 2;
@@ -468,9 +476,12 @@ function EnvelopePages({ c, inv }: { c: Ctx; inv: Invitation }) {
       <EnvelopeFront c={c} inv={inv} w={pt(d.W)} h={pt(d.H)} x={X(L)} y={Y(T)} />
       {/* the seal on the outside of the top flap, near its tip: upside down here, upright once folded */}
       <Seal c={c} inv={inv} size={pt(Math.min(d.W, d.H) * 0.2)} x={X(mid)} y={Y(Math.min(d.top * 0.32, 22))} flip />
-      <Text style={{ position: "absolute", left: 0, right: 0, bottom: pt(4), textAlign: "center", fontFamily: "Cormorant", fontSize: 8.5, color: cut }}>
-        {`Cut along the solid line · fold along the dashes, flaps behind the front · glue the side flaps under the bottom one · envelope ${envelopeFor(c.o).name}`}
-      </Text>
+      {/* how to make it, where the sheet has room below the template */}
+      {oy >= pt(7) && (
+        <Text style={{ position: "absolute", left: pt(6), right: pt(6), bottom: Math.min(pt(4), oy / 2 - 5), textAlign: "center", fontFamily: "Cormorant", fontSize: 8.5, color: cut }}>
+          {`Print on ${fit.label} · cut along the solid line · fold along the dashes, flaps behind the front · glue the side flaps under the bottom one · envelope ${envelopeFor(c.o).name}`}
+        </Text>
+      )}
       </View>
     </Page>
   );
@@ -489,7 +500,9 @@ function FoldCover({ c: base, inv }: { c: Ctx; inv: Invitation }) {
   const names = `${e.first} ${e.joiner} ${e.second}`;
   const nameBase = o.nameFont === "script" ? 30 : 24;
   const nameFs = nameBase * Math.min(1, 24 / Math.max(names.length, 1));
-  const need = (70 * top.h) / top.w + 8 + 12 + nameFs * 1.3 + 22 + 12 + 34 + 18 + 15 + 15 + 15 + 30 + 14 + 13 + (e.fromPlace ? 13 : 0);
+  // with an envelope printed too, the guest's name and the hosts go on the envelope
+  const address = o.envelope === "none";
+  const need = (70 * top.h) / top.w + 8 + 12 + nameFs * 1.3 + 22 + 12 + (address ? 34 + 18 + 15 + 15 + 15 + 30 + 14 + 13 + (e.fromPlace ? 13 : 0) : 0);
   const k = Math.max(0.55, Math.min(base.grow, contentHeight(base, o.toran) / (need * base.s)));
   const c = { ...base, s: base.s * k };
   const rule = { borderBottomWidth: 0.6, borderBottomColor: c.p.soft, height: 15 * c.s };
@@ -502,6 +515,7 @@ function FoldCover({ c: base, inv }: { c: Ctx; inv: Invitation }) {
         : { fontWeight: 700, fontSize: nameFs * c.s, lineHeight: 1.15, marginTop: 4 * c.s }}>{names}</Tx>
       <Draw m={div} width={46 * c.s} p={c.p} style={{ marginVertical: 6 * c.s }} />
       <Kicker c={c} size={7}>{e.date}</Kicker>
+      {address && <>
       <View style={{ width: "86%", marginTop: 26 * c.s, alignItems: "stretch", textAlign: "left" }}>
         <Tx style={{ fontStyle: "italic", fontSize: 11 * c.s, color: c.p.accent, marginBottom: 2 * c.s }}>{e.to}</Tx>
         <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
@@ -519,18 +533,28 @@ function FoldCover({ c: base, inv }: { c: Ctx; inv: Invitation }) {
         <Tx style={{ fontWeight: 600, fontSize: 10 * c.s, marginTop: 1.5 * c.s }}>{e.fromName}</Tx>
         {e.fromPlace ? <Tx style={{ fontSize: 9.5 * c.s, color: c.p.soft }}>{e.fromPlace}</Tx> : null}
       </View>
+      </>}
     </Card>
   );
 }
 
-/** The folded card's back (panel 4): the monogram crest, quiet. */
-function FoldBack({ c, inv }: { c: Ctx; inv: Invitation }) {
-  const size = Math.min(contentWidth(c) * 0.5, contentHeight(c, false) * 0.4);
+/** The folded card's back (panel 4): the monogram crest, and the QR code under it when it's printed. */
+function FoldBack({ c, inv, qr }: { c: Ctx; inv: Invitation; qr: string | null }) {
+  const size = Math.min(contentWidth(c) * (qr ? 0.42 : 0.5), contentHeight(c, false) * (qr ? 0.3 : 0.4));
+  const qrW = Math.min(contentWidth(c) * 0.32, 54 * c.s);
   const div = dividerMotif(c.theme);
   return (
     <Card c={c} toran={false}>
       <Crest c={c} text={inv.envelope.seal} size={size} />
       <Draw m={div} width={40 * c.s} p={c.p} style={{ marginTop: 6 * c.s }} />
+      {qr && (
+        <View style={{ alignItems: "center", marginTop: 14 * c.s }}>
+          <View style={{ backgroundColor: "#ffffff", padding: 2.5 * c.s, borderRadius: 2 }}>
+            <Image src={qr} style={{ width: qrW, height: qrW }} />
+          </View>
+          <Tx style={{ fontStyle: "italic", fontSize: 7.5 * c.s, color: c.p.soft, marginTop: 3 * c.s }}>{c.labels.scan}</Tx>
+        </View>
+      )}
     </Card>
   );
 }
@@ -556,8 +580,9 @@ function FoldedPages({ c, inv, qr }: { c: Ctx; inv: Invitation; qr: string | nul
   );
   return (
     <>
-      {page(<FoldBack c={left} inv={inv} />, <FoldCover c={right} inv={inv} />)}
-      {page(<Front c={left} inv={inv} />, <Back c={right} inv={inv} qr={qr} always />)}
+      {/* the QR goes on the back, under the crest */}
+      {page(<FoldBack c={left} inv={inv} qr={qr} />, <FoldCover c={right} inv={inv} />)}
+      {page(<Front c={left} inv={inv} />, <Back c={right} inv={inv} qr={null} always />)}
     </>
   );
 }
@@ -712,7 +737,11 @@ function Insert({ c: base, card }: { c: Ctx; card: InsertCard }) {
 }
 
 /** The print-ready PDF: front, back (events and/or details), then one card per event. */
-export async function renderInvitationPdf(inv: Invitation, o: InvitationOptions, theme: Theme): Promise<Buffer> {
+/**
+ * The print-ready PDF. `part`: "all" (the preview: the cards, then the
+ * envelope), "card" (the cards only) or "envelope" (the envelope sheet only).
+ */
+export async function renderInvitationPdf(inv: Invitation, o: InvitationOptions, theme: Theme, part: "all" | "card" | "envelope" = "all"): Promise<Buffer> {
   registerFonts();
   // folded cards are portrait or square panels; a landscape one prints as a flat card
   if (o.eventLayout === "folded") {
@@ -731,14 +760,14 @@ export async function renderInvitationPdf(inv: Invitation, o: InvitationOptions,
     : null;
   const doc = (
     <Document title="Wedding invitation" creator="One Tap Invites" producer="One Tap Invites">
-      {o.eventLayout === "folded" ? <FoldedPages c={c} inv={inv} qr={qr} /> : (
+      {part !== "envelope" && (o.eventLayout === "folded" ? <FoldedPages c={c} inv={inv} qr={qr} /> : (
         <>
           <Front c={c} inv={inv} />
           <Back c={c} inv={inv} qr={qr} />
         </>
-      )}
-      {inv.inserts.map((card) => <Insert key={card.event.id} c={c} card={card} />)}
-      {o.envelope !== "none" && <EnvelopePages c={c} inv={inv} />}
+      ))}
+      {part !== "envelope" && inv.inserts.map((card) => <Insert key={card.event.id} c={c} card={card} />)}
+      {part !== "card" && o.envelope !== "none" && <EnvelopePages c={c} inv={inv} />}
     </Document>
   );
   return renderToBuffer(doc);

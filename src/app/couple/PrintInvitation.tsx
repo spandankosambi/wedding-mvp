@@ -266,6 +266,12 @@ export function PrintInvitation(props: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(id);
+  }, [toast]);
   const [preview, setPreview] = useState<{ key: string; blob: Blob; name: string } | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -371,11 +377,11 @@ export function PrintInvitation(props: Props) {
   const portrait = customOk && isPortrait(options);
   const monoDefault = defaultMonogram(props.brideName, props.groomName, form.version);
 
-  async function makePdf(): Promise<{ blob: Blob; name: string }> {
+  async function makePdf(part: "all" | "card" | "envelope" = "all"): Promise<{ blob: Blob; name: string }> {
     const res = await fetch("/couple/invitation", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ weddingId: props.admin ? props.weddingId : undefined, options }),
+      body: JSON.stringify({ weddingId: props.admin ? props.weddingId : undefined, options, part }),
     });
     if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "failed");
     const blob = await res.blob();
@@ -427,12 +433,24 @@ export function PrintInvitation(props: Props) {
     setBusy(true); setError(null); setDone(null);
     remember();
     try {
-      const made = preview?.key === optionsKey ? preview : await makePdf();
-      const url = URL.createObjectURL(made.blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = made.name; document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 10_000);
-      setDone(made.name);
+      const save = (made: { blob: Blob; name: string }) => {
+        const url = URL.createObjectURL(made.blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = made.name; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      };
+      if (form.envelope === "none") {
+        const made = preview?.key === optionsKey ? preview : await makePdf("card");
+        save(made);
+        setDone(made.name);
+      } else {
+        // two files: the cards, and the envelope on its own sheet
+        const [card, env] = await Promise.all([makePdf("card"), makePdf("envelope")]);
+        save(card);
+        setTimeout(() => save(env), 400); // a moment apart, so the browser keeps both
+        setDone(`${card.name} and ${env.name}`);
+        setToast(`Envelope PDF downloaded. Print it on ${envelopePaper} card stock.`);
+      }
     } catch (e) {
       setError(e instanceof Error && e.message !== "failed" ? `Couldn't make the PDF: ${e.message}` : "Couldn't make the PDF. Please try again.");
     } finally {
@@ -450,6 +468,8 @@ export function PrintInvitation(props: Props) {
     }
   }
 
+  // the paper the cut-and-fold envelope prints on, e.g. "A3 (297 × 420 mm)"
+  const envelopePaper = customOk ? flatSheet(envelopeFor({ size: form.size, orientation: form.orientation, customWidthMm: customW, customHeightMm: customH, eventLayout: form.eventLayout }).mm).label : "";
   const summary = customOk
     ? folded
       ? `2 pages, printed on both sides of one sheet · opens to ${ow} × ${oh} mm, folds to ${fw} × ${fh} mm${form.output === "printer" ? ` (sheet ${ow + 2 * BLEED_MM} × ${oh + 2 * BLEED_MM} mm with bleed)` : ""}${chosen.length === 0 ? " · no events selected" : ""}`
@@ -837,7 +857,9 @@ export function PrintInvitation(props: Props) {
                     const sheet = flatSheet(env.mm);
                     return (
                       <p className="mt-2 text-xs text-neutral-500" data-testid="envelope-note">
-                        Makes a <b>{env.name}</b> envelope. Print on <b>{sheet.name === "custom" ? "a large sheet" : sheet.name}</b> card stock{sheet.name === "A3" ? " (most print shops do A3)" : ""}, cut along the solid line and fold along the dashes. Your monogram seal sits on the flap.
+                        Makes a <b>{env.name}</b> envelope. Print it on <b data-testid="envelope-paper">{sheet.label}</b> card stock
+                        {sheet.name === "A4" ? " (any home printer)" : sheet.name === "A3" ? " (most print shops do A3)" : " (at a print shop)"}, cut along the solid line and fold along the dashes.
+                        Your monogram seal sits on the flap. Download PDF gives you two files: the cards, and the envelope.
                       </p>
                     );
                   })()}
@@ -877,7 +899,10 @@ export function PrintInvitation(props: Props) {
         </div>
 
         <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200 pt-5">
-          <p className="text-xs text-neutral-500" data-testid="print-summary">{summary}</p>
+          <p className="text-xs text-neutral-500" data-testid="print-summary">
+            {summary}
+            {customOk && form.envelope !== "none" && <> · <span data-testid="envelope-summary">envelope: a separate PDF, print on {envelopePaper}</span></>}
+          </p>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={saveConfig} disabled={saving || !customOk} className="portal-button-secondary">{saving ? "Saving…" : "Save configuration"}</button>
             {step > 1 && <button type="button" onClick={() => go((step - 1) as Step)} className="portal-button-secondary">← Back</button>}
@@ -895,6 +920,12 @@ export function PrintInvitation(props: Props) {
         {savedNote && <p className="mt-3 text-right text-xs text-emerald-700" role="status">{savedNote}</p>}
         {done && <p className="mt-3 text-right text-xs text-emerald-700" role="status">Downloaded {done}. Change anything to make another version.</p>}
         {error && <p className="mt-3 text-right text-xs text-red-700" role="alert">{error}</p>}
+        {toast && (
+          <div role="status" data-testid="envelope-toast"
+            className="fixed bottom-6 left-1/2 z-50 max-w-sm -translate-x-1/2 rounded-xl bg-stone-900 px-4 py-3 text-sm text-white shadow-lg">
+            {toast}
+          </div>
+        )}
       </div>
     </section>
   );
