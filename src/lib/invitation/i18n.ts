@@ -38,7 +38,7 @@ const P = {
     replyBy: (d: string) => `${d} સુધીમાં જવાબ આપવા વિનંતી`,
     side: (x: string) => `${x} પક્ષ`,
     labels: { celebrations: "શુભ પ્રસંગો", rsvp: "સંપર્ક", scan: "જવાબ આપવા સ્કેન કરો", compliments: "સ્નેહાધીન", dress: "પહેરવેશ" },
-    cover: "શુભ લગ્ન",
+    envelope: { title: "શુભ લગ્ન", to: "પ્રતિ,", prefix: "શ્રી / શ્રીમતી", family: "સહ પરિવાર" },
     dayParts: ["રાત્રે", "સવારે", "બપોરે", "સાંજે"],
     oclock: "વાગ્યે",
     time: "સમય",
@@ -59,7 +59,7 @@ const P = {
     replyBy: (d: string) => `कृपया ${d} तक उत्तर दें`,
     side: (x: string) => `${x} पक्ष`,
     labels: { celebrations: "शुभ कार्यक्रम", rsvp: "संपर्क", scan: "उत्तर देने हेतु स्कैन करें", compliments: "दर्शनाभिलाषी", dress: "परिधान" },
-    cover: "शुभ विवाह",
+    envelope: { title: "शुभ विवाह", to: "प्रति,", prefix: "श्री / श्रीमती", family: "सपरिवार" },
     dayParts: ["रात", "सुबह", "दोपहर", "शाम"],
     oclock: "बजे",
     time: "समय",
@@ -195,15 +195,19 @@ export function localize(w: CardWedding, all: CardEvent[], o: InvitationOptions,
   d.compliments = d.compliments.map((s, i) => put({ key: `compliments.${i}`, group: "details", label: `Compliments, line ${i + 1}`, en: s, auto: spell(s, l) }));
   if (d.note) d.note = put({ key: "note", group: "details", label: "Closing line", en: d.note, auto: spell(d.note, l), long: true, check: true });
 
-  /* headings and cover */
+  /* headings and envelope */
   const lb = inv.labels;
   (Object.keys(lb) as (keyof typeof lb)[]).forEach((k) => {
     lb[k] = put({ key: `label.${k}`, group: "headings", label: ({ celebrations: "Heading over the celebrations", rsvp: "Heading over the contacts", scan: "Under the QR code", compliments: "Heading over the compliments", dress: "Before each dress code" })[k], en: lb[k], auto: ph.labels[k] });
   });
-  inv.cover = {
-    ...inv.cover,
-    title: put({ key: "cover.title", group: "headings", label: "Cover: heading", en: inv.cover.title, auto: ph.cover }),
-    first, second, joiner: ph.and, date: f.date, place: f.place,
+  const ev = inv.envelope, pe = ph.envelope;
+  inv.envelope = {
+    ...ev,
+    title: put({ key: "envelope.title", group: "headings", label: "Envelope: heading", en: ev.title, auto: pe.title }),
+    to: put({ key: "envelope.to", group: "headings", label: "Envelope: before the guest's name", en: ev.to, auto: pe.to }),
+    prefix: put({ key: "envelope.prefix", group: "headings", label: "Envelope: title before the name", en: ev.prefix, auto: pe.prefix }),
+    family: put({ key: "envelope.family", group: "headings", label: "Envelope: after the name", en: ev.family, auto: pe.family }),
+    first, second, joiner: ph.and, date: f.date,
   };
   return { inv, fields };
 }

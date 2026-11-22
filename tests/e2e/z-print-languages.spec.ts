@@ -2,7 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import fs from "node:fs";
 
 /* Printed cards in Gujarati or Hindi: pick the language, check and edit every
-   line (with our keyboard), print with a cover. The website is untouched. */
+   line (with our keyboard), print with an envelope. The website is untouched. */
 
 async function signIn(page: Page, email: string) {
   await page.goto("/signin");
@@ -14,7 +14,7 @@ async function signIn(page: Page, email: string) {
 }
 const shots = process.env.SHOTS_DIR;
 
-test("Gujarati cards: our draft, your edits with the keyboard, a cover, and the website unchanged", async ({ page }) => {
+test("Gujarati cards: our draft, your edits with the keyboard, an envelope, and the website unchanged", async ({ page }) => {
   test.setTimeout(180_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await signIn(page, "couple@example.com");
@@ -68,7 +68,7 @@ test("Gujarati cards: our draft, your edits with the keyboard, a cover, and the 
   await page.getByRole("link", { name: /^Hindi/ }).click();
   await expect(page.getByLabel("First name in Hindi", { exact: true })).toHaveValue(/[ऀ-ॿ]/);
 
-  // the card: Gujarati with a cover → a PDF with one more page
+  // the card: Gujarati with an envelope → the envelope's pages after the card
   const pdf = async (options: Record<string, unknown>) => {
     const res = await page.request.post("/couple/invitation", { data: { options: { version: "groom", ...options } } });
     expect(res.status()).toBe(200);
@@ -76,8 +76,8 @@ test("Gujarati cards: our draft, your edits with the keyboard, a cover, and the 
     return (body.toString("latin1").match(/\/Type \/Page\b/g) ?? []).length;
   };
   const plain = await pdf({ lang: "gu" });
-  expect(await pdf({ lang: "gu", cover: true })).toBe(plain + 1);
-  expect(await pdf({ lang: "en", cover: true })).toBe(plain + 1);
+  expect(await pdf({ lang: "gu", envelope: "front" })).toBe(plain + 2);
+  expect(await pdf({ lang: "en", envelope: "flat" })).toBe(plain + 1);
 
   // the website is untouched
   await page.goto("/w/ananya-weds-arjun?side=groom&k=sample");

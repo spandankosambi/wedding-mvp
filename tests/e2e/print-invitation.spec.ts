@@ -169,6 +169,19 @@ test("setup and design — with the live preview on every page — then download
   await expect(page.getByTestId("print-summary")).toContainText("card 228.6 × 152.4 mm"); // still landscape, as left
   await page.getByRole("radio", { name: "portrait" }).click();
   await expect(page.getByTestId("print-summary")).toContainText("card 152.4 × 228.6 mm");
+
+  // the envelope is sized to the card: bought ones, or a sheet to cut and fold
+  await page.getByRole("button", { name: "2 · Design" }).click();
+  await expect(page.getByTestId("envelope-note")).toHaveCount(0);
+  await page.getByRole("radio", { name: /^Print on envelopes/ }).click();
+  await expect(page.getByTestId("envelope-note")).toContainText("161 × 237 mm envelope");
+  await page.getByRole("radio", { name: /^Cut-and-fold/ }).click();
+  await expect(page.getByTestId("envelope-note")).toContainText("a large sheet");
+  await page.getByRole("button", { name: "1 · Setup" }).click();
+  await page.getByRole("combobox", { name: "Card size" }).selectOption("5x7");
+  await page.getByRole("button", { name: "2 · Design" }).click();
+  await expect(page.getByTestId("envelope-note")).toContainText("A7");
+  await expect(page.getByTestId("envelope-note")).toContainText("A3");
 });
 
 test("wording typed in the print dialog before is offered to move to the site", async ({ page }) => {

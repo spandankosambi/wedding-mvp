@@ -5,7 +5,7 @@ export const GROUP_LABEL: Record<FieldGroup, string> = {
   front: "Front of the card",
   celebrations: "The celebrations",
   details: "Contacts, reply-by and compliments",
-  headings: "Headings and cover",
+  headings: "Headings and envelope",
 };
 
 export type CardField = {

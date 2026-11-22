@@ -8,6 +8,7 @@ import type { Style } from "@react-pdf/stylesheet";
 import type { Theme } from "@/themes/catalog";
 import type { Invitation, EventCard, InsertCard, Details, Line } from "./content";
 import { BLEED_MM, SAFE_MM, trimSize, type InvitationOptions } from "./options";
+import { dieLine, envelopeFor, flatSheet } from "./envelope";
 import { backgroundPattern, borderBand, icon, symbol, isGlyph, SYMBOL_GLYPHS, type DrawnSymbol } from "./decor";
 import {
   paletteFor, topMotif, dividerMotif, cornerMotif, toranMotif, archPath, crest, scriptRuns, ARCH_CROWN,
@@ -343,43 +344,138 @@ function Front({ c: base, inv }: { c: Ctx; inv: Invitation }) {
   );
 }
 
-/* ── the cover ────────────────────────────────────────────────── */
+/* ── the envelope ─────────────────────────────────────────────── */
+
+const DASH = "3,2.4";
 
 /**
- * An optional front cover, before the invitation: the same frame, colours
- * and motifs, with the couple's names large, the date and the city, and the
- * crest when it's on. In the card's language.
+ * The envelope's front, drawn into a box of `w` × `h` points: the couple's
+ * names and date at the top, and "To, Shri / Smt. ______ & Family" with two
+ * more ruled lines to write the guest's name and address by hand.
  */
-function CoverPage({ c: base, inv }: { c: Ctx; inv: Invitation }) {
-  const o = base.o;
-  const cv = inv.cover;
-  const top = topMotif(base.theme), div = dividerMotif(base.theme);
-  const hasSymbol = o.symbol !== "motif" && (o.symbol !== "custom" || !!iconPng(o.symbolImage));
-  const nameBase = o.nameFont === "script" ? 46 : 38;
-  const need = (hasSymbol ? 40 : 0) + (96 * top.h) / top.w + 14 + 18 + nameSize(cv.first, nameBase) * 1.2 + 24 +
-    nameSize(cv.second, nameBase) * 1.2 + 24 + 18 + (cv.place ? 16 : 0) + (cv.monogram ? 56 : 0);
-  const k = Math.max(0.55, Math.min(1.5, contentHeight(base, o.toran) / (need * base.s)));
-  const c = { ...base, s: base.s * k };
-  const name = (n: string) => o.nameFont === "script"
-    ? { fontFamily: "GreatVibes", fontWeight: 400, fontSize: nameSize(n, nameBase) * c.s, lineHeight: 1.2, color: c.p.accent }
-    : { fontWeight: 700, fontSize: nameSize(n, nameBase) * c.s, lineHeight: 1.1 };
+function EnvelopeFront({ c, inv, w, h, x, y }: { c: Ctx; inv: Invitation; w: number; h: number; x: number; y: number }) {
+  const { p, theme, o } = c;
+  const e = inv.envelope;
+  const k = Math.min(w, h) / pt(133); // 1 on an A7 envelope
+  const inset = pt(5) * Math.max(0.8, Math.min(1.3, k));
+  const corner = Math.min(pt(12), h * 0.11);
+  const top = topMotif(theme), div = dividerMotif(theme);
+  const square = w / h < 1.2;
+  const nameSize = (o.nameFont === "script" ? 22 : 18) * k;
+  const names = `${e.first} ${e.joiner} ${e.second}`;
+  const fitName = nameSize * Math.min(1, 30 / Math.max(names.length, 1));
+  const toW = square ? w * 0.72 : w * 0.5;
+  const rule = { borderBottomWidth: 0.6, borderBottomColor: p.soft, height: 15 * k };
   return (
-    <Card c={base}>
-      {hasSymbol && (o.symbol === "custom"
-        ? <Image src={iconPng(o.symbolImage, c.p.accent)!} style={{ width: 34 * c.s, height: 34 * c.s, marginBottom: 6 * c.s }} />
-        : isGlyph(o.symbol)
-          ? <Text style={{ fontFamily: SYMBOL_GLYPHS[o.symbol].font, fontSize: 30 * c.s, color: c.p.accent, lineHeight: 1.1, marginBottom: 4 * c.s }}>{SYMBOL_GLYPHS[o.symbol].text}</Text>
-          : <Draw m={symbol(o.symbol as DrawnSymbol)} width={34 * c.s} p={c.p} style={{ marginBottom: 6 * c.s }} />)}
-      <Draw m={top} width={96 * c.s} p={c.p} style={{ marginBottom: 8 * c.s }} />
-      <Kicker c={c} size={9}>{cv.title}</Kicker>
-      <Tx style={{ ...name(cv.first), marginTop: 12 * c.s }}>{cv.first}</Tx>
-      <Tx style={{ fontStyle: "italic", fontSize: 16 * c.s, color: c.p.accent, marginVertical: 4 * c.s }}>{cv.joiner}</Tx>
-      <Tx style={name(cv.second)}>{cv.second}</Tx>
-      <Draw m={div} width={64 * c.s} p={c.p} style={{ marginVertical: 10 * c.s }} />
-      <Kicker c={c} size={8.5}>{cv.date}</Kicker>
-      {cv.place && <Tx style={{ fontSize: 11 * c.s, marginTop: 4 * c.s, color: c.p.soft }}>{cv.place}</Tx>}
-      {cv.monogram && <View style={{ marginTop: 14 * c.s }}><Crest c={c} text={cv.monogram} size={40 * c.s} /></View>}
-    </Card>
+    <View style={{ position: "absolute", left: x, top: y, width: w, height: h }}>
+      <View style={{ position: "absolute", left: inset, top: inset, right: inset, bottom: inset, borderWidth: 0.9, borderColor: p.accent }} />
+      <View style={{ position: "absolute", left: inset + pt(1.4), top: inset + pt(1.4), right: inset + pt(1.4), bottom: inset + pt(1.4), borderWidth: 0.35, borderColor: p.accent }} />
+      {([[false, false], [true, false], [false, true], [true, true]] as const).map(([fx, fy], i) => (
+        <Draw key={i} m={cornerMotif(theme, fx, fy)} width={corner} p={p}
+          style={{ position: "absolute", left: fx ? w - inset - pt(1) - corner : inset + pt(1), top: fy ? h - inset - pt(1) - corner : inset + pt(1) }} />
+      ))}
+      {/* the couple, at the top */}
+      <View style={{ position: "absolute", left: inset + corner, right: inset + corner, top: inset + pt(4) * k, alignItems: "center", color: p.ink, fontFamily: "Cormorant", fontWeight: 500, textAlign: "center" }}>
+        <Draw m={top} width={w * (square ? 0.34 : 0.22)} p={p} style={{ marginBottom: 3 * k }} />
+        <Kicker c={{ ...c, s: k }} size={7.5}>{e.title}</Kicker>
+        <Tx style={o.nameFont === "script"
+          ? { fontFamily: "GreatVibes", fontWeight: 400, fontSize: fitName, color: p.accent, lineHeight: 1.2, marginTop: 2 * k }
+          : { fontWeight: 700, fontSize: fitName, lineHeight: 1.15, marginTop: 3 * k }}>{names}</Tx>
+        <Draw m={div} width={w * 0.14} p={p} style={{ marginVertical: 3 * k }} />
+        <Kicker c={{ ...c, s: k }} size={6.4}>{e.date}</Kicker>
+      </View>
+      {/* "To," and lines to write on, lower right */}
+      <View style={{ position: "absolute", width: toW, right: inset + corner * (square ? 0.6 : 0.9), bottom: inset + pt(7) * k, color: p.ink, fontFamily: "Cormorant", fontWeight: 500 }}>
+        <Tx style={{ fontStyle: "italic", fontSize: 10.5 * k, color: p.accent, marginBottom: 2 * k }}>{e.to}</Tx>
+        <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
+          <Tx style={{ fontSize: 10 * k, marginRight: 4 * k, marginBottom: 2 * k }}>{e.prefix}</Tx>
+          <View style={{ ...rule, flexGrow: 1 }} />
+          <Tx style={{ fontSize: 10 * k, marginLeft: 4 * k, marginBottom: 2 * k }}>{e.family}</Tx>
+        </View>
+        <View style={{ ...rule, marginTop: 4 * k }} />
+        <View style={{ ...rule, marginTop: 4 * k }} />
+      </View>
+    </View>
+  );
+}
+
+/** The crest letters in a seal, where the flap closes. `flip` turns it upside down (a flap folded over). */
+function Seal({ c, inv, size, x, y, flip = false }: { c: Ctx; inv: Invitation; size: number; x: number; y: number; flip?: boolean }) {
+  return (
+    <View style={{ position: "absolute", left: x - size / 2, top: y - size / 2, width: size, height: size, ...(flip ? { transform: "rotate(180deg)" } : {}) }}>
+      <Crest c={{ ...c, s: 0 }} text={inv.envelope.seal} size={size} />
+    </View>
+  );
+}
+
+/**
+ * The envelope pages. "front": the envelope's own size, ink only (no
+ * background), to print on envelopes from a stationer — the front, then the
+ * back with the seal where a flap's edge sits. "flat": one sheet to cut and
+ * fold, in the card's colours, with the seal on the outside of the top flap.
+ */
+function EnvelopePages({ c, inv }: { c: Ctx; inv: Invitation }) {
+  const env = envelopeFor(c.o).mm;
+  const p = c.p;
+  if (c.o.envelope === "front") {
+    const [W, H] = env.map(pt);
+    // printed on a bought (light) envelope: the theme's light-paper inks
+    const ink = { ...c, p: paletteFor(c.theme, "light") };
+    return (
+      <>
+        <Page size={[W, H]} style={{ backgroundColor: "#ffffff" }}>
+          <EnvelopeFront c={ink} inv={inv} w={W} h={H} x={0} y={0} />
+        </Page>
+        <Page size={[W, H]} style={{ backgroundColor: "#ffffff" }}>
+          <Seal c={ink} inv={inv} size={Math.min(W, H) * 0.24} x={W / 2} y={H * 0.4} />
+        </Page>
+      </>
+    );
+  }
+  // the cut-and-fold template
+  const d = dieLine(env);
+  const sheet = flatSheet(env).mm;
+  const [SW, SH] = sheet.map(pt);
+  const ox = (SW - pt(d.width)) / 2, oy = (SH - pt(d.height)) / 2;
+  const X = (mm: number) => ox + pt(mm), Y = (mm: number) => oy + pt(mm);
+  const L = d.side, R = d.side + d.W, T = d.top, B = d.top + d.H, mid = d.side + d.W / 2;
+  const r = 3; // corner rounding, mm
+  // the outline, clockwise from the top-left of the front panel
+  const outline = [
+    `M ${X(L)} ${Y(T)}`,
+    // top flap: a point with a soft tip
+    `L ${X(mid - 9)} ${Y(4)} Q ${X(mid)} ${Y(-1)} ${X(mid + 9)} ${Y(4)} L ${X(R)} ${Y(T)}`,
+    // right flap
+    `L ${X(R + d.side - r)} ${Y(T + d.H * 0.12)} Q ${X(R + d.side)} ${Y(T + d.H * 0.12 + 1)} ${X(R + d.side)} ${Y(T + d.H * 0.12 + r)}`,
+    `L ${X(R + d.side)} ${Y(B - d.H * 0.12 - r)} Q ${X(R + d.side)} ${Y(B - d.H * 0.12 - 1)} ${X(R + d.side - r)} ${Y(B - d.H * 0.12)} L ${X(R)} ${Y(B)}`,
+    // bottom flap
+    `L ${X(R - d.W * 0.06)} ${Y(B + d.bottom - r)} Q ${X(R - d.W * 0.06 - 1)} ${Y(B + d.bottom)} ${X(R - d.W * 0.06 - r)} ${Y(B + d.bottom)}`,
+    `L ${X(L + d.W * 0.06 + r)} ${Y(B + d.bottom)} Q ${X(L + d.W * 0.06 + 1)} ${Y(B + d.bottom)} ${X(L + d.W * 0.06)} ${Y(B + d.bottom - r)} L ${X(L)} ${Y(B)}`,
+    // left flap
+    `L ${X(r)} ${Y(B - d.H * 0.12)} Q ${X(0)} ${Y(B - d.H * 0.12 - 1)} ${X(0)} ${Y(B - d.H * 0.12 - r)}`,
+    `L ${X(0)} ${Y(T + d.H * 0.12 + r)} Q ${X(0)} ${Y(T + d.H * 0.12 + 1)} ${X(r)} ${Y(T + d.H * 0.12)} Z`,
+  ].join(" ");
+  // an accent line just inside the top flap's edge
+  const flapLine = `M ${X(L + 6)} ${Y(T - 1.5)} L ${X(mid - 7)} ${Y(8)} Q ${X(mid)} ${Y(4.5)} ${X(mid + 7)} ${Y(8)} L ${X(R - 6)} ${Y(T - 1.5)}`;
+  const cut = "#8a857d";
+  return (
+    <Page size={[SW, SH]} style={{ backgroundColor: "#ffffff" }}>
+      <Svg style={{ position: "absolute", left: 0, top: 0 }} width={SW} height={SH}>
+        <Path d={outline} fill={p.bg} stroke={cut} strokeWidth={0.6} />
+        <Path d={flapLine} fill="none" stroke={p.accent} strokeWidth={0.7} />
+        {/* fold lines: the front panel's four edges */}
+        <SvgLine x1={X(L)} y1={Y(T)} x2={X(R)} y2={Y(T)} stroke={cut} strokeWidth={0.5} strokeDasharray={DASH} />
+        <SvgLine x1={X(L)} y1={Y(B)} x2={X(R)} y2={Y(B)} stroke={cut} strokeWidth={0.5} strokeDasharray={DASH} />
+        <SvgLine x1={X(L)} y1={Y(T)} x2={X(L)} y2={Y(B)} stroke={cut} strokeWidth={0.5} strokeDasharray={DASH} />
+        <SvgLine x1={X(R)} y1={Y(T)} x2={X(R)} y2={Y(B)} stroke={cut} strokeWidth={0.5} strokeDasharray={DASH} />
+      </Svg>
+      <EnvelopeFront c={c} inv={inv} w={pt(d.W)} h={pt(d.H)} x={X(L)} y={Y(T)} />
+      {/* the seal on the outside of the top flap, near its tip: upside down here, upright once folded */}
+      <Seal c={c} inv={inv} size={pt(Math.min(d.W, d.H) * 0.2)} x={X(mid)} y={Y(Math.min(d.top * 0.32, 22))} flip />
+      <Text style={{ position: "absolute", left: 0, right: 0, bottom: pt(4), textAlign: "center", fontFamily: "Cormorant", fontSize: 8.5, color: cut }}>
+        {`Cut along the solid line · fold along the dashes, flaps behind the front · glue the side flaps under the bottom one · envelope ${envelopeFor(c.o).name}`}
+      </Text>
+    </Page>
   );
 }
 
@@ -548,10 +644,10 @@ export async function renderInvitationPdf(inv: Invitation, o: InvitationOptions,
     : null;
   const doc = (
     <Document title="Wedding invitation" creator="One Tap Invites" producer="One Tap Invites">
-      {o.cover && <CoverPage c={c} inv={inv} />}
       <Front c={c} inv={inv} />
       <Back c={c} inv={inv} qr={qr} />
       {inv.inserts.map((card) => <Insert key={card.event.id} c={c} card={card} />)}
+      {o.envelope !== "none" && <EnvelopePages c={c} inv={inv} />}
     </Document>
   );
   return renderToBuffer(doc);

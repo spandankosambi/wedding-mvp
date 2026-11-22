@@ -12,6 +12,7 @@ import {
   defaultMonogram, isPortrait, trimSize, type InvitationOptions, type MonogramStyle, type SizeId,
   OMITTABLE, type Omittable,
 } from "@/lib/invitation/options";
+import { envelopeFor, flatSheet } from "@/lib/invitation/envelope";
 import { crest, paletteFor, type Motif, type Palette } from "@/lib/invitation/motifs";
 import {
   BORDER_STYLES, BORDER_LABELS, PATTERNS, PATTERN_LABELS, SYMBOLS, SYMBOL_LABELS, SYMBOL_GLYPHS, isGlyph,
@@ -71,7 +72,7 @@ function initial(p: Props): Form {
     omit: [], qr: true, dressCode: true, replyBy: p.hasDeadline,
     frame: "classic", toran: false, patternBorder: false, borderStyle: "diamond", pattern: "none", symbol: "motif", symbolImage: "", icons: false, cardIcons: true, monogram: false, monogramText: "", monogramStyle: "circle",
     fill: "classic", nameFont: "serif", photo: null, photoPlace: "front", photoShape: "arch",
-    lang: "en", cover: false,
+    lang: "en", envelope: "none",
     customW: "", customH: "", unit: "in",
   };
 }
@@ -111,7 +112,7 @@ const legacyKey = (id: string) => `print-invitation:${id}`;
     whose card it is or its events (the wording has its own "Same as" on the site). */
 const SHARED_KEYS = [
   "size", "orientation", "eventLayout", "output", "cropMarks", "colours", "omit", "qr", "dressCode", "replyBy",
-  "cover", "frame", "toran", "patternBorder", "borderStyle", "pattern", "symbol", "symbolImage", "icons", "cardIcons", "monogram", "monogramStyle", "fill", "nameFont", "photo", "photoPlace", "photoShape", "customW", "customH", "unit",
+  "envelope", "frame", "toran", "patternBorder", "borderStyle", "pattern", "symbol", "symbolImage", "icons", "cardIcons", "monogram", "monogramStyle", "fill", "nameFont", "photo", "photoPlace", "photoShape", "customW", "customH", "unit",
 ] as const;
 const readSaved = (key: string): Record<string, unknown> | null => {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; }
@@ -803,9 +804,28 @@ export function PrintInvitation(props: Props) {
                 </fieldset>
 
                 <fieldset>
+                  <legend className={label}>Envelope</legend>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                    <Choice name="envelope" value="none" current={form.envelope} onPick={(v) => set("envelope", v)} title="No envelope" />
+                    <Choice name="envelope" value="front" current={form.envelope} onPick={(v) => set("envelope", v)} title="Print on envelopes" hint="The front and the seal, to print on envelopes you buy" />
+                    <Choice name="envelope" value="flat" current={form.envelope} onPick={(v) => set("envelope", v)} title="Cut-and-fold" hint="A sheet in your design to cut out and fold" />
+                  </div>
+                  {form.envelope !== "none" && (() => {
+                    const env = envelopeFor({ size: form.size, orientation: form.orientation, customWidthMm: customW, customHeightMm: customH });
+                    const sheet = flatSheet(env.mm);
+                    return (
+                      <p className="mt-2 text-xs text-neutral-500" data-testid="envelope-note">
+                        {form.envelope === "front"
+                          ? <>Your card fits a <b>{env.name}</b> envelope. Buy those (plain, light-coloured ones print best) and feed them into the printer one at a time. The front has a line to write each guest&rsquo;s name by hand; the second page puts your monogram seal on the back.</>
+                          : <>Makes a <b>{env.name}</b> envelope. Print on <b>{sheet.name === "custom" ? "a large sheet" : sheet.name}</b> card stock{sheet.name === "A3" ? " (most print shops do A3)" : ""}, cut along the solid line and fold along the dashes. Your monogram seal sits on the flap.</>}
+                      </p>
+                    );
+                  })()}
+                </fieldset>
+
+                <fieldset>
                   <legend className={label}>Also on the card</legend>
                   <div className="mt-2 space-y-2">
-                    <Check checked={form.cover} onChange={(v) => set("cover", v)}>A cover page <span className="text-xs text-neutral-500">— in the same design: your names, the date and the city, before the invitation</span></Check>
                     <Check checked={form.qr} onChange={(v) => set("qr", v)}>QR code to the wedding website <span className="text-xs text-neutral-500">— on the back, for guests to RSVP</span></Check>
                     {props.icons ? (
                       <Check checked={form.cardIcons} onChange={(v) => set("cardIcons", v)}>Celebration icons <span className="text-xs text-neutral-500">— beside each event. Unticking removes them from the printed cards only, not your website.</span></Check>

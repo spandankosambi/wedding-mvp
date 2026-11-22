@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import { localize } from "@/lib/invitation/i18n";
+import { envelopeFor, flatSheet } from "@/lib/invitation/envelope";
 import { renderInvitationPdf } from "@/lib/invitation/pdf";
 import { invitationSchema } from "@/lib/invitation/options";
 import { transliterate } from "@/lib/invitation/translit";
@@ -14,7 +15,7 @@ const evs = [
   mk("33333333-3333-4333-8333-333333333333", "Pheras", "2027-01-29T05:00:00Z", "Shubh Lawns", "Magarpatta, Pune", null, 3),
 ];
 const opts = (lang: "en" | "gu" | "hi", extra = {}) => invitationSchema.parse({
-  version: "groom", lang, cover: true, monogram: true, invocation: "Shri Ganeshaya Namah",
+  version: "groom", lang, envelope: "front", monogram: true, invocation: "Shri Ganeshaya Namah",
   rsvpGroom: "Mrs. Manisha Kosambi 9427702237\nMr. Rajesh Kosambi 9876543210", complimentsGroom: "Kosambi Parivar", ...extra,
 });
 
@@ -34,7 +35,8 @@ describe("cards in Gujarati and Hindi", () => {
     const { inv, fields } = localize(w, evs, opts("en"), "https://x.test", "en");
     expect(fields).toHaveLength(0);
     expect(inv.front.lead[1].t).toBe("request the pleasure of your company");
-    expect(inv.cover.title).toBe("The Wedding of");
+    expect(inv.envelope.title).toBe("Wedding Invitation");
+    expect(inv.envelope.prefix).toBe("Shri / Smt.");
   });
 
   it("Gujarati: the standard phrases, dates in Gujarati numerals, names spelled out", () => {
@@ -48,11 +50,12 @@ describe("cards in Gujarati and Hindi", () => {
     expect(inv.back.events[0].time).toBe("સવારે ૧૦:૦૦ વાગ્યે");
     expect(inv.back.details.rsvp[0]).toBe("શ્રીમતી મનિશા કોસંબી 9427702237");
     expect(inv.labels.compliments).toBe("સ્નેહાધીન");
-    expect(inv.cover.title).toBe("શુભ લગ્ન");
+    expect(inv.envelope.title).toBe("શુભ લગ્ન");
+    expect(inv.envelope.family).toBe("સહ પરિવાર");
     // every field has a stable key, its English and our draft
     const keys = fields.map((f) => f.key);
     expect(new Set(keys).size).toBe(keys.length);
-    expect(keys).toEqual(expect.arrayContaining(["hosts", "request", "first", "second", "date", "event.11111111-1111-4111-8111-111111111111.time", "rsvp.0", "label.rsvp", "cover.title"]));
+    expect(keys).toEqual(expect.arrayContaining(["hosts", "request", "first", "second", "date", "event.11111111-1111-4111-8111-111111111111.time", "rsvp.0", "label.rsvp", "envelope.title", "envelope.to"]));
   });
 
   it("the family's own words win over the draft, everywhere the line is printed", () => {
@@ -60,22 +63,33 @@ describe("cards in Gujarati and Hindi", () => {
       first: "स्पन्दन कोसम्बी", "event.33333333-3333-4333-8333-333333333333.name": "पाणिग्रहण", hosts: "",
     });
     expect(inv.front.first).toBe("स्पन्दन कोसम्बी");
-    expect(inv.cover.first).toBe("स्पन्दन कोसम्बी");
+    expect(inv.envelope.first).toBe("स्पन्दन कोसम्बी");
     expect(inv.inserts.find((c) => c.event.id.startsWith("3333"))!.event.name).toBe("पाणिग्रहण");
     // an emptied box falls back to our draft rather than printing nothing
     expect(inv.front.lead[0].t).toBe("श्री रजेश एवं श्रीमती मनिशा कोसंबी");
     expect(inv.inserts[0].couple).toContain(" एवं ");
   });
 
-  it("renders a PDF with a cover in each language", async () => {
-    for (const lang of ["gu", "hi"] as const) {
-      const o = opts(lang);
-      const { inv } = localize(w, evs, o, "https://x.test", lang);
-      const pdf = await renderInvitationPdf(inv, o, "raj-mahal");
-      expect(pdf.subarray(0, 4).toString()).toBe("%PDF");
-      // cover + front + back
-      expect((pdf.toString("latin1").match(/\/Type \/Page\b/g) ?? []).length).toBe(3);
-      if (process.env.CARD_OUT) fs.writeFileSync(`${process.env.CARD_OUT}/card-${lang}.pdf`, pdf);
+  it("renders the envelope in each language: front + seal, or one cut-and-fold sheet", async () => {
+    const pages = (b: Buffer) => (b.toString("latin1").match(/\/Type \/Page\b/g) ?? []).length;
+    for (const lang of ["en", "gu", "hi"] as const) {
+      for (const envelope of ["front", "flat"] as const) {
+        const o = { ...opts(lang), envelope };
+        const { inv } = localize(w, evs, o, "https://x.test", lang);
+        const pdf = await renderInvitationPdf(inv, o, "raj-mahal");
+        expect(pdf.subarray(0, 4).toString()).toBe("%PDF");
+        // front + back of the card, then the envelope's front and back, or its one sheet
+        expect(pages(pdf)).toBe(envelope === "front" ? 4 : 3);
+        if (process.env.CARD_OUT) fs.writeFileSync(`${process.env.CARD_OUT}/card-${lang}-${envelope}.pdf`, pdf);
+      }
     }
-  }, 60_000);
+  }, 120_000);
+
+  it("sizes the envelope to the card", () => {
+    expect(envelopeFor({ size: "5x7", orientation: "portrait" }).mm).toEqual([184, 133]);
+    expect(envelopeFor({ size: "a5", orientation: "landscape" }).name).toMatch(/^C5/);
+    expect(envelopeFor({ size: "custom", orientation: "portrait", customWidthMm: 120, customHeightMm: 170 }).mm).toEqual([178, 128]);
+    expect(flatSheet([184, 133]).name).toBe("A3");
+    expect(flatSheet([146, 111]).name).toBe("A4");
+  });
 });
