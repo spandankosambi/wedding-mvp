@@ -289,6 +289,8 @@ export function PrintInvitation(props: Props) {
       const known = new Set(props.events.map((e) => e.id));
       setForm((f) => {
         const next = fromSaved(f, saved);
+        // "Print on envelopes" was retired: a saved one becomes the cut-and-fold envelope
+        if ((next.envelope as string) === "front") next.envelope = "flat";
         // always this family's card
         return { ...next, version: props.family, eventIds: next.eventIds.filter((id) => known.has(id)) };
       });
@@ -826,9 +828,8 @@ export function PrintInvitation(props: Props) {
 
                 <fieldset>
                   <legend className={label}>Envelope</legend>
-                  <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
                     <Choice name="envelope" value="none" current={form.envelope} onPick={(v) => set("envelope", v)} title="No envelope" />
-                    <Choice name="envelope" value="front" current={form.envelope} onPick={(v) => set("envelope", v)} title="Print on envelopes" hint="The front and the seal, to print on envelopes you buy" />
                     <Choice name="envelope" value="flat" current={form.envelope} onPick={(v) => set("envelope", v)} title="Cut-and-fold" hint="A sheet in your design to cut out and fold" />
                   </div>
                   {form.envelope !== "none" && (() => {
@@ -836,9 +837,7 @@ export function PrintInvitation(props: Props) {
                     const sheet = flatSheet(env.mm);
                     return (
                       <p className="mt-2 text-xs text-neutral-500" data-testid="envelope-note">
-                        {form.envelope === "front"
-                          ? <>Your card fits a <b>{env.name}</b> envelope. Buy those (plain, light-coloured ones print best) and feed them into the printer one at a time. The front has a line to write each guest&rsquo;s name by hand; the second page puts your monogram seal on the back.<br /><span data-testid="envelope-ink">Printed in your design&rsquo;s ink on a light envelope. For an envelope in your card&rsquo;s colours, choose Cut-and-fold.</span></>
-                          : <>Makes a <b>{env.name}</b> envelope. Print on <b>{sheet.name === "custom" ? "a large sheet" : sheet.name}</b> card stock{sheet.name === "A3" ? " (most print shops do A3)" : ""}, cut along the solid line and fold along the dashes. Your monogram seal sits on the flap.</>}
+                        Makes a <b>{env.name}</b> envelope. Print on <b>{sheet.name === "custom" ? "a large sheet" : sheet.name}</b> card stock{sheet.name === "A3" ? " (most print shops do A3)" : ""}, cut along the solid line and fold along the dashes. Your monogram seal sits on the flap.
                       </p>
                     );
                   })()}

@@ -76,7 +76,7 @@ test("Gujarati cards: our draft, your edits with the keyboard, an envelope, and 
     return (body.toString("latin1").match(/\/Type \/Page\b/g) ?? []).length;
   };
   const plain = await pdf({ lang: "gu" });
-  expect(await pdf({ lang: "gu", envelope: "front" })).toBe(plain + 2);
+  expect(await pdf({ lang: "gu", envelope: "flat" })).toBe(plain + 1);
   expect(await pdf({ lang: "en", envelope: "flat" })).toBe(plain + 1);
 
   // the website is untouched

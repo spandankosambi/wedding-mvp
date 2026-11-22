@@ -421,30 +421,12 @@ function Seal({ c, inv, size, x, y, flip = false }: { c: Ctx; inv: Invitation; s
 }
 
 /**
- * The envelope pages. "front": the envelope's own size, ink only (no
- * background), to print on envelopes from a stationer — the front, then the
- * back with the seal where a flap's edge sits. "flat": one sheet to cut and
- * fold, in the card's colours, with the seal on the outside of the top flap.
+ * The envelope: one sheet to cut and fold, in the card's colours, with the
+ * seal on the outside of the top flap.
  */
 function EnvelopePages({ c, inv }: { c: Ctx; inv: Invitation }) {
   const env = envelopeFor(c.o).mm;
   const p = c.p;
-  if (c.o.envelope === "front") {
-    const [W, H] = env.map(pt);
-    // printed on a bought (light) envelope: the theme's light-paper inks
-    const ink = { ...c, p: paletteFor(c.theme, "light") };
-    return (
-      <>
-        <Page size={[W, H]} style={{ backgroundColor: "#ffffff" }}>
-          <EnvelopeFront c={ink} inv={inv} w={W} h={H} x={0} y={0} />
-        </Page>
-        <Page size={[W, H]} style={{ backgroundColor: "#ffffff" }}>
-          <Seal c={ink} inv={inv} size={Math.min(W, H) * 0.24} x={W / 2} y={H * 0.4} />
-        </Page>
-      </>
-    );
-  }
-  // the cut-and-fold template
   const d = dieLine(env);
   const sheet = flatSheet(env).mm;
   const [SW, SH] = sheet.map(pt);

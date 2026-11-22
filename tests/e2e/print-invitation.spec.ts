@@ -173,10 +173,9 @@ test("setup and design — with the live preview on every page — then download
   // the envelope is sized to the card: bought ones, or a sheet to cut and fold
   await page.getByRole("button", { name: "2 · Design" }).click();
   await expect(page.getByTestId("envelope-note")).toHaveCount(0);
-  await page.getByRole("radio", { name: /^Print on envelopes/ }).click();
-  await expect(page.getByTestId("envelope-note")).toContainText("161 × 237 mm envelope");
-  await expect(page.getByTestId("envelope-ink")).toHaveText("Printed in your design’s ink on a light envelope. For an envelope in your card’s colours, choose Cut-and-fold.");
+  await expect(page.getByRole("radio", { name: /^Print on envelopes/ })).toHaveCount(0);
   await page.getByRole("radio", { name: /^Cut-and-fold/ }).click();
+  await expect(page.getByTestId("envelope-note")).toContainText("161 × 237 mm envelope");
   await expect(page.getByTestId("envelope-note")).toContainText("a large sheet");
   await page.getByRole("button", { name: "1 · Setup" }).click();
   await page.getByRole("combobox", { name: "Card size" }).selectOption("5x7");

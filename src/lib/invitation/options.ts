@@ -121,8 +121,9 @@ export const invitationSchema = z.object({
   photoShape: z.enum(["arch", "circle"]).default("arch"),
   /** the cards' language: English, or Gujarati / Hindi (words from the Card wording page) */
   lang: z.enum(["en", "gu", "hi"]).default("en"),
-  /** the envelope: none, its front to print on bought envelopes, or a cut-and-fold template */
-  envelope: z.enum(["none", "front", "flat"]).default("none"),
+  /** the envelope: none, or a cut-and-fold template in the card's design.
+      ("front", printing on bought envelopes, was retired: it now means the template) */
+  envelope: z.preprocess((v) => (v === "front" ? "flat" : v), z.enum(["none", "flat"])).default("none"),
 }).refine((o) => o.size !== "custom" || (o.customWidthMm !== undefined && o.customHeightMm !== undefined), {
   message: "a custom size needs a width and a height",
 });

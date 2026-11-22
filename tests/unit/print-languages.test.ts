@@ -16,7 +16,7 @@ const evs = [
   mk("33333333-3333-4333-8333-333333333333", "Pheras", "2027-01-29T05:00:00Z", "Shubh Lawns", "Magarpatta, Pune", null, 3),
 ];
 const opts = (lang: "en" | "gu" | "hi", extra = {}) => invitationSchema.parse({
-  version: "groom", lang, envelope: "front", monogram: true, invocation: "Shri Ganeshaya Namah",
+  version: "groom", lang, envelope: "flat", monogram: true, invocation: "Shri Ganeshaya Namah",
   rsvpGroom: "Mrs. Manisha Kosambi 9427702237\nMr. Rajesh Kosambi 9876543210", complimentsGroom: "Kosambi Parivar", ...extra,
 });
 
@@ -71,16 +71,17 @@ describe("cards in Gujarati and Hindi", () => {
     expect(inv.inserts[0].couple).toContain(" एवं ");
   });
 
-  it("renders the envelope in each language: front + seal, or one cut-and-fold sheet", async () => {
+  it("renders the cut-and-fold envelope in each language; an old 'print on envelopes' pick becomes it", async () => {
+    expect(invitationSchema.parse({ envelope: "front" }).envelope).toBe("flat");
     const pages = (b: Buffer) => (b.toString("latin1").match(/\/Type \/Page\b/g) ?? []).length;
     for (const lang of ["en", "gu", "hi"] as const) {
-      for (const envelope of ["front", "flat"] as const) {
+      for (const envelope of ["flat"] as const) {
         const o = { ...opts(lang), envelope };
         const { inv } = localize(w, evs, o, "https://x.test", lang);
         const pdf = await renderInvitationPdf(inv, o, "raj-mahal");
         expect(pdf.subarray(0, 4).toString()).toBe("%PDF");
-        // front + back of the card, then the envelope's front and back, or its one sheet
-        expect(pages(pdf)).toBe(envelope === "front" ? 4 : 3);
+        // front + back of the card, then the envelope's one sheet
+        expect(pages(pdf)).toBe(3);
         if (process.env.CARD_OUT) fs.writeFileSync(`${process.env.CARD_OUT}/card-${lang}-${envelope}.pdf`, pdf);
       }
     }

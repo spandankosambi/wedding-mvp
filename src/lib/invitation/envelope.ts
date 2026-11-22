@@ -9,7 +9,7 @@ import { CARD_SIZES, panelSize, type InvitationOptions } from "./options";
  * Envelopes are drawn landscape (opening along the long side); squares stay square.
  */
 
-export const ENVELOPE_STYLES = ["none", "front", "flat"] as const;
+export const ENVELOPE_STYLES = ["none", "flat"] as const;
 export type EnvelopeStyle = (typeof ENVELOPE_STYLES)[number];
 
 const STANDARD: Record<string, { name: string; mm: [number, number] }> = {
