@@ -142,6 +142,27 @@ export function trimSize(o: Pick<InvitationOptions, "size" | "customWidthMm" | "
   return (o.orientation === "landscape" ? [portrait[1], portrait[0]] : portrait) as [number, number];
 }
 
+type SizeOpts = Pick<InvitationOptions, "size" | "customWidthMm" | "customHeightMm" | "orientation"> & { eventLayout?: InvitationOptions["eventLayout"] };
+
+/** A folded card: the size picked is the open sheet, laid long side across. */
+export function foldedSheet(o: SizeOpts): [number, number] {
+  const [w, h] = trimSize({ ...o, orientation: "portrait" });
+  return [h, w];
+}
+
+/** One card face in mm: the card itself, or half the sheet of a folded card. */
+export function panelSize(o: SizeOpts): [number, number] {
+  if (o.eventLayout !== "folded") return trimSize(o);
+  const [w, h] = foldedSheet(o);
+  return [Math.round((w / 2) * 10) / 10, h];
+}
+
+/** Folding needs a portrait (or square) card: a landscape one would open to a long, narrow strip. */
+export function canFold(o: SizeOpts): boolean {
+  const [w, h] = trimSize(o);
+  return w <= h;
+}
+
 export const MM_PER_INCH = 25.4;
 
 /** The arch frame needs a portrait card (taller than wide). */

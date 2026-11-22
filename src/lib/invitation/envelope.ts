@@ -1,4 +1,4 @@
-import { trimSize, type InvitationOptions } from "./options";
+import { CARD_SIZES, panelSize, type InvitationOptions } from "./options";
 
 /*
  * The envelope that carries the card. Browser-safe: the print page shows the
@@ -24,11 +24,16 @@ const STANDARD: Record<string, { name: string; mm: [number, number] }> = {
 };
 
 /** The envelope for a card: its name and size in mm, [width, height] (landscape). */
-export function envelopeFor(o: Pick<InvitationOptions, "size" | "customWidthMm" | "customHeightMm" | "orientation">): { name: string; mm: [number, number] } {
-  const std = STANDARD[o.size];
+export function envelopeFor(o: Pick<InvitationOptions, "size" | "customWidthMm" | "customHeightMm" | "orientation"> & { eventLayout?: InvitationOptions["eventLayout"] }): { name: string; mm: [number, number] } {
+  // a folded card goes in the envelope for its folded size (A4 folds to A5: a C5)
+  const face = panelSize(o);
+  const size = o.eventLayout === "folded"
+    ? CARD_SIZES.find((s) => Math.abs(Math.min(...s.mm) - Math.min(...face)) <= 1 && Math.abs(Math.max(...s.mm) - Math.max(...face)) <= 1)?.id
+    : o.size;
+  const std = size ? STANDARD[size] : undefined;
   if (std) return std;
   // a custom card: 4 mm of room on every side, to the next whole mm
-  const [w, h] = trimSize(o);
+  const [w, h] = face;
   const long = Math.ceil(Math.max(w, h) + 8), short = Math.ceil(Math.min(w, h) + 8);
   return { name: `${short} × ${long} mm`, mm: [long, short] };
 }

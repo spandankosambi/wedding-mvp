@@ -9,7 +9,7 @@ import { eventForSide, type Side } from "@/lib/sides";
 import type { Theme } from "@/themes/catalog";
 import {
   BLEED_MM, CARD_SIZES, CUSTOM_MAX_MM, CUSTOM_MIN_MM, MAX_PHOTO_CHARS, MM_PER_INCH, MONOGRAM_STYLES,
-  defaultMonogram, isPortrait, trimSize, type InvitationOptions, type MonogramStyle, type SizeId,
+  defaultMonogram, foldedSheet, isPortrait, panelSize, trimSize, type InvitationOptions, type MonogramStyle, type SizeId,
   OMITTABLE, type Omittable,
 } from "@/lib/invitation/options";
 import { envelopeFor, flatSheet } from "@/lib/invitation/envelope";
@@ -363,6 +363,8 @@ export function PrintInvitation(props: Props) {
   const folded = form.eventLayout === "folded";
   const pages = folded ? 2 : 1 + ((!separate && chosen.length) || details || backPhoto ? 1 : 0) + (separate ? chosen.length : 0);
   const [tw, th] = customOk ? trimSize(options) : [0, 0];
+  const [fw, fh] = customOk ? panelSize({ ...options, eventLayout: "folded" }) : [0, 0];
+  const [ow, oh] = customOk ? foldedSheet(options) : [0, 0];
   const palette = paletteFor(props.theme, form.colours);
   const portrait = customOk && isPortrait(options);
   const monoDefault = defaultMonogram(props.brideName, props.groomName, form.version);
@@ -448,7 +450,7 @@ export function PrintInvitation(props: Props) {
 
   const summary = customOk
     ? folded
-      ? `2 pages, printed on both sides of one sheet · folds to ${tw} × ${th} mm, opens to ${2 * tw} × ${th} mm${form.output === "printer" ? ` (${2 * tw + 2 * BLEED_MM} × ${th + 2 * BLEED_MM} mm with bleed)` : ""}${chosen.length === 0 ? " · no events selected" : ""}`
+      ? `2 pages, printed on both sides of one sheet · opens to ${ow} × ${oh} mm, folds to ${fw} × ${fh} mm${form.output === "printer" ? ` (sheet ${ow + 2 * BLEED_MM} × ${oh + 2 * BLEED_MM} mm with bleed)` : ""}${chosen.length === 0 ? " · no events selected" : ""}`
       : `${pages} ${pages === 1 ? "page" : "pages"} · card ${tw} × ${th} mm${form.output === "printer" ? ` (${tw + 2 * BLEED_MM} × ${th + 2 * BLEED_MM} mm with bleed)` : " on A4"}${chosen.length === 0 ? " · no events selected" : ""}`
     : "Enter a custom size";
 
@@ -627,7 +629,8 @@ export function PrintInvitation(props: Props) {
                   </div>
                   {form.eventLayout === "folded" && (
                     <p className="mt-2 text-xs text-neutral-500" data-testid="fold-note">
-                      Each half is the card size you picked, so the sheet opens to twice its width. Print both pages on one sheet, double-sided
+                      The card size you pick is the open sheet, and each half is half of it: an A4 sheet folds to A5, a 5 × 7 in to 3½ × 5 in.
+                      Print both pages on one sheet, double-sided
                       (choose &ldquo;flip on short edge&rdquo;), then fold down the middle: the crest is the back, the To and From cover the front.
                     </p>
                   )}
@@ -829,7 +832,7 @@ export function PrintInvitation(props: Props) {
                     <Choice name="envelope" value="flat" current={form.envelope} onPick={(v) => set("envelope", v)} title="Cut-and-fold" hint="A sheet in your design to cut out and fold" />
                   </div>
                   {form.envelope !== "none" && (() => {
-                    const env = envelopeFor({ size: form.size, orientation: form.orientation, customWidthMm: customW, customHeightMm: customH });
+                    const env = envelopeFor({ size: form.size, orientation: form.orientation, customWidthMm: customW, customHeightMm: customH, eventLayout: form.eventLayout });
                     const sheet = flatSheet(env.mm);
                     return (
                       <p className="mt-2 text-xs text-neutral-500" data-testid="envelope-note">

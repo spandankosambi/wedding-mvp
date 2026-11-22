@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import { localize } from "@/lib/invitation/i18n";
 import { envelopeFor, flatSheet } from "@/lib/invitation/envelope";
+import { panelSize } from "@/lib/invitation/options";
 import { renderInvitationPdf } from "@/lib/invitation/pdf";
 import { invitationSchema } from "@/lib/invitation/options";
 import { transliterate } from "@/lib/invitation/translit";
@@ -96,9 +97,11 @@ describe("cards in Gujarati and Hindi", () => {
         if (lang === "gu") expect(fields.some((f) => f.key === "envelope.from")).toBe(true);
         const pdf = await renderInvitationPdf(inv, o, "raj-mahal");
         const pages = sizes(pdf);
-        expect(pages.length).toBe(2);
-        // 5 × 7 in panels → a 10 × 7 in sheet plus 3 mm bleed; at home, on landscape A4
-        expect(pages[0]).toEqual(output === "printer" ? [737, 522] : [842, 595]);
+        if (process.env.CARD_OUT) fs.writeFileSync(`${process.env.CARD_OUT}/folded-${lang}-${output}.pdf`, pdf);
+        expect(pages, JSON.stringify(pages)).toHaveLength(2);
+        // a 5 × 7 in card opens long side across (7 × 5 in) and folds to 3½ × 5 in halves;
+        // plus 3 mm bleed at the print shop, on an A4 page with marks at home
+        expect(pages[0]).toEqual(output === "printer" ? [522, 377] : [595, 842]);
         if (process.env.CARD_OUT) fs.writeFileSync(`${process.env.CARD_OUT}/folded-${lang}-${output}.pdf`, pdf);
       }
     }
@@ -110,6 +113,16 @@ describe("cards in Gujarati and Hindi", () => {
     const pdf = await renderInvitationPdf(inv, o, "raj-mahal");
     const boxes = [...pdf.toString("latin1").matchAll(/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/g)].map((m) => Math.round(+m[1]));
     expect(boxes.every((wd) => wd < 600)).toBe(true); // 7 in wide plus bleed, not 14
+  }, 60_000);
+
+  it("an A4 folded card is an A4 sheet with A5 halves, in a C5 envelope", async () => {
+    const o = { ...opts("en"), size: "a4" as const, envelope: "none" as const, eventLayout: "folded" as const };
+    expect(panelSize(o)).toEqual([148.5, 210]);
+    expect(envelopeFor(o).name).toMatch(/^C5/);
+    const { inv } = localize(w, evs, o, "https://x.test", "en");
+    const pdf = await renderInvitationPdf(inv, o, "raj-mahal");
+    const boxes = [...pdf.toString("latin1").matchAll(/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/g)].map((m) => [Math.round(+m[1]), Math.round(+m[2])]);
+    expect(boxes).toEqual([[859, 612], [859, 612]]); // 297 × 210 mm plus 3 mm bleed a side
   }, 60_000);
 
   it("sizes the envelope to the card", () => {

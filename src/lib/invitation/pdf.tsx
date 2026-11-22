@@ -7,7 +7,7 @@ import {
 import type { Style } from "@react-pdf/stylesheet";
 import type { Theme } from "@/themes/catalog";
 import type { Invitation, EventCard, InsertCard, Details, Line } from "./content";
-import { BLEED_MM, SAFE_MM, trimSize, type InvitationOptions } from "./options";
+import { BLEED_MM, SAFE_MM, canFold, foldedSheet, panelSize, trimSize, type InvitationOptions } from "./options";
 import { dieLine, envelopeFor, flatSheet } from "./envelope";
 import { backgroundPattern, borderBand, icon, symbol, isGlyph, SYMBOL_GLYPHS, type DrawnSymbol } from "./decor";
 import {
@@ -78,9 +78,8 @@ type Sheet = { page: [number, number]; x: number; y: number; bleed: number; mark
 
 /** Where the card sits on the PDF page, all in mm. */
 export function sheetFor(o: InvitationOptions): Sheet & { trim: [number, number] } {
-  const panel = trimSize(o);
-  // a folded card prints open: two panels side by side
-  const trim: [number, number] = o.eventLayout === "folded" ? [panel[0] * 2, panel[1]] : panel;
+  // a folded card prints open: the size picked, two halves side by side
+  const trim: [number, number] = o.eventLayout === "folded" ? foldedSheet(o) : trimSize(o);
   const [w, h] = trim;
   if (o.output === "home") {
     const fits = (pw: number, ph: number) => w + 2 * (HOME_BLEED_MM + SLUG_MM) <= pw && h + 2 * (HOME_BLEED_MM + SLUG_MM) <= ph;
@@ -140,7 +139,7 @@ function Draw({ m, width, p, style }: { m: Motif; width: number; p: Palette; sty
   );
 }
 
-function CropMarks({ sheet, trim }: { sheet: Sheet; trim: [number, number] }) {
+function CropMarks({ sheet, trim, fold = false }: { sheet: Sheet; trim: [number, number]; fold?: boolean }) {
   const [pw, ph] = sheet.page;
   const left = sheet.x + sheet.bleed, top = sheet.y + sheet.bleed;
   const right = left + trim[0], bottom = top + trim[1];
@@ -156,6 +155,10 @@ function CropMarks({ sheet, trim }: { sheet: Sheet; trim: [number, number] }) {
     <Svg style={{ position: "absolute", left: 0, top: 0 }} width={pt(pw)} height={pt(ph)}>
       {marks.map(([x1, y1, x2, y2], i) => (
         <SvgLine key={i} x1={pt(x1)} y1={pt(y1)} x2={pt(x2)} y2={pt(y2)} strokeWidth={0.3} stroke="#000000" />
+      ))}
+      {/* a folded card: short dashes above and below the fold */}
+      {fold && [[top - gap - len, top - gap], [bottom + gap, bottom + gap + len]].map(([y1, y2], i) => (
+        <SvgLine key={`f${i}`} x1={pt((left + right) / 2)} y1={pt(y1)} x2={pt((left + right) / 2)} y2={pt(y2)} strokeWidth={0.3} stroke="#000000" strokeDasharray="1.5,1.2" />
       ))}
     </Svg>
   );
@@ -469,6 +472,8 @@ function EnvelopePages({ c, inv }: { c: Ctx; inv: Invitation }) {
   const cut = "#8a857d";
   return (
     <Page size={[SW, SH]} style={{ backgroundColor: "#ffffff" }}>
+      {/* one fixed frame for everything, so nothing flows onto a second page */}
+      <View wrap={false} style={{ position: "absolute", left: 0, top: 0, width: SW, height: SH }}>
       <Svg style={{ position: "absolute", left: 0, top: 0 }} width={SW} height={SH}>
         <Path d={outline} fill={p.bg} stroke={cut} strokeWidth={0.6} />
         <Path d={flapLine} fill="none" stroke={p.accent} strokeWidth={0.7} />
@@ -484,6 +489,7 @@ function EnvelopePages({ c, inv }: { c: Ctx; inv: Invitation }) {
       <Text style={{ position: "absolute", left: 0, right: 0, bottom: pt(4), textAlign: "center", fontFamily: "Cormorant", fontSize: 8.5, color: cut }}>
         {`Cut along the solid line · fold along the dashes, flaps behind the front · glue the side flaps under the bottom one · envelope ${envelopeFor(c.o).name}`}
       </Text>
+      </View>
     </Page>
   );
 }
@@ -547,19 +553,6 @@ function FoldBack({ c, inv }: { c: Ctx; inv: Invitation }) {
   );
 }
 
-/** Crop marks for the open sheet, and short dashes above and below the fold. */
-function FoldMarks({ sheet }: { sheet: Sheet & { trim: [number, number] } }) {
-  const x = sheet.x + sheet.bleed + sheet.trim[0] / 2;
-  const top = sheet.y + sheet.bleed, bottom = top + sheet.trim[1];
-  const gap = sheet.bleed + 1, len = 6;
-  return (
-    <Svg style={{ position: "absolute", left: 0, top: 0 }} width={pt(sheet.page[0])} height={pt(sheet.page[1])}>
-      <SvgLine x1={pt(x)} y1={pt(top - gap - len)} x2={pt(x)} y2={pt(top - gap)} strokeWidth={0.3} stroke="#000000" strokeDasharray="1.5,1.2" />
-      <SvgLine x1={pt(x)} y1={pt(bottom + gap)} x2={pt(x)} y2={pt(bottom + gap + len)} strokeWidth={0.3} stroke="#000000" strokeDasharray="1.5,1.2" />
-    </Svg>
-  );
-}
-
 /**
  * One sheet, printed both sides and folded in half. Outside: the back
  * (crest) on the left, the cover on the right. Inside: the invitation on the
@@ -572,10 +565,11 @@ function FoldedPages({ c, inv, qr }: { c: Ctx; inv: Invitation; qr: string | nul
   const right = { ...c, sheet: { ...spread, x: spread.x + w }, panel: true };
   const page = (a: React.ReactNode, b: React.ReactNode) => (
     <Page size={[pt(spread.page[0]), pt(spread.page[1])]} style={{ backgroundColor: spread.marks ? "#ffffff" : c.p.bg }}>
-      {a}
-      {b}
-      {spread.marks && <CropMarks sheet={spread} trim={spread.trim} />}
-      {spread.marks && <FoldMarks sheet={spread} />}
+      <View wrap={false} style={{ position: "absolute", left: 0, top: 0, width: pt(spread.page[0]), height: pt(spread.page[1]) }}>
+        {a}
+        {b}
+        {spread.marks && <CropMarks sheet={spread} trim={spread.trim} fold />}
+      </View>
     </Page>
   );
   return (
@@ -740,11 +734,10 @@ export async function renderInvitationPdf(inv: Invitation, o: InvitationOptions,
   registerFonts();
   // folded cards are portrait or square panels; a landscape one prints as a flat card
   if (o.eventLayout === "folded") {
-    const [pw, ph] = trimSize(o);
-    if (pw > ph) o = { ...o, eventLayout: "together" };
+    if (!canFold(o)) o = { ...o, eventLayout: "together" };
   }
   const sheet = sheetFor(o);
-  const trim = trimSize(o); // one panel of a folded card
+  const trim = panelSize(o); // one half of a folded card
   const c: Ctx = {
     p: paletteFor(theme, o.colours), s: Math.min(trim[0], trim[1]) / 127, trim, sheet, theme, o, script: o.nameFont === "script",
     arch: o.frame === "arch" && trim[1] > trim[0],
