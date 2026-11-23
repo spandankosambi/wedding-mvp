@@ -1,169 +1,146 @@
-# wedding-mvp
+# One Tap Invites
 
-A multi-tenant Indian wedding platform: a themed public wedding site per couple, a
-token-link RSVP flow for guests, and three staff dashboards (couple, committee, admin)
-behind passwordless sign-in.
+A wedding invitation platform. A couple signs up, gets a wedding website, and invites
+their families to run the guest list. Each invited household gets a private link to
+the site and to RSVP. The couple can print invitation cards and envelopes in English,
+Gujarati or Hindi.
 
-Built as a first-customer pilot — small enough for one developer to run end to end,
-real enough to put in front of a paying couple.
+Live at **https://onetapinvites.com** (Vercel + Neon Postgres). Pushing to `main`
+deploys.
+
+- **New here?** Read this file, then [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+- **Looking for a folder's contents?** Each main folder has its own README:
+  [`src/app`](src/app/README.md), [`src/lib`](src/lib/README.md),
+  [`src/components`](src/components/README.md).
+- **Framework note:** this is Next.js 16. APIs differ from older versions; read
+  `node_modules/next/dist/docs/` before changing anything framework-level (see `AGENTS.md`).
 
 ## What it does
 
-- **Self-serve signup** — `/start`. Names, date, city, a theme, an email. Creates the
-  wedding, five starter ceremonies around the date, and the couple's login, then mails
-  a magic link that lands them in the editor. No sales call, no seed script.
-- **Site editor** — `/couple/site`. The couple owns every word guests see: names,
-  parents ("with the blessings of"), date, city, story, hashtag, theme. Celebrations
-  come from a picker of fifteen Indian ceremonies (Roka through Griha Pravesh), each
-  with venue, map link, dress code, a line of description, reordering, and an on/off
-  switch so a family-only puja stays off the shared link without being deleted.
-  Travel & stay and the RSVP window (open/closed, reply-by date) live here too.
-- **Open RSVP** — `/w/[slug]/rsvp`. The link the couple shares. Anyone who has it
-  answers per celebration with a headcount, food preference and the names coming;
-  they land in the same tables the committee reads, deduped by email then phone, and
-  get their own edit link back. The emailed per-family token links still work.
-- **Public wedding site** — `/w/[slug]`. Hero, story, event timeline, travel & stay,
-  gallery, RSVP call-to-action. Six switchable themes, server-rendered, with per-wedding
-  Open Graph metadata so a link shared on WhatsApp unfurls properly.
-- **Guest RSVP** — `/rsvp/[token]`. No account, no password. One emailed link per family,
-  per-event attendance and headcount, editable on revisit. Tokens are stored as SHA-256
-  hashes and expire a week after the wedding.
-- **Committee dashboard** — `/committee`. Add and edit families and their guests, send
-  invites, resend, chase non-responders, per-event totals.
-- **Guest intake** — `/committee/import`. Three ways in, one review grid, one write:
-  upload the guest list as it already exists (xlsx/xls/csv — header row detected, columns
-  profiled and mapped, AI-assisted when a key is set, name-based otherwise, with the
-  questions the sheet can't answer asked out loud); scan a photo of a handwritten list, a
-  Word/PDF/text file, or a pasted WhatsApp message; or type households straight in.
-  Households already on the list are recognised by email, name, or the same people and
-  merged by default, so the list can keep growing without duplicates.
-- **Couple dashboard** — `/couple`. The share card (link, copy, WhatsApp, QR), RSVP
-  stats, who hasn't replied, and a live theme switcher for their own site.
-- **Admin** — `/admin`. All weddings, staff, delivery log, plus `/admin/mailroom`, an
-  outbox viewer for magic links and invite mail.
-- **Invite email** — themed to match the couple's site, rendered with React Email,
-  delivered over SMTP or written to a local outbox file.
+| Who | Where | What |
+|---|---|---|
+| Couple | `/start` | Sign up from just the names, date and city |
+| Couple | `/couple`, `/couple/[family]` | Both families' overview, each family's own section |
+| Couple | `/couple/site` | Edit the wedding site: wording, celebrations, travel & stay, photos, music, design touches |
+| Couple | `/couple/people` | Invite family members and choose what each may see or change |
+| Couple | `/couple/[family]/print` | Print cards: flat, with event cards, or folded; an envelope; English, Gujarati or Hindi |
+| Committee | `/committee` | The guest list: households, guests, invites (email, WhatsApp), replies, hotels & rooms |
+| Committee | `/committee/import` | Bring in a guest list from a spreadsheet, a photo or pasted text |
+| Guests | `/w/[slug]` | The wedding website (private link per household, or the family's shared link) |
+| Guests | `/rsvp/[token]` | A household's RSVP, with calendar invites afterwards |
+| Admin | `/admin` | All weddings, and the mailroom (what was emailed) |
+
+The example wedding on the landing page is **Ananya & Arjun** (`/w/ananya-weds-arjun?k=sample`).
+Its dates always sit 60 days ahead and its phone numbers are placeholders (`src/lib/site/sample.ts`).
 
 ## Stack
 
-Next.js 16 (App Router, React Server Components, Server Actions) · React 19 · TypeScript ·
-Tailwind CSS v4 · Drizzle ORM · Postgres (PGlite locally, Neon in production) · Auth.js v5
-magic links · Zod · React Email + Nodemailer · Vitest + Playwright.
-
-**New to frontend/backend?** Start with [`docs/HOW-IT-WORKS.md`](docs/HOW-IT-WORKS.md) — a
-plain-language walkthrough of the product, the data, and how to run and demo it.
-
-**Why this stack, and how it compares to MERN:** [`docs/FRAMEWORK.md`](docs/FRAMEWORK.md) —
-also as a formatted document, [`docs/FRAMEWORK.pdf`](docs/FRAMEWORK.pdf) (7 pages, rendered
-from [`docs/framework.html`](docs/framework.html)).
+Next.js 16 (App Router, Server Components, Server Actions) · React 19 · TypeScript (strict) ·
+Tailwind CSS v4 · Drizzle ORM · Postgres (PGlite locally, Neon live) · Auth.js v5 magic links ·
+zod · nodemailer · @react-pdf/renderer · Vercel Blob · Azure Translator (optional) ·
+Vitest + Playwright.
 
 ## Running it locally
 
-Requires Node 20+. No Docker, no database server, no cloud account — local dev runs on
-[PGlite](https://pglite.dev), an embedded WASM Postgres that lives in `var/pglite`.
+Requires Node 20+. No Docker and no database server: locally the app uses
+[PGlite](https://pglite.dev), an embedded Postgres stored in `var/pglite`.
 
 ```bash
 npm install
-cp .env.example .env          # generate AUTH_SECRET: openssl rand -base64 33
-npm run seed                  # migrates + seeds two demo weddings, prints RSVP links
+cp .env.example .env          # set AUTH_SECRET: openssl rand -base64 33
+npm run seed                  # creates the tables and the demo weddings
 npm run dev                   # http://localhost:3000
 ```
 
-The seed prints guest RSVP URLs to stdout and `var/seed-urls.txt`. With the default
-`EMAIL_MODE=file`, every outgoing mail — sign-in magic links included — is appended to
-`var/outbox/mail.jsonl` instead of being sent, and is readable in the UI at
-`/admin/mailroom`. That means the whole product, sign-in included, demos offline.
-
-Staff logins default to `@example.com` placeholders. To receive real magic links, point
-`SEED_STAFF_EMAILS` at five comma-separated addresses in role order — admin, couple,
-committee, committee, and the second wedding's couple — then re-seed:
-
-```bash
-SEED_STAFF_EMAILS='you@gmail.com,you+couple@gmail.com,you+chachu@gmail.com,you+planner@gmail.com,you+karishma@gmail.com' npm run seed
-```
-
-`signIn` rejects any address that isn't already a provisioned user row. Couples
-provision themselves through `/start`; the seed provisions the demo staff.
+With `EMAIL_MODE=file` (the default locally), every email, sign-in links included, is
+recorded instead of sent: read it at `/admin/mailroom` or in `var/outbox/mail.jsonl`.
 
 ### Commands
 
 | Command | What it does |
 |---|---|
 | `npm run dev` | Dev server |
-| `npm run build` | Production build (uses a throwaway in-memory DB) |
-| `npm run seed` | Migrate + reseed both demo weddings, print RSVP links |
-| `npm run db:reset` | Delete `var/pglite` and reseed from scratch |
-| `npm test` | Vitest unit suite (120 tests) |
-| `npm run e2e` | Playwright: emailed-link RSVP, self-serve signup, open RSVP |
+| `npm run build` | Production build |
+| `npm run seed` | Create tables and reseed the demo weddings |
+| `npm run db:reset` | Delete the local database and reseed |
+| `npm run set-theme <theme>` | Change the demo wedding's look |
+| `npm test` | Unit tests (Vitest) |
+| `npm run e2e` | Browser tests (Playwright; starts its own server and wipes the local database) |
+| `npx tsc --noEmit` | Type check (also rejects unused code) |
+| `npx knip` | Unused files, exports and packages (should report nothing) |
 
-### Environment
+### Settings
 
-| Variable | Purpose |
+Every setting is read through **`src/config/env.ts`**, never `process.env` directly, and
+listed with comments in **`.env.example`**. Live values live in Vercel (Project →
+Settings → Environment Variables). At start-up the live server logs any required
+setting that's missing.
+
+| Setting | Needed for |
 |---|---|
-| `DATABASE_URL` | Neon connection string. **Leave unset** locally to use embedded PGlite. |
-| `AUTH_SECRET` | Auth.js signing secret — `openssl rand -base64 33` |
-| `APP_URL` | Fallback only. Live links come from the request host (`src/lib/origin.ts`); this covers the seed script and tests. |
-| `EMAIL_MODE` | `smtp` (real delivery, needs SMTP_USER + SMTP_PASS) or anything else (records to the `outbox` table, readable at `/admin/mailroom`) |
-| `SMTP_USER` / `SMTP_PASS` | Gmail address + app password, when `EMAIL_MODE=smtp` |
-| `EMAIL_FROM` | Display sender, e.g. `"Ananya & Arjun <you@gmail.com>"` |
-| `SEED_STAFF_EMAILS` | Optional. Five comma-separated staff logins for the seed. |
-| `AI_API_KEY` | Optional. Enables AI column matching in the import. Any OpenAI-compatible provider. |
-| `AI_BASE_URL` / `AI_MODEL` | Optional. Default `https://api.groq.com/openai/v1` / `openai/gpt-oss-120b`. |
-| `AI_VISION_MODEL` | Optional. Reads photos of guest lists. Default `meta-llama/llama-4-scout-17b-16e-instruct`. |
+| `DATABASE_URL` | The live database (unset locally: PGlite) |
+| `AUTH_SECRET` | Sign-in sessions |
+| `APP_URL` | Links built outside a request (seed, tests) |
+| `EMAIL_MODE`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` | Sending email (Gmail SMTP) |
+| `BLOB_READ_WRITE_TOKEN` | Photo and music uploads |
+| `AZURE_TRANSLATOR_KEY`, `AZURE_TRANSLATOR_REGION` | Optional: better Gujarati/Hindi on printed cards |
+| `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`, `AI_VISION_MODEL` | Optional: AI help in the guest-list import |
+| `SEED_STAFF_EMAILS`, `SEED_ON_BUILD` | Seeding only |
 
-## Layout
+## Project structure
 
 ```
 src/
-  app/
-    start/           self-serve signup + "check your inbox"
-    w/[slug]/        public wedding site + its sections
-      rsvp/          open RSVP from the shared link
-    rsvp/[token]/    per-family RSVP page and server action
-    couple/          couple dashboard + share card
-      site/          the site editor (details, events, travel, RSVP window)
-    committee/       guest operations
-      import/        spreadsheet / direct-entry intake wizard
-    admin/           overview, per-wedding detail, mailroom
-    signin/          magic-link sign-in
-  db/                Drizzle schema + the PGlite/Neon client switch
-  lib/               rsvp, open-rsvp, signup, editor, presets, slug, origin,
-                     invites, tokens, mailer, authz, ratelimit, ai (chat seam)
-    import/          spreadsheet parse → profile → heuristic/AI mapping → normalise → match → commit; scan (docx/pdf/txt/photo)
-  themes/            theme catalog, CSS custom-property tokens, SVG ornaments
-  emails/            React Email invite template
-  auth.ts            Auth.js config (Drizzle adapter, Nodemailer provider)
-  proxy.ts           coarse "has a session cookie?" gate
-drizzle/             SQL migrations
-tests/unit           Vitest
-tests/e2e            Playwright
-scripts/             seed, set-theme
+  app/            pages, layouts, server actions and route handlers (see src/app/README.md)
+    _print/       …a page's own pieces live in "_" folders beside it (not web addresses)
+  components/     shared UI: error screen, floating Save, form field, icons, keyboard…
+  lib/            business logic, no screens, grouped by area (see src/lib/README.md)
+    auth/ guests/ site/ email/ core/ import/ invitation/
+  config/         settings (env.ts)
+  db/             schema, client (Neon/PGlite), start-up changes (ensure.ts)
+  themes/         the site looks: catalog, colour tokens, ornaments
+  emails/         the invite email template
+  auth.ts         Auth.js set-up
+  proxy.ts        coarse "signed in?" gate (real checks run in each page and action)
+  instrumentation.ts  start-up: settings check, database changes (with retries)
+drizzle/          SQL migrations
+tests/unit/       Vitest
+tests/e2e/        Playwright
+scripts/          seed, set-theme
+docs/             ARCHITECTURE.md (current); docs/archive/ (older notes, kept for history)
 ```
 
-Authorization is deliberately **not** in `proxy.ts`. That file only bounces
-cookie-less visitors to `/signin`; real role and wedding-ownership checks run in
-`requireRole()` inside every page and server action, where the database session can
-actually be read.
+## Conventions
 
-## Sharp edges
+- **Files:** a component per file in `PascalCase.tsx`. Other modules are `kebab-case.ts`.
+  Server actions live in `actions.ts`, or `<topic>-actions.ts` when a folder has several.
+- **Names:** every server action ends in `Action` (`saveEventAction`). Business logic
+  functions are plain verbs (`sendInvites`, `getLooks`).
+- **Where code goes:** screens and form handling in `src/app`. Anything that touches the
+  database or decides a rule goes in `src/lib`, with no React in it except the PDF drawing.
+  UI used in more than one place goes in `src/components`.
+- **Errors:**
+  - Problems you expect (bad input, not allowed) come back as `{ ok: false, error }`, and
+    the screen shows them.
+  - Unexpected ones (network, server) are caught on screen by `safeCall()` (`src/lib/core/safe-call.ts`).
+  - Pages that fail show `src/app/error.tsx`.
+  - Never catch Next's own redirect or not-found signals: use `unstable_rethrow`.
+- **Permissions:**
+  - Every page and action checks for itself (`requireRole`, `requireAccess`, `guestListScope` in `src/lib/auth/authz.ts`).
+  - `proxy.ts` only bounces visitors who aren't signed in.
+- **Database changes:** add a Drizzle migration (with `IF NOT EXISTS`), and mirror it in
+  `src/db/ensure.ts`, which applies it to the live database at start-up.
+- **Unused code:** the type checker rejects it (`noUnusedLocals`), and `npx knip` should
+  report nothing.
 
-- **PGlite allows one process at a time.** Don't run `npm run seed` while `npm run dev`
-  is up — stop the server first. `npm run db:reset` fixes a corrupted local DB.
-- `npm run e2e` manages its own server and wipes the local database. If something else
-  already owns port 3000, `PORT=3001 npm run e2e` runs the suite there (dev server too:
-  `npm run dev -- -p 3001`).
-- Reminders mint a fresh invite token, which invalidates the family's previous link.
-  Tokens are stored hash-only, so the original can't be recovered — each mail carries a
-  working link, and only the newest one works.
+## Testing and releasing
 
-## Status
+1. Work on a `wip/…` branch.
+2. Check everything: `npx tsc --noEmit`, `npm test`, and the relevant `tests/e2e` files.
+   - The local test database can crash during long browser runs. When a test fails within
+     about a second right after an `Aborted()` message, rerun that file on its own.
+3. Merge into `main` (`--ff-only`) and push. Vercel builds and deploys in about 3–4 minutes.
+   A failed build never replaces the live site.
+4. Note the change on the tracker (see `docs/ARCHITECTURE.md` → Working agreements).
 
-**Live at https://wedding-mvp-six.vercel.app** (Vercel + Neon), deployed 2026-09-13.
-120 unit tests, three Playwright end-to-end flows, clean production build.
-
-Couples can sign up, edit and share without anyone touching a script. The one thing
-still pending is outbound email: with no `SMTP_USER`/`SMTP_PASS` set, sign-in links and
-invites are recorded in the `outbox` table and read at `/admin/mailroom` rather than
-delivered. Add a Gmail app password and set `EMAIL_MODE=smtp` to turn delivery on.
-
-`docs/DEMO-RUNBOOK.md` covers the demo script; `STATUS.md` is the running build log.
+Known: `tests/unit/import/spreadsheet.test.ts` has one long-standing failing test.
