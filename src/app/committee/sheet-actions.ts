@@ -2,10 +2,10 @@
 
 import * as XLSX from "xlsx";
 import { revalidatePath } from "next/cache";
-import { requireRole } from "@/lib/authz";
-import { allows } from "@/lib/access";
-import { asFamilySide } from "@/lib/looks";
-import { isOurSheet, updateFromSheet, type SheetPlan } from "@/lib/guest-sheet";
+import { requireRole } from "@/lib/auth/authz";
+import { allows } from "@/lib/auth/access";
+import { asFamilySide } from "@/lib/site/looks";
+import { isOurSheet, updateFromSheet, type SheetPlan } from "@/lib/guests/guest-sheet";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 

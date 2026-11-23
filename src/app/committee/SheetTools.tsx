@@ -3,8 +3,8 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { sheetUpdateAction, type SheetUpdateResult } from "./sheet-actions";
-import type { SheetPlan } from "@/lib/guest-sheet";
-import { safeCall } from "@/lib/safe-call";
+import type { SheetPlan } from "@/lib/guests/guest-sheet";
+import { safeCall } from "@/lib/core/safe-call";
 
 /**
  * Download the guest list (Excel or CSV) as it stands, edit it anywhere, and

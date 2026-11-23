@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { db, migrateDb } from "@/db/client";
 import { weddings, events, families, guests, eventInvites } from "@/db/schema";
-import { generateInviteToken, tokenExpiry } from "@/lib/tokens";
-import { getFamilyByToken, submitRsvp, getRsvpSummary } from "@/lib/rsvp";
+import { generateInviteToken, tokenExpiry } from "@/lib/auth/tokens";
+import { getFamilyByToken, submitRsvp, getRsvpSummary } from "@/lib/guests/rsvp";
 
 let token: string, eventA: string, eventB: string, weddingId: string;
 

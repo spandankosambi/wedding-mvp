@@ -2,8 +2,8 @@ import Link from "next/link";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { emailLog, families, outbox } from "@/db/schema";
-import { requireRole } from "@/lib/authz";
-import { smtpConfigured } from "@/lib/mailer";
+import { requireRole } from "@/lib/auth/authz";
+import { smtpConfigured } from "@/lib/email/mailer";
 
 export const dynamic = "force-dynamic";
 

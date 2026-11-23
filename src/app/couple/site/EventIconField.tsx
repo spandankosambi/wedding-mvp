@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { ICONS, icon, iconFor, type IconId } from "@/lib/invitation/decor";
-import { isIconMask } from "@/lib/icon-mask";
+import { isIconMask } from "@/lib/core/icon-mask";
 import { MaskCanvas, maskFromFile } from "@/components/MaskUpload";
 import { MotifSvg } from "@/components/MotifSvg";
 

@@ -1,9 +1,9 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { HELP_TOPICS } from "@/lib/help";
+import { HELP_TOPICS } from "@/lib/core/help";
 import { sendHelpAction } from "./help-actions";
-import { safeCall } from "@/lib/safe-call";
+import { safeCall } from "@/lib/core/safe-call";
 
 /**
  * "Need help?" — a short form in a dialog rather than a bare email address:

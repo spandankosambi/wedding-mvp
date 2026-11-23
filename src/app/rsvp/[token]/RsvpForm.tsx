@@ -2,11 +2,11 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { submitRsvpAction } from "../actions";
-import { fmtEventDate, fmtEventTime } from "@/lib/format";
-import { sideLabel, type Side } from "@/lib/sides";
-import type { SideNames } from "@/lib/side-names";
-import { googleCalendarLink } from "@/lib/calendar";
-import { safeCall } from "@/lib/safe-call";
+import { fmtEventDate, fmtEventTime } from "@/lib/core/format";
+import { sideLabel, type Side } from "@/lib/site/sides";
+import type { SideNames } from "@/lib/site/side-names";
+import { googleCalendarLink } from "@/lib/email/calendar";
+import { safeCall } from "@/lib/core/safe-call";
 
 type EventProp = {
   id: string;

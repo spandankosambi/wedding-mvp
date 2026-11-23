@@ -1,7 +1,7 @@
 import QRCode from "qrcode";
 import { CopyButton } from "./CopyButton";
-import { appOrigin } from "@/lib/origin";
-import { sharePath } from "@/lib/share";
+import { appOrigin } from "@/lib/core/origin";
+import { sharePath } from "@/lib/site/share";
 
 /** The one thing a couple actually needs from the dashboard: the link. */
 export async function ShareCard({ slug, coupleNames, weddingDateText, compact = false, family, shareKey, openReplies, renew }: {

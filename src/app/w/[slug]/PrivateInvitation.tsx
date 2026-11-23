@@ -1,5 +1,5 @@
-import { fmtWeddingDate } from "@/lib/format";
-import { namesFor, type FamilySide, type Look } from "@/lib/looks";
+import { fmtWeddingDate } from "@/lib/core/format";
+import { namesFor, type FamilySide, type Look } from "@/lib/site/looks";
 import { Ornament } from "@/themes/ornaments";
 import { MadeWith } from "@/components/MadeWith";
 

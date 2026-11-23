@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { rateLimit } from "@/lib/ratelimit";
+import { rateLimit } from "@/lib/auth/ratelimit";
 
 describe("rateLimit", () => {
   it("allows up to max hits then blocks within the window", () => {

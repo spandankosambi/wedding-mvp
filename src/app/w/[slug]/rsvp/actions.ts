@@ -1,6 +1,6 @@
 "use server";
 import { headers } from "next/headers";
-import { submitOpenRsvp, type OpenRsvpInput } from "@/lib/open-rsvp";
+import { submitOpenRsvp, type OpenRsvpInput } from "@/lib/guests/open-rsvp";
 
 export async function submitOpenRsvpAction(input: OpenRsvpInput) {
   const h = await headers();

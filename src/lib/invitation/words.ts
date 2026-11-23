@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events } from "@/db/schema";
-import { getLook, withLook, wordingOf, type FamilySide } from "@/lib/looks";
-import { eventForSide } from "@/lib/sides";
+import { getLook, withLook, wordingOf, type FamilySide } from "@/lib/site/looks";
+import { eventForSide } from "@/lib/site/sides";
 import { invitationSchema } from "./options";
 import { type CardField } from "./i18n";
 import { localizeCards } from "./machine";

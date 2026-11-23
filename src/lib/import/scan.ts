@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { unzipSync } from "fflate";
-import { aiConfigured, chatComplete } from "@/lib/ai";
+import { aiConfigured, chatComplete } from "@/lib/core/ai";
 import { ImportError } from "./spreadsheet";
 import { EMAIL_RE } from "./profile";
 import type { EventRef } from "./mapping";

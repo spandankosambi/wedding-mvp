@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { BrandLogo } from "@/components/BrandLogo";
-import { BRAND } from "@/lib/brand";
+import { BRAND } from "@/lib/core/brand";
 
 /**
  * The one screen for "something went wrong" and "page not found": the brand,

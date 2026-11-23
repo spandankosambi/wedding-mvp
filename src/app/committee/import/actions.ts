@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { db } from "@/db/client";
 import { events, families } from "@/db/schema";
-import { aiConfigured } from "@/lib/ai";
+import { aiConfigured } from "@/lib/core/ai";
 import { parseWorkbook, defaultSheetIndex, ImportError, MAX_COLS, MAX_ROWS, type Sheet } from "@/lib/import/spreadsheet";
 import { profileColumns, type ColumnProfile } from "@/lib/import/profile";
 import { heuristicMapping } from "@/lib/import/heuristic";
@@ -15,7 +15,7 @@ import { buildRows, type BuildStats, type ImportRow } from "@/lib/import/normali
 import { commitImport, findExistingFamilies, type CommitResult } from "@/lib/import/commit";
 import { matchExisting, type ExistingFamily } from "@/lib/import/match";
 import { aiExtractHouseholds, extractTextFromFile, householdsToRows, parseGuestText, type ScanHousehold } from "@/lib/import/scan";
-import { guestListScope } from "@/lib/authz";
+import { guestListScope } from "@/lib/auth/authz";
 
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 const MAX_SCAN_BYTES = 6 * 1024 * 1024;

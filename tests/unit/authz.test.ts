@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { db, migrateDb } from "@/db/client";
 import { users } from "@/db/schema";
-import { isProvisionedStaff } from "@/lib/authz";
+import { isProvisionedStaff } from "@/lib/auth/authz";
 
 describe("isProvisionedStaff", () => {
   beforeAll(async () => {

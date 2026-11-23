@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { unstable_rethrow } from "next/navigation";
-import { UNREACHABLE } from "@/lib/safe-call";
+import { UNREACHABLE } from "@/lib/core/safe-call";
 
 /*
  * One Save for a whole page, floating at the bottom of the screen.

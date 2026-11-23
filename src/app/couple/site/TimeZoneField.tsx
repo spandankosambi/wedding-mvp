@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ZONES, guessZone, zoneLabel } from "@/lib/timezones";
+import { ZONES, guessZone, zoneLabel } from "@/lib/core/timezones";
 
 /**
  * The celebration's time zone, beside its time. Typing a venue or address

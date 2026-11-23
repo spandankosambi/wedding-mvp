@@ -1,7 +1,7 @@
 import { Ornament } from "@/themes/ornaments";
 import { MotifSvg } from "@/components/MotifSvg";
 import type { Motif, Shape } from "@/lib/invitation/motifs";
-import type { Decor } from "@/lib/site-decor";
+import type { Decor } from "@/lib/site/site-decor";
 import { diamond, leaf as cardLeaf } from "@/lib/invitation/shapes";
 
 // the website's leaves are a touch plumper than the cards'

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { ROLE_HOME, type Role } from "@/lib/authz";
+import { ROLE_HOME, type Role } from "@/lib/auth/authz";
 
 export const dynamic = "force-dynamic";
 

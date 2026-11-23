@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { BRAND, BRAND_TAGLINE, COPYRIGHT } from "@/lib/brand";
-import { EVENT_PRESETS } from "@/lib/presets";
+import { BRAND, BRAND_TAGLINE, COPYRIGHT } from "@/lib/core/brand";
+import { EVENT_PRESETS } from "@/lib/site/presets";
 import { SiteHeader } from "./home/SiteHeader";
 import { ThemeSweep } from "./home/ThemeSweep";
 import { CardRing } from "./home/CardRing";

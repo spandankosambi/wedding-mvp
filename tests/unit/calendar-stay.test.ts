@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { icsFile, googleCalendarLink, maskEmail } from "@/lib/calendar";
-import { stayGroups } from "@/lib/stay-groups";
+import { icsFile, googleCalendarLink, maskEmail } from "@/lib/email/calendar";
+import { stayGroups } from "@/lib/guests/stay-groups";
 
 const haldi = { id: "e1", name: "Haldi, at home", startsAt: new Date("2027-03-03T04:30:00Z"), venueName: "Sharma House", address: "12 MG Road; Pune", mapUrl: "https://maps.google.com/?q=x", dressCode: "Yellow" };
 
@@ -45,8 +45,8 @@ describe("stay groups", () => {
   });
 });
 
-import { zonedDate, zonedParts, guessZone, zoneNote } from "@/lib/timezones";
-import { fmtEventTime } from "@/lib/format";
+import { zonedDate, zonedParts, guessZone, zoneNote } from "@/lib/core/timezones";
+import { fmtEventTime } from "@/lib/core/format";
 
 describe("time zones", () => {
   it("7 pm in Dubai is 3 pm UTC; in India it's 1:30 pm UTC; and back again", () => {

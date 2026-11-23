@@ -3,8 +3,8 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { signIn } from "@/auth";
-import { createWeddingForCouple } from "@/lib/signup";
-import { rateLimit } from "@/lib/ratelimit";
+import { createWeddingForCouple } from "@/lib/auth/signup";
+import { rateLimit } from "@/lib/auth/ratelimit";
 
 export type StartState = { error?: string; values?: Record<string, string> };
 

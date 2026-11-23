@@ -2,10 +2,10 @@ import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, migrateDb } from "@/db/client";
 import { weddings, users, sessions } from "@/db/schema";
-import { accessFor, allows, seesSide, sidesOf, homeSide } from "@/lib/access";
-import { addPerson, updatePerson, removePerson, listPeople, describe as describePerson } from "@/lib/people";
-import { buildChecklist } from "@/lib/checklist";
-import { getLook } from "@/lib/looks";
+import { accessFor, allows, seesSide, sidesOf, homeSide } from "@/lib/auth/access";
+import { addPerson, updatePerson, removePerson, listPeople, describe as describePerson } from "@/lib/auth/people";
+import { buildChecklist } from "@/lib/site/checklist";
+import { getLook } from "@/lib/site/looks";
 
 describe("access rules", () => {
   it("the couple and the admin do everything on both sides", () => {

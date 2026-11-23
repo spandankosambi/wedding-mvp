@@ -2,9 +2,9 @@
 
 import { z } from "zod";
 import { headers } from "next/headers";
-import { sendHelpRequest } from "@/lib/mailer";
-import { rateLimit } from "@/lib/ratelimit";
-import { GUEST_TOPICS } from "@/lib/help";
+import { sendHelpRequest } from "@/lib/email/mailer";
+import { rateLimit } from "@/lib/auth/ratelimit";
+import { GUEST_TOPICS } from "@/lib/core/help";
 
 const schema = z.object({
   name: z.string().trim().min(1, "Please add your name.").max(80),

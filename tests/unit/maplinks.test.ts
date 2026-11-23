@@ -2,8 +2,8 @@ import { describe, it, expect, beforeAll, vi, afterEach } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, migrateDb } from "@/db/client";
 import { weddings, events } from "@/db/schema";
-import { cleanMapsUrl, expandMapLink, fixShortMapLinks, isShortMapLink } from "@/lib/maplinks";
-import { upsertEvent, istParts } from "@/lib/editor";
+import { cleanMapsUrl, expandMapLink, fixShortMapLinks, isShortMapLink } from "@/lib/site/maplinks";
+import { upsertEvent, istParts } from "@/lib/site/editor";
 
 const SHORT = "https://maps.app.goo.gl/wzeibw5ZMuSb6JDt9";
 const LONG = "https://www.google.com/maps/place/Asodit+Banquets/@18.5211581,73.930755,17z/data=!3m1!4b1!4m6!3m5!1s0x3bc2c1f4f4f5ace3:0x2f37f00b9034706a!8m2!3d18.5211581!4d73.930755!16s%2Fg%2F11g81f21j8?entry=tts&g_ep=EgoyMDI2MTEwNC4wIOC7DCoASAFQAw%3D%3D&skid=d7ab3a73";

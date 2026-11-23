@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { contactHref, contactLine, contactsOf, parseContactLine } from "@/lib/contacts";
+import { contactHref, contactLine, contactsOf, parseContactLine } from "@/lib/guests/contacts";
 
 describe("RSVP contacts", () => {
   it("a WhatsApp number opens a chat; another number dials", () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
+import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/site/side-names";
 import { useState, useTransition } from "react";
 import type { ResetScope } from "@/db/schema";
 import { requestDeleteWeddingAction, requestResetWeddingAction } from "./actions";

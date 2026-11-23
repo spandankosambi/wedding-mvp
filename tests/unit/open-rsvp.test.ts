@@ -2,9 +2,9 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, migrateDb } from "@/db/client";
 import { weddings, events, families, rsvps, guests } from "@/db/schema";
-import { getPublicWedding, submitOpenRsvp, rsvpWindow } from "@/lib/open-rsvp";
-import { getFamilyByToken } from "@/lib/rsvp";
-import { getLook, updateLook } from "@/lib/looks";
+import { getPublicWedding, submitOpenRsvp, rsvpWindow } from "@/lib/guests/open-rsvp";
+import { getFamilyByToken } from "@/lib/guests/rsvp";
+import { getLook, updateLook } from "@/lib/site/looks";
 
 let weddingId: string, sangeet: string, pheras: string, hidden: string;
 

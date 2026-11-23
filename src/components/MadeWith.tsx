@@ -1,4 +1,4 @@
-import { BRAND, SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/core/brand";
 import { BrandSymbolSmall } from "@/components/BrandLogo";
 import { GuestFeedback } from "@/components/GuestFeedback";
 

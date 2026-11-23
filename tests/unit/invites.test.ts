@@ -3,8 +3,8 @@ import fs from "node:fs";
 import { eq } from "drizzle-orm";
 import { db, migrateDb } from "@/db/client";
 import { weddings, events, families, guests, eventInvites, rsvps, emailLog } from "@/db/schema";
-import { hashToken } from "@/lib/tokens";
-import { issueInvites } from "@/lib/invites";
+import { hashToken } from "@/lib/auth/tokens";
+import { issueInvites } from "@/lib/guests/invites";
 
 let weddingId: string, famResponded: string, famFresh: string;
 

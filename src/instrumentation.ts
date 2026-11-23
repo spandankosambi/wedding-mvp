@@ -11,7 +11,7 @@ export async function register() {
 
   // the live database (Neon); locally, `npm run seed` applies drizzle/ itself
   if (!env.databaseUrl) return;
-  const { withRetry } = await import("./lib/retry");
+  const { withRetry } = await import("./lib/core/retry");
   const { ensureColumns, scrubSamplePhone } = await import("./db/ensure");
   // each step on its own, retried through a slow first connection, so one failing doesn't skip the next
   for (const [label, step] of [["ensureColumns", ensureColumns], ["scrubSamplePhone", scrubSamplePhone]] as const) {

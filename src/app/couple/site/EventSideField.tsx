@@ -1,8 +1,8 @@
 "use client";
 
-import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
+import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/site/side-names";
 import { useState } from "react";
-import type { Side } from "@/lib/sides";
+import type { Side } from "@/lib/site/sides";
 
 /**
  * "Common for both families", ticked by default. Unticked, the event is this

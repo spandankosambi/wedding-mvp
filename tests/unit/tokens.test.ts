@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { generateInviteToken, hashToken, tokenExpiry, isExpired } from "@/lib/tokens";
+import { generateInviteToken, hashToken, tokenExpiry, isExpired } from "@/lib/auth/tokens";
 
 describe("invite tokens", () => {
   it("generates 32-byte base64url tokens with matching hash", () => {

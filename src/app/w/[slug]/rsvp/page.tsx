@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
-import { sideNamesOf } from "@/lib/side-names";
+import { sideNamesOf } from "@/lib/site/side-names";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPublicWedding, rsvpWindow } from "@/lib/open-rsvp";
-import { fmtWeddingDate } from "@/lib/format";
+import { getPublicWedding, rsvpWindow } from "@/lib/guests/open-rsvp";
+import { fmtWeddingDate } from "@/lib/core/format";
 import { Ornament } from "@/themes/ornaments";
 import { ContactList } from "../sections/ContactList";
 import { OpenRsvpForm } from "./OpenRsvpForm";
-import { asFamilySide, getLook, namesFor, withLook, type FamilySide } from "@/lib/looks";
+import { asFamilySide, getLook, namesFor, withLook, type FamilySide } from "@/lib/site/looks";
 import { MadeWith } from "@/components/MadeWith";
-import { keyOpens, sharePath } from "@/lib/share";
+import { keyOpens, sharePath } from "@/lib/site/share";
 import { PrivateInvitation } from "../PrivateInvitation";
 
 export const dynamic = "force-dynamic";

@@ -1,18 +1,18 @@
 import { SideNamesProvider } from "@/components/SideNames";
 import { PortalNav } from "../../couple/PortalNav";
-import { sideNamesOf } from "@/lib/side-names";
-import { namesFor } from "@/lib/looks";
+import { sideNamesOf } from "@/lib/site/side-names";
+import { namesFor } from "@/lib/site/looks";
 import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events } from "@/db/schema";
-import { requireRole } from "@/lib/authz";
-import { allows, homeSide } from "@/lib/access";
+import { requireRole } from "@/lib/auth/authz";
+import { allows, homeSide } from "@/lib/auth/access";
 import { redirect } from "next/navigation";
 import { PortalFrame } from "../../couple/PortalFrame";
-import { aiConfigured } from "@/lib/ai";
+import { aiConfigured } from "@/lib/core/ai";
 import { ImportWizard } from "./ImportWizard";
-import { asFamilySide } from "@/lib/looks";
+import { asFamilySide } from "@/lib/site/looks";
 
 export const dynamic = "force-dynamic";
 

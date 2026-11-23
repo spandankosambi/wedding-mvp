@@ -1,7 +1,7 @@
 import { closeDb, db, migrateDb } from "@/db/client";
 import { weddings, weddingSides, events, families, guests, eventInvites, rsvps, users } from "@/db/schema";
-import { generateInviteToken, tokenExpiry } from "@/lib/tokens";
-import { syncHousehold } from "@/lib/primary";
+import { generateInviteToken, tokenExpiry } from "@/lib/auth/tokens";
+import { syncHousehold } from "@/lib/guests/primary";
 import { inArray, or } from "drizzle-orm";
 
 // Seeded staff logins in role order: [admin, couple, committee, committee], plus a

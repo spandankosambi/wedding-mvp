@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { aiConfigured, chatComplete } from "@/lib/ai";
+import { aiConfigured, chatComplete } from "@/lib/core/ai";
 import type { ColumnProfile } from "./profile";
 import type { EventRef, Mapping } from "./mapping";
 import { TARGET_FIELDS, matchEventName, type TargetField } from "./targets";

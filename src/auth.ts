@@ -4,8 +4,8 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users, accounts, sessions, verificationTokens } from "@/db/schema";
-import { isProvisionedStaff } from "@/lib/authz";
-import { recordOutbox, smtpConfigured } from "@/lib/mailer";
+import { isProvisionedStaff } from "@/lib/auth/authz";
+import { recordOutbox, smtpConfigured } from "@/lib/email/mailer";
 import { env } from "@/config/env";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({

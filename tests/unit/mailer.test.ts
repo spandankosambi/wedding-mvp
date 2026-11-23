@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import fs from "node:fs";
 import { db, migrateDb } from "@/db/client";
 import { weddings, families, emailLog } from "@/db/schema";
-import { sendInvite, fromHeader } from "@/lib/mailer";
+import { sendInvite, fromHeader } from "@/lib/email/mailer";
 
 describe("sendInvite (file mode)", () => {
   beforeAll(async () => {

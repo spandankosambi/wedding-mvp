@@ -2,9 +2,9 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, migrateDb } from "@/db/client";
 import { weddings, events } from "@/db/schema";
-import { getLook } from "@/lib/looks";
-import { adoptCardWording, updateWording, updateDetails, updateWords, updateRsvpSettings, updateTravel, upsertEvent, setEventPublished, deleteEvent, moveEvent, istParts, sortEventsByTime } from "@/lib/editor";
-import { getPublicWedding } from "@/lib/open-rsvp";
+import { getLook } from "@/lib/site/looks";
+import { adoptCardWording, updateWording, updateDetails, updateWords, updateRsvpSettings, updateTravel, upsertEvent, setEventPublished, deleteEvent, moveEvent, istParts, sortEventsByTime } from "@/lib/site/editor";
+import { getPublicWedding } from "@/lib/guests/open-rsvp";
 
 let weddingId: string, other: string;
 beforeAll(async () => {
@@ -120,8 +120,8 @@ describe("editor", () => {
     expect((await db.select().from(events).where(eq(events.weddingId, weddingId))).length).toBe(1);
   });
   it("an event's icon: one of the set, the family's own mask, or automatic", async () => {
-    const { ICON_PX } = await import("@/lib/icon-mask");
-    const { iconPng } = await import("@/lib/icon-png");
+    const { ICON_PX } = await import("@/lib/core/icon-mask");
+    const { iconPng } = await import("@/lib/core/icon-png");
     const mask = Buffer.alloc(ICON_PX * ICON_PX, 200).toString("base64");
     const base = { name: "Mameru", date: "2027-01-30", time: "10:00", venueName: "Home", address: "Pune" };
     const a = await upsertEvent(weddingId, { ...base, icon: "custom", iconImage: mask });

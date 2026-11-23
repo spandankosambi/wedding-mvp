@@ -1,15 +1,15 @@
 import { Fragment } from "react";
 import { Ornament } from "@/themes/ornaments";
-import { fmtWeddingDate } from "@/lib/format";
+import { fmtWeddingDate } from "@/lib/core/format";
 import { Petals } from "./Petals";
 import { Scene } from "./Scene";
 import { Countdown } from "./Countdown";
 import { Mark } from "@/themes/mark";
 import { hostWords, wordingLines } from "@/lib/invitation/content";
-import type { FamilySide } from "@/lib/looks";
+import type { FamilySide } from "@/lib/site/looks";
 import { cornerMotif, toranMotif } from "@/lib/invitation/motifs";
 import { MotifSvg } from "@/components/MotifSvg";
-import { DEFAULT_DECOR, type Decor } from "@/lib/site-decor";
+import { DEFAULT_DECOR, type Decor } from "@/lib/site/site-decor";
 import type { Theme } from "@/themes/catalog";
 
 type HeroWedding = {

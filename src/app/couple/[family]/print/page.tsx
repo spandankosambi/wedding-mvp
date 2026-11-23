@@ -1,18 +1,18 @@
 import { notFound } from "next/navigation";
-import { sideNamesOf } from "@/lib/side-names";
+import { sideNamesOf } from "@/lib/site/side-names";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events } from "@/db/schema";
-import { requireAccess } from "@/lib/authz";
-import { getChecklist } from "@/lib/checklist";
+import { requireAccess } from "@/lib/auth/authz";
+import { getChecklist } from "@/lib/site/checklist";
 import { PortalFrame, Checklist } from "../../PortalFrame";
-import { eventForSide, eventLabel } from "@/lib/sides";
-import { asFamilySide, getLooks, namesFor, otherSide, wordingOf } from "@/lib/looks";
-import { seesSide } from "@/lib/access";
-import { decorOf } from "@/lib/site-decor";
+import { eventForSide, eventLabel } from "@/lib/site/sides";
+import { asFamilySide, getLooks, namesFor, otherSide, wordingOf } from "@/lib/site/looks";
+import { seesSide } from "@/lib/auth/access";
+import { decorOf } from "@/lib/site/site-decor";
 import { THEME_META } from "@/themes/catalog";
 import { PortalNav } from "../../PortalNav";
-import { PrintInvitation } from "../../PrintInvitation";
+import { PrintInvitation } from "../../_print/PrintInvitation";
 
 export const dynamic = "force-dynamic";
 

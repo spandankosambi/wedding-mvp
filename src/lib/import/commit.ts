@@ -1,9 +1,9 @@
 import { eq, inArray } from "drizzle-orm";
-import { pruneAttendees } from "@/lib/household";
-import { syncHousehold } from "@/lib/primary";
+import { pruneAttendees } from "@/lib/guests/household";
+import { syncHousehold } from "@/lib/guests/primary";
 import { db } from "@/db/client";
 import { events, families, guests, eventInvites } from "@/db/schema";
-import { eventForSide } from "@/lib/sides";
+import { eventForSide } from "@/lib/site/sides";
 import type { ImportRow, Member } from "./normalize";
 import { matchExisting, normalizePersonName, type ExistingFamily } from "./match";
 

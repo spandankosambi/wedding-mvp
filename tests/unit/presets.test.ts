@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { EVENT_PRESETS, presetStart, starterEvents } from "@/lib/presets";
-import { slugify, uniqueSlug, normalizePhone } from "@/lib/slug";
+import { EVENT_PRESETS, presetStart, starterEvents } from "@/lib/site/presets";
+import { slugify, uniqueSlug, normalizePhone } from "@/lib/site/slug";
 
 describe("presets", () => {
   it("a new wedding starts with just the wedding day", () => {

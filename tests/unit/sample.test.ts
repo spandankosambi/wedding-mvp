@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { asSampleDates, sampleShift, SAMPLE_SLUG } from "@/lib/sample";
+import { asSampleDates, sampleShift, SAMPLE_SLUG } from "@/lib/site/sample";
 
 describe("the example wedding", () => {
   const now = new Date("2026-11-23T14:00:00Z");

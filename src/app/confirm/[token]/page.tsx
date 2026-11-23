@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { findAction, resetItems } from "@/lib/account";
+import { findAction, resetItems } from "@/lib/auth/account";
 import { confirmAccountAction } from "@/app/couple/danger/actions";
 
 export const dynamic = "force-dynamic";

@@ -1,7 +1,7 @@
 import { iconOf, type IconId } from "./decor";
-import { sideNamesOf } from "@/lib/side-names";
-import { eventForSide, type Side } from "@/lib/sides";
-import { fmtEventTime, fmtWeddingDate } from "@/lib/format";
+import { sideNamesOf } from "@/lib/site/side-names";
+import { eventForSide, type Side } from "@/lib/site/sides";
+import { fmtEventTime, fmtWeddingDate } from "@/lib/core/format";
 import { defaultMonogram, type InvitationOptions } from "./options";
 
 /**

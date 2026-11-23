@@ -1,7 +1,7 @@
 "use client";
 
 import { whatsappInviteAction } from "./actions";
-import { safeCall } from "@/lib/safe-call";
+import { safeCall } from "@/lib/core/safe-call";
 
 /**
  * Opens WhatsApp with the family's invitation typed out. The tab is opened

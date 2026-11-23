@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireRole } from "@/lib/authz";
-import { allows } from "@/lib/access";
-import { asFamilySide, getLook, updateLook } from "@/lib/looks";
+import { requireRole } from "@/lib/auth/authz";
+import { allows } from "@/lib/auth/access";
+import { asFamilySide, getLook, updateLook } from "@/lib/site/looks";
 import { cardWords } from "@/lib/invitation/words";
 import { isCardLang } from "@/lib/invitation/langs";
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { aiConfigured, chatComplete } from "@/lib/ai";
+import { aiConfigured, chatComplete } from "@/lib/core/ai";
 import { aiMapping, buildPrompt } from "@/lib/import/ai";
 import { profileColumns } from "@/lib/import/profile";
 import { heuristicMapping } from "@/lib/import/heuristic";

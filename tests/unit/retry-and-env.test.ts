@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { withRetry } from "@/lib/retry";
+import { withRetry } from "@/lib/core/retry";
 import { env, envProblems } from "@/config/env";
 
 describe("withRetry", () => {

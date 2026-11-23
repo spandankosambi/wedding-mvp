@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { db, migrateDb } from "@/db/client";
 import { weddings } from "@/db/schema";
-import { getLook } from "@/lib/looks";
-import { galleryOf, setGalleryEnabled, appendPhoto, detachPhoto, movePhoto, canAddPhoto, MAX_GALLERY_PHOTOS } from "@/lib/gallery";
+import { getLook } from "@/lib/site/looks";
+import { galleryOf, setGalleryEnabled, appendPhoto, detachPhoto, movePhoto, canAddPhoto, MAX_GALLERY_PHOTOS } from "@/lib/site/gallery";
 
 let weddingId: string;
 const photo = (n: number) => ({ url: `https://blob.example.com/p${n}.jpg`, pathname: `weddings/x/gallery/p${n}.jpg`, width: 2000, height: 1500 });

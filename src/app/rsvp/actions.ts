@@ -1,11 +1,11 @@
 "use server";
 import { headers } from "next/headers";
-import { getFamilyByToken, submitRsvp } from "@/lib/rsvp";
-import { googleCalendarLink, icsFile, maskEmail } from "@/lib/calendar";
-import { namesFor } from "@/lib/looks";
-import { appOrigin } from "@/lib/origin";
-import { fmtEventDate, fmtEventTime } from "@/lib/format";
-import { calendarOrganizer, sendCalendarInvite } from "@/lib/mailer";
+import { getFamilyByToken, submitRsvp } from "@/lib/guests/rsvp";
+import { googleCalendarLink, icsFile, maskEmail } from "@/lib/email/calendar";
+import { namesFor } from "@/lib/site/looks";
+import { appOrigin } from "@/lib/core/origin";
+import { fmtEventDate, fmtEventTime } from "@/lib/core/format";
+import { calendarOrganizer, sendCalendarInvite } from "@/lib/email/mailer";
 
 const looksLikeEmail = (s: string | null | undefined) => !!s && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 

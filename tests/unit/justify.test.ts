@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { justify } from "@/lib/justify";
+import { justify } from "@/lib/core/justify";
 
 const DESK = { targetHeight: 260, gap: 14, mat: 12 };
 const PHONE = { targetHeight: 170, gap: 8, mat: 8 };

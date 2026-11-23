@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { signOut } from "@/auth";
-import { allows, seesSide, type Access } from "@/lib/access";
+import { allows, seesSide, type Access } from "@/lib/auth/access";
 import { BrandLogo, BrandSymbol } from "@/components/BrandLogo";
-import { BRAND } from "@/lib/brand";
-import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
+import { BRAND } from "@/lib/core/brand";
+import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/site/side-names";
 
 type Section = "dashboard" | "bride" | "groom" | "people";
 type Page = "overview" | "site" | "guests" | "print";

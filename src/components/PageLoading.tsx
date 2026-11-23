@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { BRAND } from "@/lib/brand";
+import { BRAND } from "@/lib/core/brand";
 
 /*
  * Shown the moment you click through to another signed-in page, while it

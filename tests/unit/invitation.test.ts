@@ -168,7 +168,7 @@ describe("more design: borders, symbols, patterns, icons", () => {
     expect(inv.back.events[0].icon).toBe("thali");
   });
   it("a family's own icon is drawn on the card", async () => {
-    const { ICON_PX, maskFromPixels, maskCoverage } = await import("@/lib/icon-mask");
+    const { ICON_PX, maskFromPixels, maskCoverage } = await import("@/lib/core/icon-mask");
     // a black square on white paper: the paper drops out, the square stays
     const px = new Uint8ClampedArray(ICON_PX * ICON_PX * 4).fill(255);
     for (let y = 30; y < 60; y++) for (let x = 30; x < 60; x++) px.set([0, 0, 0, 255], (y * ICON_PX + x) * 4);
@@ -184,7 +184,7 @@ describe("more design: borders, symbols, patterns, icons", () => {
     expect((await renderInvitationPdf(inv, opts, "raj-mahal")).subarray(0, 4).toString()).toBe("%PDF");
   }, 60_000);
   it("a family's own symbol prints; without an upload it is simply left out", async () => {
-    const { ICON_PX } = await import("@/lib/icon-mask");
+    const { ICON_PX } = await import("@/lib/core/icon-mask");
     const mask = Buffer.alloc(ICON_PX * ICON_PX, 180).toString("base64");
     for (const extra of [{ symbol: "custom", symbolImage: mask }, { symbol: "custom" }]) {
       const opts = o(extra);

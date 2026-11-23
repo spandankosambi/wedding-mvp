@@ -1,5 +1,5 @@
 import { Divider } from "./Divider";
-import type { Decor } from "@/lib/site-decor";
+import type { Decor } from "@/lib/site/site-decor";
 
 /** The card's last words: the closing line and "with best compliments from". */
 export function Closing({ theme, closingLine, compliments, divider }: { theme: string; closingLine: string | null; compliments: string[]; divider?: Decor["divider"] }) {

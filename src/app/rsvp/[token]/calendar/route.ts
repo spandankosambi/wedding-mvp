@@ -1,7 +1,7 @@
-import { getFamilyByToken } from "@/lib/rsvp";
-import { icsFile } from "@/lib/calendar";
-import { namesFor } from "@/lib/looks";
-import { appOrigin } from "@/lib/origin";
+import { getFamilyByToken } from "@/lib/guests/rsvp";
+import { icsFile } from "@/lib/email/calendar";
+import { namesFor } from "@/lib/site/looks";
+import { appOrigin } from "@/lib/core/origin";
 
 /** The household's calendar file: every celebration they said yes to (or one, with ?event=). */
 export async function GET(req: Request, { params }: { params: Promise<{ token: string }> }) {

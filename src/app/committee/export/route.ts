@@ -1,7 +1,7 @@
 import * as XLSX from "xlsx";
-import { requireAccess } from "@/lib/authz";
-import { asFamilySide } from "@/lib/looks";
-import { guestSheet, COLS } from "@/lib/guest-sheet";
+import { requireAccess } from "@/lib/auth/authz";
+import { asFamilySide } from "@/lib/site/looks";
+import { guestSheet, COLS } from "@/lib/guests/guest-sheet";
 
 /**
  * GET /committee/export?family=bride&format=xlsx|csv — this family's guest

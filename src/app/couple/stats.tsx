@@ -1,8 +1,8 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { families, guests, rsvps } from "@/db/schema";
-import { getRsvpSummary } from "@/lib/rsvp";
-import type { FamilySide } from "@/lib/looks";
+import { getRsvpSummary } from "@/lib/guests/rsvp";
+import type { FamilySide } from "@/lib/site/looks";
 
 /** The numbers the dashboard and each family's section show. */
 export async function weddingStats(weddingId: string, side?: FamilySide) {

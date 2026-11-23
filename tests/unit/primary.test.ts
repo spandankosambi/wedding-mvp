@@ -2,9 +2,9 @@ import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, migrateDb } from "@/db/client";
 import { weddings, families, guests, emailLog } from "@/db/schema";
-import { syncHousehold } from "@/lib/primary";
-import { whatsappNumber, whatsappInvite } from "@/lib/invites";
-import { getFamilyByToken } from "@/lib/rsvp";
+import { syncHousehold } from "@/lib/guests/primary";
+import { whatsappNumber, whatsappInvite } from "@/lib/guests/invites";
+import { getFamilyByToken } from "@/lib/guests/rsvp";
 
 let n = 0, weddingId: string, familyId: string;
 beforeAll(async () => { await migrateDb(); });

@@ -3,11 +3,11 @@ import { notFound } from "next/navigation";
 import { eq, inArray, desc } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, families, users, emailLog } from "@/db/schema";
-import { requireRole } from "@/lib/authz";
-import { getRsvpSummary } from "@/lib/rsvp";
-import { fmtWeddingDate } from "@/lib/format";
-import { sharePath } from "@/lib/share";
-import { getLook } from "@/lib/looks";
+import { requireRole } from "@/lib/auth/authz";
+import { getRsvpSummary } from "@/lib/guests/rsvp";
+import { fmtWeddingDate } from "@/lib/core/format";
+import { sharePath } from "@/lib/site/share";
+import { getLook } from "@/lib/site/looks";
 
 export const dynamic = "force-dynamic";
 

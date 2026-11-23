@@ -2,12 +2,12 @@ import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, migrateDb } from "@/db/client";
 import { weddings, events, families, guests, eventInvites, rsvps } from "@/db/schema";
-import { eventForSide, eventLabel, sideLabel } from "@/lib/sides";
-import { upsertEvent, istParts } from "@/lib/editor";
+import { eventForSide, eventLabel, sideLabel } from "@/lib/site/sides";
+import { upsertEvent, istParts } from "@/lib/site/editor";
 import { commitImport } from "@/lib/import/commit";
 import type { ImportRow } from "@/lib/import/normalize";
-import { generateInviteToken, tokenExpiry } from "@/lib/tokens";
-import { getFamilyByToken, getRsvpSummary } from "@/lib/rsvp";
+import { generateInviteToken, tokenExpiry } from "@/lib/auth/tokens";
+import { getFamilyByToken, getRsvpSummary } from "@/lib/guests/rsvp";
 
 describe("sides", () => {
   it("a household sees common events and its own side's", () => {

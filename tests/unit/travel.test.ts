@@ -2,9 +2,9 @@ import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, migrateDb } from "@/db/client";
 import { weddings, events, families, eventInvites } from "@/db/schema";
-import { generateInviteToken, tokenExpiry } from "@/lib/tokens";
-import { getFamilyByToken } from "@/lib/rsvp";
-import { showsTravel } from "@/lib/travel";
+import { generateInviteToken, tokenExpiry } from "@/lib/auth/tokens";
+import { getFamilyByToken } from "@/lib/guests/rsvp";
+import { showsTravel } from "@/lib/guests/travel";
 
 describe("showsTravel", () => {
   const all = ["a", "b", "c"];

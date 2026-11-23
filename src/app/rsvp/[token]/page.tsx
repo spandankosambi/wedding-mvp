@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { MadeWith } from "@/components/MadeWith";
-import { sideNamesOf } from "@/lib/side-names";
-import { getFamilyByToken } from "@/lib/rsvp";
-import { fmtWeddingDate } from "@/lib/format";
+import { sideNamesOf } from "@/lib/site/side-names";
+import { getFamilyByToken } from "@/lib/guests/rsvp";
+import { fmtWeddingDate } from "@/lib/core/format";
 import { Ornament } from "@/themes/ornaments";
 import { RsvpForm } from "./RsvpForm";
-import { namesFor } from "@/lib/looks";
+import { namesFor } from "@/lib/site/looks";
 
 export const dynamic = "force-dynamic";
 

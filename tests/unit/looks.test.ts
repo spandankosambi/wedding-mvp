@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, migrateDb } from "@/db/client";
 import { weddings, weddingSides } from "@/db/schema";
-import { copyFromPartner, getLooks, hasPart, namesFor, photoInUse, samePart, updateLook, withLook } from "@/lib/looks";
+import { copyFromPartner, getLooks, hasPart, namesFor, photoInUse, samePart, updateLook, withLook } from "@/lib/site/looks";
 
 let weddingId: string;
 beforeAll(async () => {

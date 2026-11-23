@@ -2,10 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { submitOpenRsvpAction } from "./actions";
-import { fmtEventDate, fmtEventTime } from "@/lib/format";
+import { fmtEventDate, fmtEventTime } from "@/lib/core/format";
 import { DIET_OPTIONS, MAX_OPEN_HEADCOUNT_UI as MAX } from "./limits";
-import { eventForSide, sideLabel, type Side } from "@/lib/sides";
-import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
+import { eventForSide, sideLabel, type Side } from "@/lib/site/sides";
+import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/site/side-names";
 
 type EventProp = { id: string; name: string; side: Side; startsAtISO: string; timeZone?: string; venueName: string; address: string; dressCode: string | null };
 type Status = "attending" | "declined" | null;

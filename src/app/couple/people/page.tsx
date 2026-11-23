@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
-import { sideNamesOf } from "@/lib/side-names";
+import { sideNamesOf } from "@/lib/site/side-names";
 import { db } from "@/db/client";
 import { weddings } from "@/db/schema";
-import { requireRole } from "@/lib/authz";
-import { listPeople } from "@/lib/people";
+import { requireRole } from "@/lib/auth/authz";
+import { listPeople } from "@/lib/auth/people";
 import { PortalNav } from "../PortalNav";
 import { PortalFrame } from "../PortalFrame";
 import { PeopleManager } from "./PeopleManager";

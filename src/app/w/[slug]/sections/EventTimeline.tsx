@@ -1,10 +1,10 @@
 import { SectionHeader } from "./SectionHeader";
-import { fmtEventDate, fmtEventTime } from "@/lib/format";
-import { sideLabel, type Side } from "@/lib/sides";
-import type { SideNames } from "@/lib/side-names";
+import { fmtEventDate, fmtEventTime } from "@/lib/core/format";
+import { sideLabel, type Side } from "@/lib/site/sides";
+import type { SideNames } from "@/lib/site/side-names";
 import { icon, iconOf } from "@/lib/invitation/decor";
 import { MotifSvg } from "@/components/MotifSvg";
-import { iconPng } from "@/lib/icon-png";
+import { iconPng } from "@/lib/core/icon-png";
 
 /** The family's uploaded icon, drawn in the theme's accent colour. */
 function ownIcon(e: { icon?: string | null; iconImage?: string | null }) {

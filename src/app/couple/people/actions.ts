@@ -4,12 +4,12 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings } from "@/db/schema";
-import { requireRole } from "@/lib/authz";
-import { appOrigin } from "@/lib/origin";
-import { sendAccessEmail } from "@/lib/mailer";
-import { rateLimit } from "@/lib/ratelimit";
-import * as people from "@/lib/people";
-import { sideNamesOf } from "@/lib/side-names";
+import { requireRole } from "@/lib/auth/authz";
+import { appOrigin } from "@/lib/core/origin";
+import { sendAccessEmail } from "@/lib/email/mailer";
+import { rateLimit } from "@/lib/auth/ratelimit";
+import * as people from "@/lib/auth/people";
+import { sideNamesOf } from "@/lib/site/side-names";
 
 type Out = { ok: true; note?: string } | { ok: false; error: string };
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GalleryPhoto } from "@/db/schema";
-import { justify } from "@/lib/justify";
+import { justify } from "@/lib/core/justify";
 
 // keep in step with .photo-rows in globals.css (the pre-measure fallback)
 const DESKTOP = { targetHeight: 260, gap: 14, mat: 12 };

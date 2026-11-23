@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth, signIn } from "@/auth";
-import { ROLE_HOME, type Role } from "@/lib/authz";
-import { BRAND } from "@/lib/brand";
+import { ROLE_HOME, type Role } from "@/lib/auth/authz";
+import { BRAND } from "@/lib/core/brand";
 import { BrandLogo } from "@/components/BrandLogo";
 
 export default async function SignInPage({

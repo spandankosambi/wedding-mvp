@@ -3,11 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { stayDetailsAction } from "./actions";
-import { stayGroups } from "@/lib/stay-groups";
+import { stayGroups } from "@/lib/guests/stay-groups";
 import type { Row } from "./FamilyTable";
 import { IconButton, MailIcon, WhatsAppIcon } from "@/components/icons";
 import type { StaySent } from "@/db/schema";
-import { safeCall } from "@/lib/safe-call";
+import { safeCall } from "@/lib/core/safe-call";
 
 /** "18 Nov, 4:05 pm", in India time */
 const when = (iso: string) =>

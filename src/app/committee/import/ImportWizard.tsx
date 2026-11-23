@@ -13,8 +13,8 @@ import { ReviewGrid, blankRow, type OnExisting, type ScanInfo } from "./ReviewGr
 import { ScanStep } from "./ScanStep";
 import { sheetUpdateAction } from "../sheet-actions";
 import { SheetPlanView } from "../SheetTools";
-import type { SheetPlan } from "@/lib/guest-sheet";
-import { safeCall } from "@/lib/safe-call";
+import type { SheetPlan } from "@/lib/guests/guest-sheet";
+import { safeCall } from "@/lib/core/safe-call";
 
 type Step = "choose" | "upload" | "scan" | "map" | "review" | "done" | "sheet";
 type Mode = "upload" | "direct" | "scan";

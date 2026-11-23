@@ -1,20 +1,20 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { DEFAULT_ZONE, guessZone, zonedParts } from "@/lib/timezones";
+import { DEFAULT_ZONE, guessZone, zonedParts } from "@/lib/core/timezones";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings } from "@/db/schema";
-import { requireRole } from "@/lib/authz";
-import { allows, homeSide, seesSide } from "@/lib/access";
-import * as editor from "@/lib/editor";
-import { EVENT_PRESETS, presetStart } from "@/lib/presets";
+import { requireRole } from "@/lib/auth/authz";
+import { allows, homeSide, seesSide } from "@/lib/auth/access";
+import * as editor from "@/lib/site/editor";
+import { EVENT_PRESETS, presetStart } from "@/lib/site/presets";
 import { put, del } from "@vercel/blob";
-import * as gallery from "@/lib/gallery";
-import { newShareKey } from "@/lib/share";
-import { MAX_KNOW, MAX_MUSIC_BYTES, MUSIC_TYPES } from "@/lib/site-decor";
-import { asFamilySide, otherSide, copyFromPartner, photoInUse, updateLook, type FamilySide, type LookPart } from "@/lib/looks";
+import * as gallery from "@/lib/site/gallery";
+import { newShareKey } from "@/lib/site/share";
+import { MAX_KNOW, MAX_MUSIC_BYTES, MUSIC_TYPES } from "@/lib/site/site-decor";
+import { asFamilySide, otherSide, copyFromPartner, photoInUse, updateLook, type FamilySide, type LookPart } from "@/lib/site/looks";
 
 /* Every action re-resolves the wedding server-side: a couple is pinned to
    their own; admin passes one explicitly. Then the site + editor revalidate

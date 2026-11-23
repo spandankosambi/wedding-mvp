@@ -1,11 +1,11 @@
 "use client";
 
-import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
+import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/site/side-names";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { setThemeAction, copyFromPartnerAction } from "./actions";
 import { THEMES, THEME_META, type Theme } from "@/themes/catalog";
-import { safeCall } from "@/lib/safe-call";
+import { safeCall } from "@/lib/core/safe-call";
 
 const SWATCHES = THEMES.map((theme) => ({ theme, ...THEME_META[theme] }));
 

@@ -2,10 +2,10 @@ import { describe, it, expect, beforeEach, beforeAll } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, migrateDb } from "@/db/client";
 import { weddings, events, families, guests, eventInvites, rsvps, users, sessions, accountActions } from "@/db/schema";
-import { createAction, findAction, carryOut, resetWedding, deleteWedding, resetItems } from "@/lib/account";
-import { getLook, updateLook } from "@/lib/looks";
-import { updateTravel } from "@/lib/editor";
-import { galleryOf } from "@/lib/gallery";
+import { createAction, findAction, carryOut, resetWedding, deleteWedding, resetItems } from "@/lib/auth/account";
+import { getLook, updateLook } from "@/lib/site/looks";
+import { updateTravel } from "@/lib/site/editor";
+import { galleryOf } from "@/lib/site/gallery";
 
 let n = 0;
 type Fixture = { weddingId: string; coupleId: string; committeeId: string; familyId: string; eventId: string };

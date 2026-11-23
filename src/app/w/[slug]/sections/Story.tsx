@@ -1,6 +1,6 @@
 import { SectionHeader } from "./SectionHeader";
 import { Divider } from "./Divider";
-import type { Decor } from "@/lib/site-decor";
+import type { Decor } from "@/lib/site/site-decor";
 
 /** Shorter stories set large; longer ones smaller, so the whole story fits one screen. */
 function storySize(story: string): "l" | "m" | "s" | "xs" {

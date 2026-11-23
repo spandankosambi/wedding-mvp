@@ -1,8 +1,8 @@
 import Link from "next/link";
-import type { ChecklistItem } from "@/lib/checklist";
+import type { ChecklistItem } from "@/lib/site/checklist";
 import { JumpNav } from "./JumpNav";
 import { HelpForm } from "./HelpForm";
-import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
+import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/site/side-names";
 
 /* "Need help?" at the foot of the left column. */
 const HELP = {

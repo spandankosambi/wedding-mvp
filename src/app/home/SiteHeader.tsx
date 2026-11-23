@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { BRAND } from "@/lib/brand";
+import { BRAND } from "@/lib/core/brand";
 import { BrandLogo } from "@/components/BrandLogo";
 
 const LINKS = [

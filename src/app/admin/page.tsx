@@ -2,8 +2,8 @@ import Link from "next/link";
 import { eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, families, rsvps } from "@/db/schema";
-import { requireRole } from "@/lib/authz";
-import { fmtWeddingDate } from "@/lib/format";
+import { requireRole } from "@/lib/auth/authz";
+import { fmtWeddingDate } from "@/lib/core/format";
 
 export const dynamic = "force-dynamic";
 

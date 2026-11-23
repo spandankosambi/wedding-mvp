@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { setTravelAction } from "./actions";
-import { safeCall } from "@/lib/safe-call";
+import { safeCall } from "@/lib/core/safe-call";
 
 type Family = { id: string; name: string; showTravel: boolean };
 

@@ -1,17 +1,17 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events } from "@/db/schema";
-import { requireRole } from "@/lib/authz";
-import { allows } from "@/lib/access";
-import { sharePath } from "@/lib/share";
-import { appOrigin } from "@/lib/origin";
+import { requireRole } from "@/lib/auth/authz";
+import { allows } from "@/lib/auth/access";
+import { sharePath } from "@/lib/site/share";
+import { appOrigin } from "@/lib/core/origin";
 import { invitationSchema } from "@/lib/invitation/options";
 import { downloadName } from "@/lib/invitation/content";
 import { envelopeFor, flatSheet } from "@/lib/invitation/envelope";
 import { localizeCards } from "@/lib/invitation/machine";
 import { renderInvitationPdf } from "@/lib/invitation/pdf";
-import { getLook, withLook, wordingOf } from "@/lib/looks";
-import { decorOf } from "@/lib/site-decor";
+import { getLook, withLook, wordingOf } from "@/lib/site/looks";
+import { decorOf } from "@/lib/site/site-decor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

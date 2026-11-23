@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { RsvpPerson } from "@/lib/contacts";
+import type { RsvpPerson } from "@/lib/guests/contacts";
 
 type Row = RsvpPerson & { key: number };
 

@@ -1,17 +1,17 @@
 "use server";
 
-import { sideNamesOf } from "@/lib/side-names";
+import { sideNamesOf } from "@/lib/site/side-names";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { del } from "@vercel/blob";
 import { db } from "@/db/client";
 import { users, weddings } from "@/db/schema";
-import { requireRole } from "@/lib/authz";
-import { appOrigin } from "@/lib/origin";
-import { rateLimit } from "@/lib/ratelimit";
-import { sendConfirmEmail } from "@/lib/mailer";
-import { photoStorageConfigured } from "@/lib/gallery";
-import { createAction, carryOut, resetScopeSchema, resetItems, CONFIRM_MINUTES } from "@/lib/account";
+import { requireRole } from "@/lib/auth/authz";
+import { appOrigin } from "@/lib/core/origin";
+import { rateLimit } from "@/lib/auth/ratelimit";
+import { sendConfirmEmail } from "@/lib/email/mailer";
+import { photoStorageConfigured } from "@/lib/site/gallery";
+import { createAction, carryOut, resetScopeSchema, resetItems, CONFIRM_MINUTES } from "@/lib/auth/account";
 import type { ResetScope } from "@/db/schema";
 
 type Requested = { ok: true; email: string; minutes: number } | { ok: false; error: string };

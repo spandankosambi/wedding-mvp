@@ -2,11 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { Person } from "@/lib/people";
+import type { Person } from "@/lib/auth/people";
 import { addPersonAction, removePersonAction, renameMeAction, updatePersonAction } from "./actions";
 import { SaveBar } from "@/components/FloatingSave";
-import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
-import { safeCall } from "@/lib/safe-call";
+import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/site/side-names";
+import { safeCall } from "@/lib/core/safe-call";
 
 type Draft = Pick<Person, "name" | "role" | "side" | "site" | "guests" | "print">;
 const BLANK: Draft = { name: "", role: "committee", side: "bride", site: "none", guests: "full", print: "none" };

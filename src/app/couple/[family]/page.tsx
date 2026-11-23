@@ -1,15 +1,15 @@
 import Link from "next/link";
-import { sideNamesOf } from "@/lib/side-names";
+import { sideNamesOf } from "@/lib/site/side-names";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings } from "@/db/schema";
-import { requireAccess } from "@/lib/authz";
-import { allows, seesSide } from "@/lib/access";
-import { getChecklist } from "@/lib/checklist";
+import { requireAccess } from "@/lib/auth/authz";
+import { allows, seesSide } from "@/lib/auth/access";
+import { getChecklist } from "@/lib/site/checklist";
 import { PortalFrame, Checklist } from "../PortalFrame";
-import { fmtWeddingDate } from "@/lib/format";
-import { asFamilySide, getLooks, namesFor, otherSide, sideName } from "@/lib/looks";
+import { fmtWeddingDate } from "@/lib/core/format";
+import { asFamilySide, getLooks, namesFor, otherSide, sideName } from "@/lib/site/looks";
 import { THEME_META } from "@/themes/catalog";
 import { ShareCard } from "../ShareCard";
 import { SummaryCards } from "../SummaryCards";
@@ -18,7 +18,7 @@ import { FloatingSave } from "@/components/FloatingSave";
 import { saveRsvpSettingsAction, renewShareLinkAction } from "../site/actions";
 import { PortalNav } from "../PortalNav";
 import { DangerZone } from "../danger/DangerZone";
-import { istParts } from "@/lib/editor";
+import { istParts } from "@/lib/site/editor";
 
 export const dynamic = "force-dynamic";
 

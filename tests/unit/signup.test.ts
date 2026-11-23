@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, migrateDb } from "@/db/client";
 import { weddings, events, users } from "@/db/schema";
-import { createWeddingForCouple } from "@/lib/signup";
+import { createWeddingForCouple } from "@/lib/auth/signup";
 
 beforeAll(async () => { await migrateDb(); });
 

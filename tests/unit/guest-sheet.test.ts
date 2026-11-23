@@ -2,8 +2,8 @@ import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, migrateDb } from "@/db/client";
 import { weddings, events, families, guests, eventInvites } from "@/db/schema";
-import { guestSheet, updateFromSheet, COLS } from "@/lib/guest-sheet";
-import { updateLook } from "@/lib/looks";
+import { guestSheet, updateFromSheet, COLS } from "@/lib/guests/guest-sheet";
+import { updateLook } from "@/lib/site/looks";
 
 /* The guest list as a spreadsheet and back: only edits are applied, nobody
    is duplicated or removed, and the hotel defaults when there's one. */

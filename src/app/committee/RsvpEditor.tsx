@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { recordRsvpAction } from "./actions";
-import { safeCall } from "@/lib/safe-call";
+import { safeCall } from "@/lib/core/safe-call";
 
 type Answer = "attending" | "declined" | "none";
 type Member = { id: string; fullName: string; ageGroup: "adult" | "child" };

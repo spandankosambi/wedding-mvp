@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { ICON_PX, maskCoverage, maskFromPixels } from "@/lib/icon-mask";
+import { ICON_PX, maskCoverage, maskFromPixels } from "@/lib/core/icon-mask";
 
 const toB64 = (bytes: Uint8Array) => { let s = ""; for (const b of bytes) s += String.fromCharCode(b); return btoa(s); };
 

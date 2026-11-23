@@ -5,7 +5,7 @@ import { weddings, events, families, guests, eventInvites, rsvps } from "@/db/sc
 import {
   deleteFamily, recordRsvpForFamily, bulkFamilyRsvp, setGuestRsvp, pruneAttendees,
   addGuestColumn, removeGuestColumn, setGuestDetail, guestAnswer, attendeesFromCount,
-} from "@/lib/household";
+} from "@/lib/guests/household";
 
 let n = 0;
 let weddingId: string, otherWeddingId: string, familyId: string, sangeet: string, pheras: string, a: string, b: string;

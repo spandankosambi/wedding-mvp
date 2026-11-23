@@ -5,11 +5,11 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings } from "@/db/schema";
-import { requireRole } from "@/lib/authz";
-import { allows, seesSide } from "@/lib/access";
+import { requireRole } from "@/lib/auth/authz";
+import { allows, seesSide } from "@/lib/auth/access";
 import { THEMES } from "@/themes/catalog";
-import { asFamilySide, copyFromPartner, otherSide, updateLook } from "@/lib/looks";
-import { adoptCardWording } from "@/lib/editor";
+import { asFamilySide, copyFromPartner, otherSide, updateLook } from "@/lib/site/looks";
+import { adoptCardWording } from "@/lib/site/editor";
 
 const schema = z.object({
   theme: z.enum(THEMES),

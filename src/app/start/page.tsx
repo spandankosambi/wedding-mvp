@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { StartForm } from "./StartForm";
 import { Ornament } from "@/themes/ornaments";
-import { BRAND } from "@/lib/brand";
+import { BRAND } from "@/lib/core/brand";
 import { BrandLogo } from "@/components/BrandLogo";
 
 export const metadata: Metadata = {

@@ -1,9 +1,9 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { GUEST_TOPICS } from "@/lib/help";
+import { GUEST_TOPICS } from "@/lib/core/help";
 import { sendGuestFeedbackAction } from "@/app/feedback-actions";
-import { safeCall } from "@/lib/safe-call";
+import { safeCall } from "@/lib/core/safe-call";
 
 /**
  * "Questions or feedback? Contact us" at the foot of an invitation: opens a

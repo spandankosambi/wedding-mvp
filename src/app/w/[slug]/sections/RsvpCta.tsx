@@ -1,7 +1,7 @@
-import { fmtWeddingDate } from "@/lib/format";
-import type { RsvpPerson } from "@/lib/contacts";
+import { fmtWeddingDate } from "@/lib/core/format";
+import type { RsvpPerson } from "@/lib/guests/contacts";
 import { ContactList } from "./ContactList";
-import { sharePath } from "@/lib/share";
+import { sharePath } from "@/lib/site/share";
 
 /** A household that arrived from its personal invitation. */
 export type InvitedGuest = { familyName: string; href: string; answered: boolean };

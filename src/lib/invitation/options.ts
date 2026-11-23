@@ -1,4 +1,4 @@
-import { isIconMask } from "@/lib/icon-mask";
+import { isIconMask } from "@/lib/core/icon-mask";
 import { z } from "zod";
 import { BORDER_STYLES, PATTERNS, SYMBOLS } from "./decor";
 

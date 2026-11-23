@@ -5,12 +5,12 @@ import { revalidatePath } from "next/cache";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { families, guests, eventInvites, events } from "@/db/schema";
-import { issueInvites, whatsappInvite } from "@/lib/invites";
-import * as household from "@/lib/household";
-import { syncHousehold } from "@/lib/primary";
-import { eventForSide } from "@/lib/sides";
-import { sendStayDetails } from "@/lib/stay";
-import { guestListScope } from "@/lib/authz";
+import { issueInvites, whatsappInvite } from "@/lib/guests/invites";
+import * as household from "@/lib/guests/household";
+import { syncHousehold } from "@/lib/guests/primary";
+import { eventForSide } from "@/lib/site/sides";
+import { sendStayDetails } from "@/lib/guests/stay";
+import { guestListScope } from "@/lib/auth/authz";
 
 /* Admin may act on any wedding (passes it explicitly); everyone else is pinned
    to their own. Every action re-resolves this server-side — never trust input.

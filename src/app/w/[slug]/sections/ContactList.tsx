@@ -1,4 +1,4 @@
-import { contactHref, type RsvpPerson } from "@/lib/contacts";
+import { contactHref, type RsvpPerson } from "@/lib/guests/contacts";
 import { WhatsAppIcon } from "@/components/icons";
 
 function PhoneIcon() {

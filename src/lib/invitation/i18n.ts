@@ -1,7 +1,7 @@
 import { buildInvitation, type CardEvent, type CardWedding, type Invitation } from "./content";
 import type { InvitationOptions } from "./options";
 import { transliterate, hasLatin, type Script } from "./translit";
-import { zoneLabel, zoneNote } from "@/lib/timezones";
+import { zoneLabel, zoneNote } from "@/lib/core/timezones";
 
 /*
  * The printed cards in another language. Every piece of text on the cards
