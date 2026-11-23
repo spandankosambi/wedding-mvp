@@ -57,7 +57,8 @@ export function buildPrompt(profiles: ColumnProfile[], events: EventRef[], base:
   return { system, user };
 }
 
-function stripFences(s: string): string {
+/** a model's reply without the ```json fences some models wrap it in */
+export function stripFences(s: string): string {
   return s.replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
 }
 

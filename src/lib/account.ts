@@ -61,7 +61,7 @@ export async function createAction(
   return { token, expiresAt };
 }
 
-export type PendingAction = {
+type PendingAction = {
   id: string; kind: "delete" | "reset"; scope: ResetScope | null; weddingId: string; userId: string;
   coupleNames: string; slug: string; email: string; sideNames: SideNames;
 };
@@ -168,7 +168,7 @@ export async function resetWedding(weddingId: string, scope: ResetScope, keepUse
 /** Wipes the chosen parts of one family's section. The other family's
     guests, own celebrations, photos and look, and the common celebrations,
     stay. Returns the photo URLs no longer used by either family. */
-export async function resetSide(weddingId: string, side: FamilySide, scope: ResetScope): Promise<{ photoUrls: string[] }> {
+async function resetSide(weddingId: string, side: FamilySide, scope: ResetScope): Promise<{ photoUrls: string[] }> {
   const theirs = (await db.select({ id: families.id }).from(families)
     .where(and(eq(families.weddingId, weddingId), eq(families.side, side)))).map((f) => f.id);
   if (scope.guests) {

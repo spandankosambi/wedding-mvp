@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { eq } from "drizzle-orm";
 import { db, migrateDb } from "@/db/client";
 import { weddings } from "@/db/schema";
 import { getLook } from "@/lib/looks";

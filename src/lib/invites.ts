@@ -7,16 +7,16 @@ import { sendInvite } from "@/lib/mailer";
 import { appOrigin } from "@/lib/origin";
 import { fmtWeddingDate } from "@/lib/format";
 
-export type InviteType = "invite" | "resend" | "remind";
+type InviteType = "invite" | "resend" | "remind";
 
 /** Where an invitation points: the couple's wedding site, personalised for
     this household (greeting, and an RSVP button that opens their own RSVP
     page). Plain /rsvp/<token> links keep working too. */
-export function inviteUrl(origin: string, slug: string, token: string) {
+function inviteUrl(origin: string, slug: string, token: string) {
   return `${origin}/w/${slug}?invite=${token}`;
 }
 
-export type IssueResult = { familyId: string; ok: boolean; error?: string };
+type IssueResult = { familyId: string; ok: boolean; error?: string };
 
 // Hash-only token storage means every send mints a fresh link — we cannot
 // recover the original token to re-use it for reminders. Acceptable: the old

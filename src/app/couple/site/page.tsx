@@ -2,7 +2,7 @@ import Link from "next/link";
 import { sideNamesOf, type SideNames } from "@/lib/side-names";
 import { EventSideField } from "./EventSideField";
 import { EventIconField } from "./EventIconField";
-import { asFamilySide, getLooks, hasPart, namesFor, otherSide, samePart, sideName, type FamilySide, type Look, type LookPart } from "@/lib/looks";
+import { asFamilySide, getLooks, hasPart, namesFor, otherSide, samePart, type FamilySide, type Look, type LookPart } from "@/lib/looks";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events } from "@/db/schema";
@@ -11,7 +11,6 @@ import { MAX_STAYS, STORY_MAX } from "@/lib/editor";
 import { zonedParts, zoneNote } from "@/lib/timezones";
 import { TimeZoneField } from "./TimeZoneField";
 import { EVENT_PRESETS } from "@/lib/presets";
-import { fmtWeddingDate } from "@/lib/format";
 import { ThemeSwitcher } from "../ThemeSwitcher";
 import { FloatingSave } from "@/components/FloatingSave";
 import { GalleryUploader } from "./GalleryUploader";
@@ -34,19 +33,13 @@ import { sharePath } from "@/lib/share";
 import { MusicUpload } from "./MediaFields";
 import { galleryOf, photoStorageConfigured, MAX_GALLERY_PHOTOS } from "@/lib/gallery";
 import {
-  saveWords, saveWording, saveDecor, saveKnow, removeMusic, saveTravel, saveEvent, addPresetEvent, toggleEvent, removeEvent, moveEventAction, sortEvents,
-  saveGallerySettings, removeGalleryPhotoAction, moveGalleryPhotoAction, copyPartAction, saveChanges,
+  saveWordsAction, saveWordingAction, saveDecorAction, saveKnowAction, removeMusicAction, saveTravelAction, saveEventAction, addPresetEventAction, toggleEventAction, removeEventAction, moveEventAction, sortEventsAction,
+  saveGallerySettingsAction, removeGalleryPhotoAction, moveGalleryPhotoAction, copyPartAction, saveChangesAction,
 } from "./actions";
+import { Field } from "@/components/Field";
 
 export const dynamic = "force-dynamic";
 
-const Field = ({ label, hint, children, className = "" }: { label: string; hint?: string; children: React.ReactNode; className?: string }) => (
-  <label className={`block ${className}`}>
-    <span className="text-xs font-medium text-neutral-600">{label}</span>
-    {hint && <span className="ml-2 text-xs text-neutral-400">{hint}</span>}
-    <div className="mt-1.5">{children}</div>
-  </label>
-);
 
 /** "Same as Spandan's family" — offered once the other family has filled this part in. */
 function SameAsPartner({ part, family, partner, mine, hidden, names }: { part: LookPart; family: FamilySide; partner: Look; mine: Look; hidden: React.ReactNode; names: SideNames }) {
@@ -150,7 +143,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
               </div>
               {same("decor")}
             </div>
-            <form action={saveDecor} data-save-part="decor" className="mt-5 space-y-6">
+            <form action={saveDecorAction} data-save-part="decor" className="mt-5 space-y-6">
               {wid}
               <fieldset>
                 <legend className="text-sm font-medium">How much the site moves</legend>
@@ -221,7 +214,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
               </div>
               {same("wording")}
             </div>
-            <form action={saveWording} data-save-part="wording" className="mt-5 grid gap-4 md:grid-cols-2">
+            <form action={saveWordingAction} data-save-part="wording" className="mt-5 grid gap-4 md:grid-cols-2">
               {wid}
               <Field label="Invocation at the top" hint="optional">
                 <input name="invocation" defaultValue={look.invocation ?? ""} maxLength={80} placeholder="|| Shree Ganeshaya Namah ||  or  ॥ श्री गणेशाय नमः ॥" className="portal-input" />
@@ -256,7 +249,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
               </div>
               {same("words")}
             </div>
-            <form action={saveWords} data-save-part="words" className="mt-5 grid gap-4 md:grid-cols-2">
+            <form action={saveWordsAction} data-save-part="words" className="mt-5 grid gap-4 md:grid-cols-2">
               {wid}
               <Field label="Tagline" hint="one line under your names" className="md:col-span-2"><input name="heroTagline" defaultValue={look.heroTagline ?? ""} maxLength={160} placeholder="Two families, five celebrations, one big yes." className="portal-input" /></Field>
               <Field label="Your story" hint="how you met, in about 150 words — leave blank to hide the section" className="md:col-span-2">
@@ -280,7 +273,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                 </p>
               </div>
               {evs.length > 1 && (
-                <form action={sortEvents}>{wid}<button className="portal-button-secondary" type="submit">Sort by date</button></form>
+                <form action={sortEventsAction}>{wid}<button className="portal-button-secondary" type="submit">Sort by date</button></form>
               )}
             </div>
 
@@ -304,7 +297,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                       <span className="hidden text-xs text-neutral-400 group-open:inline">close ▴</span>
                     </summary>
                     <div className="border-t border-neutral-100 p-4">
-                      <form action={saveEvent} data-save-part={`event-${e.id}`} className="grid gap-4 md:grid-cols-2">
+                      <form action={saveEventAction} data-save-part={`event-${e.id}`} className="grid gap-4 md:grid-cols-2">
                         {wid}
                         <input type="hidden" name="id" value={e.id} />
                         <Field label="Name"><input name="name" defaultValue={e.name} required maxLength={60} className="portal-input" /></Field>
@@ -330,13 +323,13 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                         </label>
                       </form>
                       <div className="mt-3 flex flex-wrap gap-2 border-t border-neutral-100 pt-3">
-                        <form action={toggleEvent}>{wid}<input type="hidden" name="id" value={e.id} /><input type="hidden" name="isPublished" value={e.isPublished ? "false" : "true"} />
+                        <form action={toggleEventAction}>{wid}<input type="hidden" name="id" value={e.id} /><input type="hidden" name="isPublished" value={e.isPublished ? "false" : "true"} />
                           <button type="submit" className="portal-button-secondary">{e.isPublished ? "Hide from site" : "Show on site"}</button></form>
                         <form action={moveEventAction}>{wid}<input type="hidden" name="id" value={e.id} /><input type="hidden" name="dir" value="up" />
                           <button type="submit" className="portal-button-secondary" disabled={i === 0}>↑ Move up</button></form>
                         <form action={moveEventAction}>{wid}<input type="hidden" name="id" value={e.id} /><input type="hidden" name="dir" value="down" />
                           <button type="submit" className="portal-button-secondary" disabled={i === evs.length - 1}>↓ Move down</button></form>
-                        <form action={removeEvent} className="ml-auto">{wid}<input type="hidden" name="id" value={e.id} />
+                        <form action={removeEventAction} className="ml-auto">{wid}<input type="hidden" name="id" value={e.id} />
                           <button type="submit" className="portal-button-secondary" style={{ color: "#b91c1c" }}>Delete</button></form>
                       </div>
                     </div>
@@ -350,10 +343,10 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
               <p className="mt-1 text-xs text-neutral-400">Tap one to add it with a sensible date, dress code and blurb — then edit the venue.</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {EVENT_PRESETS.map((p) => (
-                  <form key={p.name} action={addPresetEvent}>{wid}<input type="hidden" name="preset" value={p.name} />
+                  <form key={p.name} action={addPresetEventAction}>{wid}<input type="hidden" name="preset" value={p.name} />
                     <button type="submit" className="portal-badge hover:border-neutral-400 hover:text-neutral-900">+ {p.name}</button></form>
                 ))}
-                <form action={addPresetEvent}>{wid}<input type="hidden" name="preset" value="" />
+                <form action={addPresetEventAction}>{wid}<input type="hidden" name="preset" value="" />
                   <button type="submit" className="portal-badge hover:border-neutral-400 hover:text-neutral-900">+ Something else</button></form>
               </div>
             </div>
@@ -369,7 +362,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
               </div>
               {same("travel")}
             </div>
-            <form action={saveTravel} data-save-part="travel" className="mt-5 space-y-4">
+            <form action={saveTravelAction} data-save-part="travel" className="mt-5 space-y-4">
               {wid}
               <StaysEditor initial={look.travel?.stays ?? []} family={family} max={MAX_STAYS} names={sn} />
               <Field label="Getting there" hint="airport, distances, shuttles">
@@ -393,7 +386,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
                 : "Until you add photos, your site shows decorative illustrations here instead."}
             </p>
 
-            <form action={saveGallerySettings} data-save-part="gallery" className="mt-5 flex flex-wrap items-center gap-4">
+            <form action={saveGallerySettingsAction} data-save-part="gallery" className="mt-5 flex flex-wrap items-center gap-4">
               {wid}
               <label className="flex items-start gap-3 text-sm">
                 <input type="checkbox" name="galleryEnabled" defaultChecked={gal.enabled} className="mt-0.5 h-4 w-4" />
@@ -436,7 +429,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
             <p className="portal-eyebrow">Things to know</p>
             <h2 className="mt-1 font-semibold">Short notes for your guests</h2>
             <p className="mt-1 max-w-2xl text-sm text-neutral-500">Parking, the weather, what to wear, gifts — up to {MAX_KNOW} notes, shown as their own section on your site. Leave it empty to leave the section out.</p>
-            <form action={saveKnow} data-save-part="know" className="mt-5 space-y-4">
+            <form action={saveKnowAction} data-save-part="know" className="mt-5 space-y-4">
               {wid}
               <KnowEditor initial={look.know ?? []} max={MAX_KNOW} suggestions={KNOW_SUGGESTIONS} />
             </form>
@@ -453,7 +446,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
               <div className="mt-4 flex flex-wrap items-center gap-3" data-testid="music-current">
                 <audio controls preload="none" src={look.music.url} className="h-9 max-w-full" />
                 <span className="text-sm text-neutral-700">{look.music.name}</span>
-                <form action={removeMusic}>{wid}<button type="submit" className="text-xs text-neutral-500 underline underline-offset-2 hover:text-red-700">Remove</button></form>
+                <form action={removeMusicAction}>{wid}<button type="submit" className="text-xs text-neutral-500 underline underline-offset-2 hover:text-red-700">Remove</button></form>
               </div>
             )}
             <div className="mt-4">
@@ -469,7 +462,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
         </div>
         </fieldset>
       </PortalFrame>
-      {!readOnly && <FloatingSave key={JSON.stringify(sp)} action={saveChanges} batch failedPart={sp.error ? sp.section : undefined} />}
+      {!readOnly && <FloatingSave key={JSON.stringify(sp)} action={saveChangesAction} batch failedPart={sp.error ? sp.section : undefined} />}
     </main>
   );
 }

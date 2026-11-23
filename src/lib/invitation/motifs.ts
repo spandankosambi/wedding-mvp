@@ -1,5 +1,6 @@
 import type { Theme } from "@/themes/catalog";
 import type { MonogramStyle } from "./options";
+import { diamond, f, leaf } from "./shapes";
 
 /**
  * The card's decoration as plain shape data, drawn by the PDF and by the
@@ -41,18 +42,9 @@ export function paletteFor(theme: Theme, colours: "theme" | "light"): Palette {
 }
 
 /* ── helpers ──────────────────────────────────────────────────── */
-const f = (n: number) => Math.round(n * 100) / 100;
-const diamond = (cx: number, cy: number, r: number) =>
-  `M ${f(cx)} ${f(cy - r)} L ${f(cx + r)} ${f(cy)} L ${f(cx)} ${f(cy + r)} L ${f(cx - r)} ${f(cy)} Z`;
 const star = (cx: number, cy: number, r: number) => {
   const i = r * 0.36;
   return `M ${f(cx)} ${f(cy - r)} L ${f(cx + i)} ${f(cy - i)} L ${f(cx + r)} ${f(cy)} L ${f(cx + i)} ${f(cy + i)} L ${f(cx)} ${f(cy + r)} L ${f(cx - i)} ${f(cy + i)} L ${f(cx - r)} ${f(cy)} L ${f(cx - i)} ${f(cy - i)} Z`;
-};
-/** a pointed leaf from (x,y), `len` long, pointing at `deg` (0 = down) */
-const leaf = (x: number, y: number, len: number, deg: number) => {
-  const a = (deg * Math.PI) / 180, dx = Math.sin(a), dy = Math.cos(a), w = len * 0.32;
-  const tx = x + dx * len, ty = y + dy * len, mx = x + dx * len * 0.5, my = y + dy * len * 0.5;
-  return `M ${f(x)} ${f(y)} Q ${f(mx - dy * w)} ${f(my + dx * w)} ${f(tx)} ${f(ty)} Q ${f(mx + dy * w)} ${f(my - dx * w)} ${f(x)} ${f(y)} Z`;
 };
 
 /* ── theme motifs: the top ornament, the divider, a corner ─────── */
@@ -269,7 +261,7 @@ export function archPath(x: number, y: number, w: number, h: number): string {
 export const ARCH_CROWN = 0.36;
 
 /* ── monogram crests, 100×100, letters drawn on top ────────────── */
-export type Crest = Motif & { textY: number; textSize: number };
+type Crest = Motif & { textY: number; textSize: number };
 export function crest(style: MonogramStyle): Crest {
   switch (style) {
     case "diamond":
@@ -325,9 +317,9 @@ export function crest(style: MonogramStyle): Crest {
 }
 
 /** Devanagari (and Vedic marks) → printed with the Devanagari face. */
-export const DEVANAGARI = /[ऀ-ॿ᳐-᳿꣠-ꣿ]/;
+const DEVANAGARI = /[ऀ-ॿ᳐-᳿꣠-ꣿ]/;
 /** Gujarati → printed with the Gujarati face. */
-export const GUJARATI = /[\u0A80-\u0AFF]/;
+const GUJARATI = /[\u0A80-\u0AFF]/;
 /** Split a line into runs of Devanagari, Gujarati and everything else; the
     spaces, dandas (। ॥) and marks between words of one script stay in its run. */
 export function scriptRuns(s: string): { text: string; deva: boolean; font: "Tiro" | "Gujarati" | null }[] {

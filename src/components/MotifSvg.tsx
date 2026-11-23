@@ -1,9 +1,9 @@
 import type { Motif } from "@/lib/invitation/motifs";
 
-export type MotifColours = { accent: string; accent2: string; hair: string; ink: string; bg: string };
+type MotifColours = { accent: string; accent2: string; hair: string; ink: string; bg: string };
 
 /** The website's theme colours, for motifs drawn on a wedding site. */
-export const THEME_VARS: MotifColours = {
+const THEME_VARS: MotifColours = {
   accent: "var(--accent)", accent2: "var(--accent-2)", hair: "var(--hairline)", ink: "var(--ink)", bg: "var(--bg)",
 };
 

@@ -6,7 +6,7 @@ import type { GuestColumn } from "@/db/schema";
 import { guestAnswer, type GuestAnswer } from "@/lib/attendance";
 import { guestRsvpAction, addGuestColumnAction, removeGuestColumnAction, setGuestDetailAction } from "./actions";
 import { BulkRsvpDialog } from "./BulkRsvpDialog";
-import { FamilyForm, draftFromFamily, type FamilyDraft } from "./FamilyForm";
+import { FamilyForm, type FamilyDraft } from "./FamilyForm";
 import { useTravelToggle } from "./travel";
 import { useBarHeight } from "./layout-hooks";
 import type { Side } from "@/lib/sides";

@@ -51,7 +51,7 @@ function done(ctx: Ctx, section: string, error?: string, page: "site" | "section
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "");
 
 /** The shared wedding details, saved from the main dashboard. */
-export async function saveDetails(formData: FormData) {
+export async function saveDetailsAction(formData: FormData) {
   const ctx = await scoped(formData, "couple");
   const r = await editor.updateDetails(ctx.weddingId, {
     brideName: str(formData, "brideName"), groomName: str(formData, "groomName"),
@@ -67,7 +67,7 @@ const applyWords = (ctx: Ctx, formData: FormData): Promise<Applied> =>
     heroTagline: str(formData, "heroTagline"), story: str(formData, "story"),
     hashtag: str(formData, "hashtag"),
   });
-export async function saveWords(formData: FormData) {
+export async function saveWordsAction(formData: FormData) {
   const ctx = await scoped(formData);
   const r = await applyWords(ctx, formData);
   done(ctx, "words", r.ok ? undefined : r.error);
@@ -82,7 +82,7 @@ const applyWording = (ctx: Ctx, formData: FormData): Promise<Applied> =>
     })).filter((c) => c.phone),
     compliments: str(formData, "compliments"), closingLine: str(formData, "closingLine"),
   });
-export async function saveWording(formData: FormData) {
+export async function saveWordingAction(formData: FormData) {
   const ctx = await scoped(formData);
   const r = await applyWording(ctx, formData);
   done(ctx, "wording", r.ok ? undefined : r.error);
@@ -94,13 +94,13 @@ const applyDecor = (ctx: Ctx, formData: FormData): Promise<Applied> =>
     reveal: str(formData, "reveal") || undefined, falling: str(formData, "falling") || undefined, divider: str(formData, "divider") || undefined,
     toran: formData.get("toran") === "on", corners: formData.get("corners") === "on", icons: formData.get("icons") === "on",
   });
-export async function saveDecor(formData: FormData) {
+export async function saveDecorAction(formData: FormData) {
   const ctx = await scoped(formData);
   const r = await applyDecor(ctx, formData);
   done(ctx, "decor", r.ok ? undefined : r.error);
 }
 
-export async function saveRsvpSettings(formData: FormData) {
+export async function saveRsvpSettingsAction(formData: FormData) {
   const ctx = await scoped(formData, "guests");
   const r = await editor.updateRsvpSettings(ctx.weddingId, ctx.family, {
     rsvpOpen: formData.get("rsvpOpen") === "on", rsvpDeadline: str(formData, "rsvpDeadline"),
@@ -126,7 +126,7 @@ function applyTravel(ctx: Ctx, formData: FormData): Promise<Applied> {
   }
   return editor.updateTravel(ctx.weddingId, ctx.family, { stays, gettingThere: str(formData, "gettingThere") });
 }
-export async function saveTravel(formData: FormData) {
+export async function saveTravelAction(formData: FormData) {
   const ctx = await scoped(formData);
   const r = await applyTravel(ctx, formData);
   done(ctx, "travel", r.ok ? undefined : r.error);
@@ -144,14 +144,14 @@ const applyEvent = (ctx: Ctx, formData: FormData): Promise<Applied> =>
     side: str(formData, "side") === "both" ? "both" : ctx.family,
     icon: str(formData, "icon"), iconImage: str(formData, "iconImage"),
   });
-export async function saveEvent(formData: FormData) {
+export async function saveEventAction(formData: FormData) {
   const ctx = await scoped(formData);
   const id = str(formData, "id") || undefined;
   const r = await applyEvent(ctx, formData);
   done(ctx, id ? `event-${id}` : "events", r.ok ? undefined : r.error);
 }
 
-export async function addPresetEvent(formData: FormData) {
+export async function addPresetEventAction(formData: FormData) {
   const ctx = await scoped(formData);
   const preset = EVENT_PRESETS.find((p) => p.name === str(formData, "preset"));
   const startsAt = preset ? presetStart(preset, ctx.weddingDate) : ctx.weddingDate;
@@ -167,14 +167,14 @@ export async function addPresetEvent(formData: FormData) {
   done(ctx, r.ok && r.id ? `event-${r.id}` : "events", r.ok ? undefined : r.error);
 }
 
-export async function toggleEvent(formData: FormData) {
+export async function toggleEventAction(formData: FormData) {
   const ctx = await scoped(formData);
   const id = str(formData, "id");
   const r = await editor.setEventPublished(ctx.weddingId, id, formData.get("isPublished") === "true");
   done(ctx, `event-${id}`, r.ok ? undefined : r.error);
 }
 
-export async function removeEvent(formData: FormData) {
+export async function removeEventAction(formData: FormData) {
   const ctx = await scoped(formData);
   const r = await editor.deleteEvent(ctx.weddingId, str(formData, "id"));
   done(ctx, "events", r.ok ? undefined : r.error);
@@ -187,7 +187,7 @@ export async function moveEventAction(formData: FormData) {
   done(ctx, `event-${id}`, r.ok ? undefined : r.error);
 }
 
-export async function sortEvents(formData: FormData) {
+export async function sortEventsAction(formData: FormData) {
   const ctx = await scoped(formData);
   await editor.sortEventsByTime(ctx.weddingId);
   done(ctx, "events");
@@ -197,7 +197,7 @@ export async function sortEvents(formData: FormData) {
 
 const applyGallery = (ctx: Ctx, formData: FormData): Promise<Applied> =>
   gallery.setGalleryEnabled(ctx.weddingId, ctx.family, formData.get("galleryEnabled") === "on");
-export async function saveGallerySettings(formData: FormData) {
+export async function saveGallerySettingsAction(formData: FormData) {
   const ctx = await scoped(formData);
   const r = await applyGallery(ctx, formData);
   done(ctx, "gallery", r.ok ? undefined : r.error);
@@ -222,7 +222,7 @@ export async function moveGalleryPhotoAction(formData: FormData) {
 
 /** One photo per call, already resized in the browser. Returns instead of
     redirecting so the uploader can work through a batch and report progress. */
-export async function uploadGalleryPhoto(formData: FormData): Promise<{ ok: boolean; error?: string }> {
+export async function uploadGalleryPhotoAction(formData: FormData): Promise<{ ok: boolean; error?: string }> {
   const ctx = await scoped(formData);
   if (!gallery.photoStorageConfigured()) return { ok: false, error: "photo uploads aren't switched on for this site yet" };
   const file = formData.get("photo");
@@ -251,7 +251,7 @@ function applyKnow(ctx: Ctx, formData: FormData): Promise<Applied> {
   for (let i = 0; i < MAX_KNOW; i++) rows.push({ title: str(formData, `know${i}title`), text: str(formData, `know${i}text`) });
   return editor.updateKnow(ctx.weddingId, ctx.family, rows);
 }
-export async function saveKnow(formData: FormData) {
+export async function saveKnowAction(formData: FormData) {
   const ctx = await scoped(formData);
   const r = await applyKnow(ctx, formData);
   done(ctx, "know", r.ok ? undefined : r.error);
@@ -271,7 +271,7 @@ const APPLY: Record<string, (ctx: Ctx, fd: FormData) => Promise<Applied>> = {
  * one; on the first that fails we stop and point at it (those before it are
  * already saved), otherwise we come back once with all of them noted.
  */
-export async function saveChanges(formData: FormData) {
+export async function saveChangesAction(formData: FormData) {
   const ctx = await scoped(formData);
   const parts = String(formData.get("__parts") ?? "").split(",").filter(Boolean).slice(0, 60);
   const saved: string[] = [];
@@ -294,7 +294,7 @@ function refresh(ctx: Ctx) {
 }
 
 /** Background music for this family's site: one MP3 (or M4A), played only after a guest taps. */
-export async function uploadMusic(formData: FormData): Promise<{ ok: boolean; error?: string }> {
+export async function uploadMusicAction(formData: FormData): Promise<{ ok: boolean; error?: string }> {
   const ctx = await scoped(formData);
   if (!gallery.photoStorageConfigured()) return { ok: false, error: "File storage isn't set up on this site yet." };
   const file = formData.get("file");
@@ -309,7 +309,7 @@ export async function uploadMusic(formData: FormData): Promise<{ ok: boolean; er
   return { ok: true };
 }
 
-export async function removeMusic(formData: FormData) {
+export async function removeMusicAction(formData: FormData) {
   const ctx = await scoped(formData);
   const before = await editor.setMusic(ctx.weddingId, ctx.family, null);
   if (before && gallery.photoStorageConfigured()) await del(before.url).catch(() => {});
@@ -317,7 +317,7 @@ export async function removeMusic(formData: FormData) {
 }
 
 /** Swaps a family's link code for a new one: the old link and QR stop opening the invitation. */
-export async function renewShareLink(formData: FormData) {
+export async function renewShareLinkAction(formData: FormData) {
   const ctx = await scoped(formData, "couple");
   await updateLook(ctx.weddingId, ctx.family, { shareKey: newShareKey() });
   done(ctx, "share", undefined, "section");

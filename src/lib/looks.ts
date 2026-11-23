@@ -19,7 +19,7 @@ export type Look = typeof weddingSides.$inferSelect;
 export const otherSide = (s: FamilySide): FamilySide => (s === "bride" ? "groom" : "bride");
 /** "Pooja's family" */
 export const sideName = (s: FamilySide, names: SideNames = DEFAULT_SIDE_NAMES) => `${names[s]}'s family`;
-export { sideNamesOf, firstName, DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
+export { sideNamesOf, type SideNames } from "@/lib/side-names";
 export function asFamilySide(v: unknown): FamilySide | null {
   return v === "bride" || v === "groom" ? v : null;
 }
@@ -55,7 +55,7 @@ export async function getLook(weddingId: string, side: FamilySide): Promise<Look
  * The invitation's wording: the same on the family's site and its printed
  * cards. `rsvpContacts` is the contacts as printed, one per line.
  */
-export type Wording = Pick<Look, "invocation" | "shloka" | "rsvpContacts" | "compliments" | "closingLine">;
+type Wording = Pick<Look, "invocation" | "shloka" | "rsvpContacts" | "compliments" | "closingLine">;
 export const WORDING_KEYS = ["invocation", "shloka", "rsvpContacts", "compliments", "closingLine"] as const;
 export const wordingOf = (look: Look): Wording => ({
   invocation: look.invocation, shloka: look.shloka, compliments: look.compliments, closingLine: look.closingLine,
@@ -119,7 +119,7 @@ type Stay = TravelInfo["stays"][number];
 const key = (s: Stay) => s.name.trim().toLowerCase();
 
 /** The other family's travel once this family's common stays are mirrored into it. */
-export function mirrorCommonStays(mine: TravelInfo | null, theirs: TravelInfo | null): TravelInfo | null {
+function mirrorCommonStays(mine: TravelInfo | null, theirs: TravelInfo | null): TravelInfo | null {
   const common = (mine?.stays ?? []).filter((s) => s.common);
   const names = new Set(common.map(key));
   const own = (theirs?.stays ?? []).filter((s) => !s.common && !names.has(key(s)));

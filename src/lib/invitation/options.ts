@@ -22,7 +22,7 @@ export const CARD_SIZES = [
 ] as const;
 
 export type SizeId = (typeof CARD_SIZES)[number]["id"];
-export const SIZE_IDS = CARD_SIZES.map((s) => s.id) as [SizeId, ...SizeId[]];
+const SIZE_IDS = CARD_SIZES.map((s) => s.id) as [SizeId, ...SizeId[]];
 
 /** Custom sizes: from a small insert up to A4. */
 export const CUSTOM_MIN_MM = 76;
@@ -198,18 +198,6 @@ export function sheetFor(o: Pick<InvitationOptions, "size" | "customWidthMm" | "
   return { trim, page: [w + 2 * (BLEED_MM + slug), h + 2 * (BLEED_MM + slug)], x: slug, y: slug, bleed: BLEED_MM, marks: o.cropMarks };
 }
 
-const mmText = (n: number) => `${Math.round(n * 10) / 10}`;
-
-/** What the invitation PDF prints on, in words: "A4 (210 × 297 mm)" at home, the sheet and its trim at a print shop. */
-export function cardPaper(o: Parameters<typeof sheetFor>[0]): string {
-  const s = sheetFor(o);
-  const [pw, ph] = s.page;
-  const isA4 = Math.min(pw, ph) === 210 && Math.max(pw, ph) === 297;
-  if (o.output === "home") {
-    return isA4 ? `A4 (210 × 297 mm), then cut along the marks` : `${mmText(pw)} × ${mmText(ph)} mm`;
-  }
-  return `${mmText(pw)} × ${mmText(ph)} mm card stock, trimmed to ${mmText(s.trim[0])} × ${mmText(s.trim[1])} mm`;
-}
 
 const STANDARD_PAPER: [string, [number, number]][] = [["A3", [297, 420]], ["A4", [210, 297]], ["A5", [148, 210]], ["A6", [105, 148]], ["DL", [99, 210]]];
 

@@ -4,7 +4,7 @@ import QRCode from "qrcode";
 import {
   Document, Page, View, Text, Image, Svg, Line as SvgLine, Path, Circle, Font, renderToBuffer,
 } from "@react-pdf/renderer";
-import type { Style } from "@react-pdf/stylesheet";
+import type { ComponentProps } from "react";
 import type { Theme } from "@/themes/catalog";
 import type { Invitation, EventCard, InsertCard, Details, Line } from "./content";
 import { SAFE_MM, canFold, panelSize, sheetFor, type InvitationOptions, type PrintSheet } from "./options";
@@ -15,7 +15,10 @@ import {
   type Motif, type Ink, type Palette,
 } from "./motifs";
 
-export { paletteFor };
+/** One style object, as the PDF library takes it (its own package for the type is not a direct dependency). */
+type Style = Exclude<NonNullable<ComponentProps<typeof View>["style"]>, readonly unknown[] | unknown[]>;
+
+
 
 /* ── fonts (bundled, SIL Open Font Licence) ───────────────────── */
 const FONT_DIR = path.join(process.cwd(), "src/lib/invitation/fonts");

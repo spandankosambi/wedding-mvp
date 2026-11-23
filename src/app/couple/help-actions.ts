@@ -17,7 +17,7 @@ const schema = z.object({
   page: z.string().max(300).optional(),
 });
 
-export type HelpResult = { ok: true; replyTo: string } | { ok: false; error: string };
+type HelpResult = { ok: true; replyTo: string } | { ok: false; error: string };
 
 /** The "Need help?" form: sends the message to our inbox, with reply-to set to the person. */
 export async function sendHelpAction(input: unknown): Promise<HelpResult> {

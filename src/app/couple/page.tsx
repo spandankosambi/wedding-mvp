@@ -15,18 +15,12 @@ import { SummaryCards } from "./SummaryCards";
 import { PortalNav } from "./PortalNav";
 import { DangerZone } from "./danger/DangerZone";
 import { FloatingSave } from "@/components/FloatingSave";
-import { saveDetails } from "./site/actions";
+import { saveDetailsAction } from "./site/actions";
 import { Stat, weddingStats } from "./stats";
+import { Field } from "@/components/Field";
 
 export const dynamic = "force-dynamic";
 
-const Field = ({ label, hint, children, className = "" }: { label: string; hint?: string; children: React.ReactNode; className?: string }) => (
-  <label className={`block ${className}`}>
-    <span className="text-xs font-medium text-neutral-600">{label}</span>
-    {hint && <span className="ml-2 text-xs text-neutral-400">{hint}</span>}
-    <div className="mt-1.5">{children}</div>
-  </label>
-);
 
 /**
  * The couple's dashboard: the numbers that matter, the details both families
@@ -139,7 +133,7 @@ export default async function CouplePage({
         <section id="details" className="portal-panel p-6">
           <p className="portal-eyebrow">Shared by both families</p>
           <h2 className="mt-1 font-semibold">Names, date, city, parents</h2>
-          <form action={saveDetails} data-save-part="details" className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <form action={saveDetailsAction} data-save-part="details" className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {wid}
             <Field label="Bride's name"><input name="brideName" defaultValue={wedding.brideName} required maxLength={60} className="portal-input" /></Field>
             <Field label="Groom's name"><input name="groomName" defaultValue={wedding.groomName} required maxLength={60} className="portal-input" /></Field>
@@ -165,7 +159,7 @@ export default async function CouplePage({
       {/* only the couple themselves can delete; each family resets its own part in its section */}
       {staff.role === "couple" && staff.access.owner && <div className="mt-8"><DangerZone coupleNames={coupleNames} /></div>}
       </PortalFrame>
-      {staff.access.manage && <FloatingSave key={JSON.stringify(sp)} action={saveDetails} failedPart={sp.error ? "details" : undefined} />}
+      {staff.access.manage && <FloatingSave key={JSON.stringify(sp)} action={saveDetailsAction} failedPart={sp.error ? "details" : undefined} />}
     </main>
   );
 }

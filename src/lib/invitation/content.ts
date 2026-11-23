@@ -84,7 +84,7 @@ export type Invitation = {
 };
 
 const TZ = "Asia/Kolkata";
-export const fmtCardDate = (d: Date, zone?: string | null) =>
+const fmtCardDate = (d: Date, zone?: string | null) =>
   new Intl.DateTimeFormat("en-IN", { timeZone: zone || TZ, weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(d);
 
 const phrase = (t: string): Line => ({ t });
@@ -192,8 +192,8 @@ const SIZE_TAG: Record<string, string> = {
   "5x7": "5x7in", a5: "A5", "5.5x8.5": "5.5x8.5in", "6x6": "6x6in", "5x5": "5x5in", dl: "DL", "4.25x5.5": "4.25x5.5in", a4: "A4",
 };
 const LANG_TAG = { en: "English", gu: "Gujarati", hi: "Hindi" } as const;
-/** "Spandan Kosambi" → "Spandan"; letters and digits only, so every system keeps the name. */
-const firstName = (name: string) =>
+/** "Spandan Kosambi" → "Spandan", letters and digits only, for file names every system keeps. */
+const fileFirstName = (name: string) =>
   (name.trim().split(/\s+/)[0] ?? "").normalize("NFKD").replace(/[^A-Za-z0-9]/g, "");
 
 /**
@@ -209,7 +209,7 @@ export function downloadName(
   envelope?: { name: string; paper: string },
 ): string {
   const [own, other] = o.version === "groom" ? [names.groom, names.bride] : [names.bride, names.groom];
-  const couple = [firstName(own), firstName(other)].filter(Boolean).join("-") || "Wedding";
+  const couple = [fileFirstName(own), fileFirstName(other)].filter(Boolean).join("-") || "Wedding";
   const side = o.version === "groom" ? "Groom-side" : "Bride-side";
   if (part === "envelope") {
     const env = (envelope?.name.split("·")[0] ?? "").trim().replace(/\s*×\s*/g, "x").replace(/\s+/g, "") || "Envelope";

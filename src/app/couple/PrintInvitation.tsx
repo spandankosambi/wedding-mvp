@@ -9,7 +9,7 @@ import { eventForSide, type Side } from "@/lib/sides";
 import type { Theme } from "@/themes/catalog";
 import {
   BLEED_MM, CARD_SIZES, CUSTOM_MAX_MM, CUSTOM_MIN_MM, MAX_PHOTO_CHARS, MM_PER_INCH, MONOGRAM_STYLES,
-  cardPrintLine, defaultMonogram, foldedSheet, isPortrait, paperName, panelSize, trimSize, type InvitationOptions, type MonogramStyle, type SizeId,
+  cardPrintLine, defaultMonogram, foldedSheet, isPortrait, paperName, trimSize, type InvitationOptions, type MonogramStyle, type SizeId,
   OMITTABLE, type Omittable,
 } from "@/lib/invitation/options";
 import { envelopeFor, flatSheet } from "@/lib/invitation/envelope";
@@ -52,7 +52,7 @@ type Props = {
   editedCounts?: Partial<Record<OtherLang, number>>;
 };
 
-export type CardWording = { invocation: string | null; shloka: string | null; rsvpContacts: string | null; compliments: string | null; closingLine: string | null };
+type CardWording = { invocation: string | null; shloka: string | null; rsvpContacts: string | null; compliments: string | null; closingLine: string | null };
 
 /** The words come from the site; the PDF route fills them in. */
 type WordingOption = "invocation" | "shloka" | "rsvpBride" | "rsvpGroom" | "complimentsBride" | "complimentsGroom" | "note";
@@ -535,12 +535,6 @@ export function PrintInvitation(props: Props) {
     : "Enter a custom size";
 
   const go = (to: Step) => { remember(); setStep(to); };
-  const parentsLine = (who: string, names: string | null) => (
-    <p>
-      <span className="text-neutral-500">{who}:</span>{" "}
-      {names ? <span className="text-neutral-800">{names}</span> : <span className="italic text-neutral-400">not set — “The family of …” prints instead</span>}
-    </p>
-  );
 
   return (
     <section id="print-options" data-testid="print-page" aria-label="Print invitation cards">

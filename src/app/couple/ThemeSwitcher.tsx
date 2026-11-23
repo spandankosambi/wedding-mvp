@@ -3,7 +3,7 @@
 import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { setTheme, copyFromPartnerAction } from "./actions";
+import { setThemeAction, copyFromPartnerAction } from "./actions";
 import { THEMES, THEME_META, type Theme } from "@/themes/catalog";
 import { safeCall } from "@/lib/safe-call";
 
@@ -41,7 +41,7 @@ export function ThemeSwitcher({
     const prev = active;
     setActive(theme); // optimistic — the swatch highlights instantly
     startTransition(async () => {
-      const res = await setTheme({ theme, weddingId, family });
+      const res = await setThemeAction({ theme, weddingId, family });
       if (!res.ok) setActive(prev);
       else router.refresh();
     });

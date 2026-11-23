@@ -6,10 +6,11 @@ import { EMAIL_RE } from "./profile";
 import type { EventRef } from "./mapping";
 import { familyFromMember, padWithPlaceholders, parseMembersCell, type ImportRow, type IssueCode, type Member } from "./normalize";
 import { matchEventName, parseSide } from "./targets";
+import { stripFences } from "./ai";
 
 /* ------------------------------------------------------------------ files */
 
-export type Extracted = { kind: "text"; text: string } | { kind: "image"; mime: string };
+type Extracted = { kind: "text"; text: string } | { kind: "image"; mime: string };
 
 const IMAGE_MIME: Record<string, string> = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif" };
 const UNSUPPORTED = "Upload a photo (JPG/PNG), PDF, Word document (.docx) or text file — or paste the text.";
@@ -25,7 +26,7 @@ function normalizeText(s: string): string {
   return s.replace(/\r\n?/g, "\n").split("\n").map((l) => l.replace(/[ \t]+/g, " ").trim()).filter(Boolean).join("\n");
 }
 
-export function docxToText(xml: string): string {
+function docxToText(xml: string): string {
   const paragraphs = xml.split(/<\/w:p>/);
   const lines: string[] = [];
   for (const p of paragraphs) {
@@ -218,10 +219,6 @@ const extractionSchema = z.object({
   households: z.array(householdSchema).max(1000),
   notes: z.array(z.string()).max(10).optional().nullable(),
 });
-
-function stripFences(s: string): string {
-  return s.replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
-}
 
 /**
  * Read a guest list out of free text or photos. Returns null when AI is off or the

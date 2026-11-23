@@ -12,7 +12,7 @@ import { unstable_rethrow } from "next/navigation";
 
 export const UNREACHABLE = "Couldn't reach the server. Please check your connection and try again.";
 
-export type CallFailed = { ok: false; error: string };
+type CallFailed = { ok: false; error: string };
 
 export async function safeCall<T>(fn: () => Promise<T>): Promise<T | CallFailed> {
   try {

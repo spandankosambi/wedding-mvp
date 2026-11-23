@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { db } from "@/db/client";
 import { events, families } from "@/db/schema";
-import { requireRole } from "@/lib/authz";
 import { aiConfigured } from "@/lib/ai";
 import { parseWorkbook, defaultSheetIndex, ImportError, MAX_COLS, MAX_ROWS, type Sheet } from "@/lib/import/spreadsheet";
 import { profileColumns, type ColumnProfile } from "@/lib/import/profile";
@@ -16,6 +15,7 @@ import { buildRows, type BuildStats, type ImportRow } from "@/lib/import/normali
 import { commitImport, findExistingFamilies, type CommitResult } from "@/lib/import/commit";
 import { matchExisting, type ExistingFamily } from "@/lib/import/match";
 import { aiExtractHouseholds, extractTextFromFile, householdsToRows, parseGuestText, type ScanHousehold } from "@/lib/import/scan";
+import { guestListScope } from "@/lib/authz";
 
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 const MAX_SCAN_BYTES = 6 * 1024 * 1024;
@@ -33,14 +33,8 @@ function applyMatches(rows: ImportRow[], existing: ExistingFamily[]): number {
   return n;
 }
 
-/* Same rule as the rest of /committee: admin names a wedding, everyone else is
-   pinned to their own, and importing needs full access to the guest list. */
-async function scoped(requested: string) {
-  const staff = await requireRole(["committee", "couple", "admin"]);
-  const weddingId = staff.role === "admin" ? requested : staff.weddingId;
-  if (!weddingId || staff.access.guests !== "full") return null;
-  return { weddingId, access: staff.access };
-}
+/* Same rule as the rest of /committee (see guestListScope). */
+const scoped = guestListScope;
 async function scopedWeddingId(requested: string): Promise<string | null> {
   return (await scoped(requested))?.weddingId ?? null;
 }
@@ -61,7 +55,7 @@ export type Analysis = {
   aiConfigured: boolean;
 };
 
-export async function analyzeUpload(formData: FormData): Promise<{ ok: true; analysis: Analysis } | { ok: false; error: string }> {
+export async function analyzeUploadAction(formData: FormData): Promise<{ ok: true; analysis: Analysis } | { ok: false; error: string }> {
   const weddingIdRaw = String(formData.get("weddingId") ?? "");
   if (!z.string().uuid().safeParse(weddingIdRaw).success) return { ok: false, error: "invalid input" };
   const weddingId = await scopedWeddingId(weddingIdRaw);
@@ -137,7 +131,7 @@ const previewSchema = z.object({
   answers: answersSchema,
 });
 
-export async function previewRows(input: unknown): Promise<
+export async function previewRowsAction(input: unknown): Promise<
   { ok: true; rows: ImportRow[]; stats: BuildStats; existsCount: number } | { ok: false; error: string }
 > {
   const parsed = previewSchema.safeParse(input);
@@ -170,7 +164,7 @@ const checkSchema = z.object({
 });
 
 /** Typed-in or edited rows: compare with the list before writing anything. */
-export async function checkRows(input: unknown): Promise<{ ok: true; rows: ImportRow[]; existsCount: number } | { ok: false; error: string }> {
+export async function checkRowsAction(input: unknown): Promise<{ ok: true; rows: ImportRow[]; existsCount: number } | { ok: false; error: string }> {
   const parsed = checkSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid input" };
   const weddingId = await scopedWeddingId(parsed.data.weddingId);
@@ -180,13 +174,13 @@ export async function checkRows(input: unknown): Promise<{ ok: true; rows: Impor
   return { ok: true, rows, existsCount };
 }
 
-export type ScanEngine = "heuristic" | "ai" | "vision";
+type ScanEngine = "heuristic" | "ai" | "vision";
 
 /**
  * A photo, a document, or pasted text → households. Images need the AI key (vision);
  * text goes through the built-in rules and, when a key is set, the model.
  */
-export async function extractDocument(formData: FormData): Promise<
+export async function extractDocumentAction(formData: FormData): Promise<
   { ok: true; rows: ImportRow[]; existsCount: number; engine: ScanEngine; notes: string[]; textPreview: string | null } | { ok: false; error: string }
 > {
   const weddingIdRaw = String(formData.get("weddingId") ?? "");
@@ -247,7 +241,7 @@ const commitSchema = z.object({
   rows: z.array(rowSchema).min(1).max(MAX_ROWS),
 });
 
-export async function commitRows(input: unknown): Promise<{ ok: true; result: CommitResult } | { ok: false; error: string }> {
+export async function commitRowsAction(input: unknown): Promise<{ ok: true; result: CommitResult } | { ok: false; error: string }> {
   const parsed = commitSchema.safeParse(input);
   if (!parsed.success) {
     const bad = parsed.error.issues.find((i) => i.path.includes("email"));

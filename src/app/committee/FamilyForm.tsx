@@ -2,7 +2,7 @@
 
 import { useSideNames } from "@/components/SideNames";
 import { useState, useTransition } from "react";
-import { upsertFamily, deleteFamilyAction } from "./actions";
+import { upsertFamilyAction, deleteFamilyAction } from "./actions";
 import { invitesAll } from "@/lib/travel";
 import { eventForSide, type Side } from "@/lib/sides";
 import { safeCall } from "@/lib/safe-call";
@@ -111,7 +111,7 @@ export function FamilyForm({
   function save() {
     setError(null);
     startTransition(async () => {
-      const res = await upsertFamily({
+      const res = await upsertFamilyAction({
         weddingId,
         familyId: form.familyId,
         name: form.name.trim(),

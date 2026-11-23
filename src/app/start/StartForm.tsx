@@ -1,13 +1,13 @@
 "use client";
 
 import { useActionState } from "react";
-import { startWedding, type StartState } from "./actions";
+import { startWeddingAction, type StartState } from "./actions";
 import { THEMES, THEME_META } from "@/themes/catalog";
 
 const field = { background: "var(--surface)", border: "1px solid var(--hairline)", color: "var(--ink)" } as const;
 
 export function StartForm({ initialTheme }: { initialTheme?: string }) {
-  const [state, action, pending] = useActionState<StartState, FormData>(startWedding, {});
+  const [state, action, pending] = useActionState<StartState, FormData>(startWeddingAction, {});
   const v = state.values ?? {};
   const minDate = new Date().toISOString().slice(0, 10);
 

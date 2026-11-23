@@ -10,7 +10,7 @@ import { RsvpEditor, type RsvpTarget } from "./RsvpEditor";
 import { BulkRsvpDialog } from "./BulkRsvpDialog";
 import { openWhatsAppInvite } from "./whatsapp";
 import { useBarHeight, useIsPhone } from "./layout-hooks";
-import { EditIcon, IconButton, MailIcon, RsvpIcon, WhatsAppIcon } from "./icons";
+import { EditIcon, IconButton, MailIcon, RsvpIcon, WhatsAppIcon } from "@/components/icons";
 
 import type { StaySent } from "@/db/schema";
 import { safeCall } from "@/lib/safe-call";
@@ -36,7 +36,7 @@ export type Row = {
 };
 
 /** "19 Nov, 12:44 am", in India time */
-export const sentWhen = (iso: string) =>
+const sentWhen = (iso: string) =>
   new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" });
 
 /** has this household already been sent a personal link (any route)? */

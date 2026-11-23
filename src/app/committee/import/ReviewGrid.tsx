@@ -30,7 +30,7 @@ const ISSUE_LABEL: Record<IssueCode, { text: string; cls: string }> = {
 /** Flags that only the server can know stay; the rest are recomputed as the user edits. */
 const SERVER_ONLY: IssueCode[] = ["exists", "duplicate_in_sheet", "unknown_side"];
 
-export function liveIssues(row: ImportRow): IssueCode[] {
+function liveIssues(row: ImportRow): IssueCode[] {
   const out: IssueCode[] = row.issues.filter((i) => SERVER_ONLY.includes(i));
   if (!row.name.trim()) out.push("missing_name");
   const email = row.email.trim();

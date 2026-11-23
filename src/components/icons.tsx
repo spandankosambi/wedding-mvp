@@ -1,4 +1,4 @@
-/* Small line icons for the guest list's row actions (20px, current colour). */
+/* Small line icons shared across the app: the guest list's row actions, the website's contact links (18px, current colour). */
 
 type P = { className?: string };
 const base = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };

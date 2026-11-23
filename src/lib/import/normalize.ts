@@ -75,7 +75,7 @@ type Extracted = {
   empty: boolean;
 };
 
-export const MAX_PLACEHOLDERS = 50;
+const MAX_PLACEHOLDERS = 50;
 
 export function padWithPlaceholders(members: Member[], headcount: number | null | undefined): Member[] {
   if (!headcount || headcount <= members.length) return members;

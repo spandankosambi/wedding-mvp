@@ -17,11 +17,11 @@ export function aiConfigured(): boolean {
   return !!env.ai.key;
 }
 
-export function aiModel(): string {
+function aiModel(): string {
   return env.ai.model || DEFAULT_MODEL;
 }
 
-export function aiVisionModel(): string {
+function aiVisionModel(): string {
   return env.ai.visionModel || DEFAULT_VISION_MODEL;
 }
 

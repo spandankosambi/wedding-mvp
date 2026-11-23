@@ -9,8 +9,6 @@ import { CARD_SIZES, panelSize, type InvitationOptions } from "./options";
  * Envelopes are drawn landscape (opening along the long side); squares stay square.
  */
 
-export const ENVELOPE_STYLES = ["none", "flat"] as const;
-export type EnvelopeStyle = (typeof ENVELOPE_STYLES)[number];
 
 const STANDARD: Record<string, { name: string; mm: [number, number] }> = {
   "5x7": { name: "A7 · 5¼ × 7¼ in", mm: [184, 133] },
@@ -59,12 +57,12 @@ const TIP = 4; // the top flap's point stops this short of the sheet edge, mm
 const OVERLAP = 7; // how far the bottom flap runs under the top flap, mm
 
 /** How deep the top flap reaches at `x` mm from the panel's left edge. */
-export function flapDepth(d: Pick<Die, "W" | "top">, x: number) {
+function flapDepth(d: Pick<Die, "W" | "top">, x: number) {
   const half = d.W / 2 - 9; // the rounded point is 18 mm wide
   return (d.top - TIP) * Math.min(1, Math.min(x, d.W - x) / half);
 }
 
-export function dieLine(env: [number, number], topF = 0.55, sideF = 0.16): Die {
+function dieLine(env: [number, number], topF = 0.55, sideF = 0.16): Die {
   const [W, H] = env;
   const top = Math.round(H * topF);
   const side = Math.round(Math.max(15, W * sideF));
@@ -76,14 +74,14 @@ export function dieLine(env: [number, number], topF = 0.55, sideF = 0.16): Die {
 }
 
 /** Does every part of the back get covered by a flap? */
-export function closes(d: Die) {
+function closes(d: Die) {
   const bottomOk = d.bottom >= d.H - flapDepth(d, d.side) + OVERLAP - 0.5 && d.bottom <= d.H - 2;
   // near the top corners, the side flap's cut corner has to stay under the V
   const cornerOk = d.taper / d.side <= (d.top - TIP) / (d.W / 2 - 9) * 0.92;
   return bottomOk && cornerOk;
 }
 
-export const FLAT_MARGIN_MM = 5;
+const FLAT_MARGIN_MM = 5;
 
 /** Sheets a template can go on, smallest first: home printers do A4, print shops the rest. */
 const SHEETS: [string, [number, number]][] = [["A4", [210, 297]], ["A3", [297, 420]], ["SRA3", [320, 450]], ["A2", [420, 594]]];

@@ -12,7 +12,7 @@ import { fmtEventDate, fmtEventTime } from "./format";
  * Yes / Maybe / No buttons that add it to the guest's calendar.
  */
 
-export type CalendarEvent = {
+type CalendarEvent = {
   id: string;
   name: string;
   startsAt: Date;

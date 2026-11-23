@@ -3,7 +3,7 @@ import { Divider } from "./Divider";
 import type { Decor } from "@/lib/site-decor";
 
 /** Shorter stories set large; longer ones smaller, so the whole story fits one screen. */
-export function storySize(story: string): "l" | "m" | "s" | "xs" {
+function storySize(story: string): "l" | "m" | "s" | "xs" {
   const n = story.length;
   return n <= 280 ? "l" : n <= 550 ? "m" : n <= 900 ? "s" : "xs";
 }

@@ -23,8 +23,7 @@ export type Access = {
 export type Grant = { site: Level; guests: Level; print: "none" | "full" };
 
 /** What a committee login had before access could be set: the guest list. */
-export const LEGACY_GRANT: Grant = { site: "none", guests: "full", print: "none" };
-export const AREAS: readonly Area[] = ["site", "guests", "print"];
+const LEGACY_GRANT: Grant = { site: "none", guests: "full", print: "none" };
 export const AREA_LABELS: Record<Area, string> = { site: "Edit your site", guests: "Guest list", print: "Print cards" };
 export const LEVEL_LABELS: Record<Level, string> = { none: "No access", view: "View only", full: "Full access" };
 export const REACH_LABELS: Record<Reach, string> = { bride: "Bride's side", groom: "Groom's side", both: "Both sides" };

@@ -1,7 +1,7 @@
 /** Indian wedding ceremonies a couple can add with one tap. `dayOffset` is
     relative to the wedding day; `hour` is IST. Used by the "add event" picker
     in the editor. */
-export type EventPreset = {
+type EventPreset = {
   name: string;
   blurb: string;
   dressCode: string;
@@ -46,7 +46,7 @@ export function presetStart(preset: Pick<EventPreset, "dayOffset" | "hour">, wed
 /** What a brand-new wedding starts with: just the day the couple told us at
     sign-up. The name is deliberately faith-neutral; they can rename it (Pheras,
     Nikah, Anand Karaj…) and add the rest of the week from the picker. */
-export const STARTER_EVENT: EventPreset = {
+const STARTER_EVENT: EventPreset = {
   name: "Wedding",
   blurb: "The day itself — the ceremony the whole celebration is for.",
   dressCode: "Traditional",

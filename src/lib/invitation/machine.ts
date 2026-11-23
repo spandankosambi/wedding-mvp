@@ -19,10 +19,10 @@ export type Machine = { get(kind: MachineKind, src: string): string | undefined 
 const ENDPOINT = "https://api.cognitive.microsofttranslator.com";
 const SCRIPT: Record<OtherLang, string> = { gu: "Gujr", hi: "Deva" };
 
-export const machineOn = () => !!env.translator.key;
+const machineOn = () => !!env.translator.key;
 
 /** A Machine that only notes what it was asked for (and answers nothing). */
-export function recorder(): Machine & { asked: Map<MachineKind, Set<string>> } {
+function recorder(): Machine & { asked: Map<MachineKind, Set<string>> } {
   const asked = new Map<MachineKind, Set<string>>([["name", new Set()], ["text", new Set()]]);
   return { asked, get(kind, src) { if (src.trim()) asked.get(kind)!.add(src); return undefined; } };
 }
@@ -59,7 +59,7 @@ function batches(items: string[]) {
 }
 
 /** The machine's words for the lines asked for: saved ones, then Azure for the rest. */
-export async function machineFor(lang: OtherLang, asked: Map<MachineKind, Set<string>>): Promise<Machine | undefined> {
+async function machineFor(lang: OtherLang, asked: Map<MachineKind, Set<string>>): Promise<Machine | undefined> {
   if (!machineOn()) return undefined;
   const got = new Map<string, string>();
   const key = (kind: MachineKind, src: string) => `${kind}\u0000${src}`;

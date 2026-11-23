@@ -30,7 +30,7 @@ export function rsvpWindow(w: { rsvpOpen: boolean; rsvpDeadline: Date | null; we
   return { open: true as const };
 }
 
-export const MAX_OPEN_HEADCOUNT = 10;
+const MAX_OPEN_HEADCOUNT = 10;
 
 const schema = z.object({
   slug: z.string().min(1).max(80),
@@ -52,7 +52,7 @@ const schema = z.object({
 });
 
 export type OpenRsvpInput = z.input<typeof schema>;
-export type OpenRsvpResult =
+type OpenRsvpResult =
   /** `editPath` is origin-relative on purpose: the guest is already on the right
       host, so the link they are handed never depends on APP_URL being correct. */
   | { ok: true; editPath: string; familyName: string; attending: string[] }

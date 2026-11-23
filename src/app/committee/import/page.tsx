@@ -12,7 +12,7 @@ import { redirect } from "next/navigation";
 import { PortalFrame } from "../../couple/PortalFrame";
 import { aiConfigured } from "@/lib/ai";
 import { ImportWizard } from "./ImportWizard";
-import { asFamilySide, sideName } from "@/lib/looks";
+import { asFamilySide } from "@/lib/looks";
 
 export const dynamic = "force-dynamic";
 

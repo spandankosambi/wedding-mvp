@@ -46,11 +46,11 @@ async function request(kind: "delete" | "reset", scope?: ResetScope): Promise<Re
   return { ok: true, email: c.email, minutes: CONFIRM_MINUTES };
 }
 
-export async function requestDeleteWedding(): Promise<Requested> {
+export async function requestDeleteWeddingAction(): Promise<Requested> {
   return request("delete");
 }
 
-export async function requestResetWedding(input: unknown): Promise<Requested> {
+export async function requestResetWeddingAction(input: unknown): Promise<Requested> {
   const parsed = resetScopeSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Choose at least one thing to reset." };
   // the guest list takes its replies with it; a family's reset never touches committee logins

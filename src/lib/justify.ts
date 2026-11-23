@@ -12,7 +12,7 @@
  * `mat` is the frame around each photo (both sides together), `gap` the space
  * between frames. Returned `height` is the photo's own height, frame excluded.
  */
-export type JustifiedRow = { items: number[]; height: number; last: boolean; filled: boolean };
+type JustifiedRow = { items: number[]; height: number; last: boolean; filled: boolean };
 
 type Opts = { targetHeight: number; gap: number; mat: number; maxScale?: number };
 

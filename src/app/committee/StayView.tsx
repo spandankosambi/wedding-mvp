@@ -5,7 +5,7 @@ import Link from "next/link";
 import { stayDetailsAction } from "./actions";
 import { stayGroups } from "@/lib/stay-groups";
 import type { Row } from "./FamilyTable";
-import { IconButton, MailIcon, WhatsAppIcon } from "./icons";
+import { IconButton, MailIcon, WhatsAppIcon } from "@/components/icons";
 import type { StaySent } from "@/db/schema";
 import { safeCall } from "@/lib/safe-call";
 

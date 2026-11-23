@@ -23,7 +23,7 @@ export function parseContactLine(line: string): RsvpPerson | null {
 const digits = (s: string) => s.replace(/\D/g, "");
 
 /** The number in international form, without "+": a 10-digit number is taken as Indian. */
-export function intlDigits(phone: string): string {
+function intlDigits(phone: string): string {
   const d = digits(phone);
   if (phone.trim().startsWith("+")) return d;
   if (d.length === 10) return `91${d}`;

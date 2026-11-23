@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 
-export type BulkAnswer = "yes" | "no" | "none";
+type BulkAnswer = "yes" | "no" | "none";
 
 /** Mark an RSVP for many families or guests in one go: pick the events and
     the answer. Answers only land on events each one is invited to. */

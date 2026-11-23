@@ -2,7 +2,7 @@ import { closeDb, db, migrateDb } from "@/db/client";
 import { weddings, weddingSides, events, families, guests, eventInvites, rsvps, users } from "@/db/schema";
 import { generateInviteToken, tokenExpiry } from "@/lib/tokens";
 import { syncHousehold } from "@/lib/primary";
-import { eq, inArray, or } from "drizzle-orm";
+import { inArray, or } from "drizzle-orm";
 
 // Seeded staff logins in role order: [admin, couple, committee, committee], plus a
 // second couple for the second wedding. Override with SEED_STAFF_EMAILS (comma-separated,

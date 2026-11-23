@@ -12,14 +12,11 @@ import { zoneLabel, zoneNote } from "@/lib/timezones";
  * language and used only on the printed cards, never on the website.
  */
 
-export { CARD_LANGS, isCardLang, langLabel, langNative, type CardLang, type OtherLang } from "./langs";
 import type { CardLang, OtherLang } from "./langs";
 const SCRIPT: Record<OtherLang, Script> = { gu: "gujr", hi: "deva" };
 const LOCALE: Record<OtherLang, string> = { gu: "gu-IN-u-nu-gujr", hi: "hi-IN-u-nu-deva" };
 
 /** What a family has changed, per language: key → their words. */
-export type CardText = Partial<Record<OtherLang, Record<string, string>>>;
-
 /* ── the standard phrases ─────────────────────────────────────── */
 const P = {
   gu: {
@@ -112,7 +109,7 @@ function contactLine(line: string, nm: (s: string) => string) {
 
 /* ── the fields ───────────────────────────────────────────────── */
 
-export { GROUP_LABEL, type CardField, type FieldGroup } from "./i18n-types";
+export { type CardField } from "./i18n-types";
 import type { CardField } from "./i18n-types";
 import type { Machine } from "./machine";
 

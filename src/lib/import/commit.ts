@@ -7,7 +7,7 @@ import { eventForSide } from "@/lib/sides";
 import type { ImportRow, Member } from "./normalize";
 import { matchExisting, normalizePersonName, type ExistingFamily } from "./match";
 
-export type CommitOptions = { onExisting: "skip" | "update" | "merge" };
+type CommitOptions = { onExisting: "skip" | "update" | "merge" };
 export type CommitResult = {
   created: number;
   /** updated + merged */

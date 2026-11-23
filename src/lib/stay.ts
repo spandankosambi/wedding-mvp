@@ -13,7 +13,7 @@ import { sendStayEmail } from "@/lib/mailer";
  * their guests are in, its note and map link, and who is in which room.
  */
 
-export function stayMessage(o: { greeting: string; couple: string; groups: StayGroup[]; gettingThere?: string }) {
+function stayMessage(o: { greeting: string; couple: string; groups: StayGroup[]; gettingThere?: string }) {
   const lines = [o.greeting, "", `Here's where you're staying for ${o.couple}'s wedding:`];
   for (const g of o.groups) {
     lines.push("", `🏨 ${g.hotel}`);

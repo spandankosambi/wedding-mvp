@@ -6,7 +6,7 @@ import { slugify, uniqueSlug } from "@/lib/slug";
 import { starterEvents } from "@/lib/presets";
 import { THEMES } from "@/themes/catalog";
 
-export const signupSchema = z.object({
+const signupSchema = z.object({
   brideName: z.string().trim().min(1).max(60),
   groomName: z.string().trim().min(1).max(60),
   weddingDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date"),
@@ -16,9 +16,7 @@ export const signupSchema = z.object({
   /** which of the two is filling the form in: their own login carries their own name */
   you: z.enum(["bride", "groom"]).optional(),
 });
-export type SignupInput = z.input<typeof signupSchema>;
-
-export type SignupResult =
+type SignupResult =
   | { ok: true; created: true; slug: string; weddingId: string; email: string }
   | { ok: true; created: false; email: string }
   | { ok: false; error: string };

@@ -14,7 +14,7 @@ import { syncHousehold } from "@/lib/primary";
 
 type Result = { ok: true } | { ok: false; error: string };
 
-export { guestAnswer, attendeesFromCount, type GuestAnswer } from "@/lib/attendance";
+export { guestAnswer, attendeesFromCount } from "@/lib/attendance";
 
 async function familyInWedding(weddingId: string, familyId: string) {
   const [fam] = await db.select({ id: families.id }).from(families)
@@ -47,7 +47,7 @@ export async function deleteFamily(weddingId: string, familyId: string): Promise
   return { ok: true };
 }
 
-export const committeeRsvpSchema = z.object({
+const committeeRsvpSchema = z.object({
   familyId: z.string().uuid(),
   /** People to add to the household first; refer to them as "new:<index>" in guestIds */
   addGuests: z.array(z.object({ fullName: z.string().trim().min(1).max(120), ageGroup: z.enum(["adult", "child"]) })).max(20).default([]),
@@ -187,12 +187,12 @@ export async function pruneAttendees(familyId: string) {
 
 /* ── Custom guest columns ───────────────────────────────────────────── */
 
-export const MAX_GUEST_COLUMNS = 8;
+const MAX_GUEST_COLUMNS = 8;
 
 /** Built into every guest list (not counted above): where each guest stays,
     for households shown Travel & Stay. Kept in the guest's details like the
     custom columns, under these fixed ids. */
-export const STAY_COLUMNS: GuestColumn[] = [{ id: "hotel", label: "Hotel" }, { id: "room", label: "Room No." }];
+const STAY_COLUMNS: GuestColumn[] = [{ id: "hotel", label: "Hotel" }, { id: "room", label: "Room No." }];
 
 /** A guest's hotel: the one chosen for them, or — when the family's site lists
     just one hotel — that one by default. Empty when their household isn't shown

@@ -8,7 +8,7 @@
 export type SideNames = Record<"bride" | "groom", string>;
 export const DEFAULT_SIDE_NAMES: SideNames = { bride: "Bride", groom: "Groom" };
 
-export const firstName = (full: string | null | undefined) => (full ?? "").trim().split(/\s+/)[0] ?? "";
+const firstName = (full: string | null | undefined) => (full ?? "").trim().split(/\s+/)[0] ?? "";
 
 /** The two first names; if they're the same, the full names, so the families stay distinct. */
 export function sideNamesOf(w: { brideName: string; groomName: string }): SideNames {

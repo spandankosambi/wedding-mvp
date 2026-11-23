@@ -16,7 +16,7 @@ type SendArgs = {
 export const smtpConfigured = () =>
   env.email.mode === "smtp" && !!env.email.smtpUser && !!env.email.smtpPass;
 
-export function smtpTransport() {
+function smtpTransport() {
   return nodemailer.createTransport({
     service: "gmail",
     auth: { user: env.email.smtpUser, pass: env.email.smtpPass },

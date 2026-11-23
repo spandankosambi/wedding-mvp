@@ -15,7 +15,7 @@ import { ShareCard } from "../ShareCard";
 import { SummaryCards } from "../SummaryCards";
 import { Stat, weddingStats } from "../stats";
 import { FloatingSave } from "@/components/FloatingSave";
-import { saveRsvpSettings, renewShareLink } from "../site/actions";
+import { saveRsvpSettingsAction, renewShareLinkAction } from "../site/actions";
 import { PortalNav } from "../PortalNav";
 import { DangerZone } from "../danger/DangerZone";
 import { istParts } from "@/lib/editor";
@@ -50,7 +50,6 @@ export default async function FamilySection({
   const look = looks[family];
   const coupleNames = namesFor(wedding, family).couple; // this family's name order
   const admin = staff.role === "admin";
-  const q = (extra: string) => (admin ? `?wedding=${weddingId}&${extra}` : `?${extra}`);
   const meta = THEME_META[look.theme];
   const sn = sideNamesOf(wedding); // "Pooja", "Spandan"
   const who = sn[family];
@@ -84,7 +83,7 @@ export default async function FamilySection({
           slug={wedding.slug} coupleNames={coupleNames} weddingDateText={fmtWeddingDate(wedding.weddingDate)} family={family}
           shareKey={look.shareKey} openReplies={look.rsvpOpen}
           renew={staff.access.manage && (
-            <form action={renewShareLink} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-500">
+            <form action={renewShareLinkAction} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-500">
               {admin && <input type="hidden" name="weddingId" value={weddingId} />}
               <input type="hidden" name="family" value={family} />
               <span>Link gone too far?</span>
@@ -110,7 +109,7 @@ export default async function FamilySection({
         <p className="portal-eyebrow">RSVP</p>
         <h2 className="mt-1 font-semibold">Who can reply to {who}&apos;s side, and until when</h2>
         <p className="mt-1 text-sm text-neutral-500">Families on your guest list always reply from their personal invitation links, until the reply-by date.</p>
-        <form action={saveRsvpSettings} data-save-part="rsvp" className="mt-5 space-y-4">
+        <form action={saveRsvpSettingsAction} data-save-part="rsvp" className="mt-5 space-y-4">
           <fieldset disabled={!canRsvp} className="portal-fieldset space-y-4">
           {admin && <input type="hidden" name="weddingId" value={weddingId} />}
           <input type="hidden" name="family" value={family} />
@@ -143,7 +142,7 @@ export default async function FamilySection({
       </p>
       )}
       </PortalFrame>
-      {canRsvp && <FloatingSave key={JSON.stringify(sp)} action={saveRsvpSettings} failedPart={sp.error ? "rsvp" : undefined} />}
+      {canRsvp && <FloatingSave key={JSON.stringify(sp)} action={saveRsvpSettingsAction} failedPart={sp.error ? "rsvp" : undefined} />}
     </main>
   );
 }

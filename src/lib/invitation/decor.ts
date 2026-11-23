@@ -1,4 +1,5 @@
 import type { Motif, Shape, Ink } from "./motifs";
+import { diamond, f, leaf } from "./shapes";
 
 /**
  * More decoration, as the same plain shape data motifs.ts uses, so the PDF,
@@ -7,15 +8,7 @@ import type { Motif, Shape, Ink } from "./motifs";
  * Browser-safe.
  */
 
-const f = (n: number) => Math.round(n * 100) / 100;
 /** a pointed leaf from (x,y), `len` long, pointing at `deg` (0 = down, 90 = right) */
-const leaf = (x: number, y: number, len: number, deg: number, fat = 0.32) => {
-  const a = (deg * Math.PI) / 180, dx = Math.sin(a), dy = Math.cos(a), w = len * fat;
-  const tx = x + dx * len, ty = y + dy * len, mx = x + dx * len * 0.5, my = y + dy * len * 0.5;
-  return `M ${f(x)} ${f(y)} Q ${f(mx - dy * w)} ${f(my + dx * w)} ${f(tx)} ${f(ty)} Q ${f(mx + dy * w)} ${f(my - dx * w)} ${f(x)} ${f(y)} Z`;
-};
-const diamond = (cx: number, cy: number, r: number) =>
-  `M ${f(cx)} ${f(cy - r)} L ${f(cx + r)} ${f(cy)} L ${f(cx)} ${f(cy + r)} L ${f(cx - r)} ${f(cy)} Z`;
 
 /* ── celebration icons: 24×24 line drawings ────────────────────── */
 
@@ -155,8 +148,6 @@ export const isGlyph = (id: SymbolId): id is GlyphSymbol => id in SYMBOL_GLYPHS;
 export type DrawnSymbol = Exclude<SymbolId, "motif" | "custom" | GlyphSymbol>;
 
 /** `om` is set in type (ॐ), not drawn. */
-export const OM = "ॐ";
-
 export function symbol(id: DrawnSymbol): Motif {
   const A = (d: string, sw = 1.8): Shape => ({ k: "path", d, stroke: "accent", sw });
   const C = (cx: number, cy: number, r: number, sw = 1.8): Shape => ({ k: "circle", cx, cy, r, stroke: "accent", sw });
@@ -304,7 +295,7 @@ export function symbol(id: DrawnSymbol): Motif {
 /* ── border styles: a band inside the card's edge ──────────────── */
 
 export const BORDER_STYLES = ["diamond", "paisley", "lotus", "jali", "vine"] as const;
-export type BorderStyle = (typeof BORDER_STYLES)[number];
+type BorderStyle = (typeof BORDER_STYLES)[number];
 export const BORDER_LABELS: Record<BorderStyle, string> = {
   diamond: "Diamonds", paisley: "Paisley", lotus: "Lotus", jali: "Jali lattice", vine: "Flower vine",
 };
@@ -403,7 +394,7 @@ export function borderBand(w: number, h: number, band: number, style: BorderStyl
 /* ── background patterns: faint, behind the words ──────────────── */
 
 export const PATTERNS = ["none", "mandala", "jaal", "floral"] as const;
-export type PatternId = (typeof PATTERNS)[number];
+type PatternId = (typeof PATTERNS)[number];
 export const PATTERN_LABELS: Record<PatternId, string> = { none: "None", mandala: "Mandala", jaal: "Jaal trellis", floral: "Scattered flowers" };
 
 /** A faint pattern filling a w×h box (same units as the box). */

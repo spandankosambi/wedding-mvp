@@ -11,19 +11,19 @@ import type { SideNames } from "@/lib/side-names";
    - only that person (the owner) adds, changes or removes a "couple" login;
    - an email address has one login, for one wedding. */
 
-export const MAX_PEOPLE = 40;
+const MAX_PEOPLE = 40;
 type Result = { ok: true } | { ok: false; error: string };
-export type Actor = { userId: string; owner: boolean };
+type Actor = { userId: string; owner: boolean };
 
 const level = z.enum(["none", "view", "full"]);
-export const personSchema = z.object({
+const personSchema = z.object({
   name: z.string().trim().max(80).default(""),
   role: z.enum(["couple", "committee"]),
   side: z.enum(["bride", "groom", "both"]),
   site: level, guests: level, print: z.enum(["none", "full"]),
 });
 const emailSchema = z.string().trim().toLowerCase().email().max(254);
-export type PersonInput = z.infer<typeof personSchema>;
+type PersonInput = z.infer<typeof personSchema>;
 
 export type Person = {
   id: string; email: string; name: string; role: "couple" | "committee"; isOwner: boolean;

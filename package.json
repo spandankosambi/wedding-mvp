@@ -9,7 +9,8 @@
     "test": "vitest run --passWithNoTests",
     "seed": "tsx --env-file=.env scripts/seed.ts",
     "e2e": "playwright test",
-    "db:reset": "rm -rf var/pglite && npm run seed"
+    "db:reset": "rm -rf var/pglite && npm run seed",
+    "set-theme": "tsx --env-file=.env scripts/set-theme.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.2",

@@ -17,7 +17,7 @@ const schema = z.object({
   family: z.enum(["bride", "groom"]),
 });
 
-export async function setTheme(input: unknown): Promise<{ ok: boolean; error?: string }> {
+export async function setThemeAction(input: unknown): Promise<{ ok: boolean; error?: string }> {
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid input" };
   const staff = await requireRole(["committee", "couple", "admin"]);

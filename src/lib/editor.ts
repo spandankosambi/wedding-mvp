@@ -19,7 +19,7 @@ const hm = z.string().regex(/^\d{2}:\d{2}$/);
 const optional = (max: number) => z.string().trim().max(max).optional().transform((v) => v || null);
 
 /** What both families share: who, when, where, whose children. */
-export const detailsSchema = z.object({
+const detailsSchema = z.object({
   brideName: z.string().trim().min(1).max(60),
   groomName: z.string().trim().min(1).max(60),
   weddingDate: ymd,
@@ -32,7 +32,7 @@ export const detailsSchema = z.object({
 /** about 150 words: fits one screen on the site */
 export const STORY_MAX = 900;
 
-export const wordsSchema = z.object({
+const wordsSchema = z.object({
   heroTagline: optional(160),
   story: optional(STORY_MAX),
   hashtag: optional(60).transform((v) => (v ? v.replace(/^#+/, "") : v)),
@@ -46,14 +46,14 @@ const multiline = (max: number) => z.string().max(max).optional().transform((v) 
 });
 
 /** Someone guests can reach about RSVPs: a name, a number with 7–15 digits, and whether it's on WhatsApp. */
-export const contactSchema = z.object({
+const contactSchema = z.object({
   name: z.string().trim().max(60).transform((v) => v.replace(/\s+/g, " ")),
   phone: z.string().trim().max(30).refine((v) => /^\+?[\d\s\-().]+$/.test(v) && v.replace(/\D/g, "").length >= 7 && v.replace(/\D/g, "").length <= 15),
   whatsapp: z.boolean(),
 });
 
 /** The invitation's wording, on the family's site and its printed cards. */
-export const wordingSchema = z.object({
+const wordingSchema = z.object({
   invocation: optional(80),
   shloka: multiline(200),
   contacts: z.array(contactSchema).max(MAX_CONTACTS).default([]),
@@ -61,12 +61,12 @@ export const wordingSchema = z.object({
   closingLine: optional(160),
 });
 
-export const rsvpSettingsSchema = z.object({
+const rsvpSettingsSchema = z.object({
   rsvpOpen: z.boolean(),
   rsvpDeadline: z.union([ymd, z.literal("")]).optional(),
 });
 
-export const eventSchema = z.object({
+const eventSchema = z.object({
   id: z.string().uuid().optional(),
   name: z.string().trim().min(1).max(60),
   date: ymd,
@@ -91,7 +91,7 @@ export const eventSchema = z.object({
 
 export const MAX_STAYS = 12;
 
-export const travelSchema = z.object({
+const travelSchema = z.object({
   stays: z.array(z.object({
     name: z.string().trim().min(1).max(120),
     note: z.string().trim().max(400),
@@ -101,7 +101,7 @@ export const travelSchema = z.object({
   gettingThere: z.string().trim().max(1200),
 });
 
-export const istDate = (date: string, time = "10:00") => new Date(`${date}T${time}:00+05:30`);
+const istDate = (date: string, time = "10:00") => new Date(`${date}T${time}:00+05:30`);
 
 /** Split a stored timestamp back into the editor's IST date + time fields. */
 export function istParts(d: Date): { date: string; time: string } {

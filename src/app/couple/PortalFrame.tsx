@@ -5,7 +5,7 @@ import { HelpForm } from "./HelpForm";
 import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
 
 /* "Need help?" at the foot of the left column. */
-export const HELP = {
+const HELP = {
   /** a WhatsApp number to offer alongside the form, e.g. "+91 XXXXX XXXXX" */
   contactWhatsApp: "",
 };

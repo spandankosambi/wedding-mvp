@@ -8,7 +8,7 @@ import { rateLimit } from "@/lib/ratelimit";
 
 export type StartState = { error?: string; values?: Record<string, string> };
 
-export async function startWedding(_prev: StartState, formData: FormData): Promise<StartState> {
+export async function startWeddingAction(_prev: StartState, formData: FormData): Promise<StartState> {
   const values = Object.fromEntries(
     ["brideName", "groomName", "you", "weddingDate", "city", "email", "theme"].map((k) => [k, String(formData.get(k) ?? "").trim()]),
   );

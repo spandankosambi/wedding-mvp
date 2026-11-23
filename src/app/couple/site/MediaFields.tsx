@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { uploadMusic } from "./actions";
+import { uploadMusicAction } from "./actions";
 
 type Scope = { weddingId: string; admin: boolean; family: "bride" | "groom" };
 const base = (s: Scope) => { const fd = new FormData(); if (s.admin) fd.set("weddingId", s.weddingId); fd.set("family", s.family); return fd; };
@@ -20,7 +20,7 @@ export function MusicUpload({ scope, has, maxMb }: { scope: Scope; has: boolean;
     setBusy(true); setMsg(null);
     const fd = base(scope); fd.set("file", file);
     try {
-      const r = await uploadMusic(fd);
+      const r = await uploadMusicAction(fd);
       setMsg(r.ok ? { ok: true, text: "Music added." } : { ok: false, text: r.error ?? "Couldn't upload that file." });
       if (r.ok) router.refresh();
     } catch { setMsg({ ok: false, text: "Couldn't upload that file. Try again." }); }

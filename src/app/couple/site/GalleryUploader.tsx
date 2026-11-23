@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { uploadGalleryPhoto } from "./actions";
+import { uploadGalleryPhotoAction } from "./actions";
 
 const LONG_EDGE = 2000;
 
@@ -48,7 +48,7 @@ export function GalleryUploader({ weddingId, admin, remaining, family }: { weddi
         fd.set("photo", new File([blob], f.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" }));
         fd.set("width", String(width));
         fd.set("height", String(height));
-        const r = await uploadGalleryPhoto(fd);
+        const r = await uploadGalleryPhotoAction(fd);
         if (r.ok) done++;
         else errs.push(`${f.name}: ${r.error}`);
       } catch {

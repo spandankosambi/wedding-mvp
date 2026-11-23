@@ -16,7 +16,7 @@ const schema = z.object({
   website: z.string().max(0).optional(),
 });
 
-export type FeedbackResult = { ok: true; replyTo: string } | { ok: false; error: string };
+type FeedbackResult = { ok: true; replyTo: string } | { ok: false; error: string };
 
 /** "Questions or feedback?" at the foot of an invitation: anyone can write, to our inbox. */
 export async function sendGuestFeedbackAction(input: unknown): Promise<FeedbackResult> {

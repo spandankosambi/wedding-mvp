@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import type { Analysis } from "./actions";
-import { analyzeUpload, checkRows, commitRows, extractDocument, previewRows } from "./actions";
+import { analyzeUploadAction, checkRowsAction, commitRowsAction, extractDocumentAction, previewRowsAction } from "./actions";
 import type { Answers, EventRef, Mapping } from "@/lib/import/mapping";
 import type { BuildStats, ImportRow } from "@/lib/import/normalize";
 import type { CommitResult } from "@/lib/import/commit";
@@ -82,7 +82,7 @@ export function ImportWizard({
       fd.set("weddingId", weddingId);
       if (input.file) fd.set("file", input.file);
       if (input.text.trim()) fd.set("text", input.text);
-      const res = await safeCall(() => extractDocument(fd));
+      const res = await safeCall(() => extractDocumentAction(fd));
       if (!res.ok) { setError(res.error); return; }
       setRows(res.rows);
       setStats(null);
@@ -127,7 +127,7 @@ export function ImportWizard({
       fd.set("weddingId", weddingId);
       fd.set("file", f);
       if (sheetIndex !== undefined) fd.set("sheetIndex", String(sheetIndex));
-      const res = await safeCall(() => analyzeUpload(fd));
+      const res = await safeCall(() => analyzeUploadAction(fd));
       if (!res.ok) { setError(res.error); return; }
       setAnalysis(res.analysis);
       setMapping(res.analysis.proposal.mapping);
@@ -140,7 +140,7 @@ export function ImportWizard({
     if (!analysis || !mapping) return;
     setError(null);
     startTransition(async () => {
-      const res = await previewRows({ weddingId, sheet: analysis.sheet, mapping, answers });
+      const res = await previewRowsAction({ weddingId, sheet: analysis.sheet, mapping, answers });
       if (!res.ok) { setError(res.error); return; }
       setRows(res.rows);
       setStats(res.stats);
@@ -158,7 +158,7 @@ export function ImportWizard({
       // Typed-in rows haven't been compared with the list yet: do that first, and let
       // the committee choose what happens to matches before anything is written.
       if (mode === "direct" && !checked) {
-        const chk = await checkRows({ weddingId, rows: live });
+        const chk = await checkRowsAction({ weddingId, rows: live });
         if (!chk.ok) { setError(chk.error); return; }
         setChecked(true);
         if (chk.existsCount > 0) {
@@ -168,7 +168,7 @@ export function ImportWizard({
           return;
         }
       }
-      const res = await commitRows({ weddingId, onExisting, rows: live });
+      const res = await commitRowsAction({ weddingId, onExisting, rows: live });
       if (!res.ok) { setError(res.error); return; }
       setResult(res.result);
       setStep("done");

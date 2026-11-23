@@ -3,7 +3,7 @@
 import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
 import { useState, useTransition } from "react";
 import type { ResetScope } from "@/db/schema";
-import { requestDeleteWedding, requestResetWedding } from "./actions";
+import { requestDeleteWeddingAction, requestResetWeddingAction } from "./actions";
 
 type Option = { key: "guests" | "rsvps" | "events" | "photos" | "content"; label: string; hint: string };
 
@@ -39,7 +39,7 @@ export function DangerZone({ coupleNames, family, names = DEFAULT_SIDE_NAMES }: 
   function send(kind: "reset" | "delete") {
     setError(null);
     startTransition(async () => {
-      const r = kind === "delete" ? await requestDeleteWedding() : await requestResetWedding(scope);
+      const r = kind === "delete" ? await requestDeleteWeddingAction() : await requestResetWeddingAction(scope);
       if (r.ok) { setSent({ email: r.email, minutes: r.minutes, kind }); setConfirming(null); setUnderstood(false); }
       else setError(r.error);
     });

@@ -2,13 +2,11 @@ import { Ornament } from "@/themes/ornaments";
 import { MotifSvg } from "@/components/MotifSvg";
 import type { Motif, Shape } from "@/lib/invitation/motifs";
 import type { Decor } from "@/lib/site-decor";
+import { diamond, leaf as cardLeaf } from "@/lib/invitation/shapes";
 
-const leaf = (x: number, y: number, len: number, deg: number, fat = 0.34) => {
-  const a = (deg * Math.PI) / 180, dx = Math.sin(a), dy = Math.cos(a), w = len * fat;
-  const tx = x + dx * len, ty = y + dy * len, mx = x + dx * len * 0.5, my = y + dy * len * 0.5;
-  return `M ${x} ${y} Q ${mx - dy * w} ${my + dx * w} ${tx} ${ty} Q ${mx + dy * w} ${my - dx * w} ${x} ${y} Z`;
-};
-const dm = (cx: number, cy: number, r: number) => `M ${cx} ${cy - r} L ${cx + r} ${cy} L ${cx} ${cy + r} L ${cx - r} ${cy} Z`;
+// the website's leaves are a touch plumper than the cards'
+const leaf = (x: number, y: number, len: number, deg: number, fat = 0.34) => cardLeaf(x, y, len, deg, fat);
+const dm = diamond;
 const rules: Shape[] = [
   { k: "line", x1: 0, y1: 14, x2: 58, y2: 14, stroke: "hair", sw: 1 },
   { k: "line", x1: 102, y1: 14, x2: 160, y2: 14, stroke: "hair", sw: 1 },

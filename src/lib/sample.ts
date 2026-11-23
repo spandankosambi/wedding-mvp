@@ -6,7 +6,7 @@ import type { RsvpPerson } from "@/lib/contacts";
  * move with the calendar, and no real person's number is shown on it.
  */
 export const SAMPLE_SLUG = "ananya-weds-arjun";
-export const SAMPLE_DAYS_AHEAD = 60;
+const SAMPLE_DAYS_AHEAD = 60;
 export const SAMPLE_PHONE = "+91 XXXXX XXXXX";
 /** the sample's replies close this many days before the wedding */
 const SAMPLE_REPLY_BY_DAYS = 30;

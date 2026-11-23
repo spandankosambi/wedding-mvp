@@ -43,7 +43,7 @@ export async function requireRole(allowed: Role[]) {
   return { userId: u.id, role: u.role, weddingId: u.weddingId ?? null, access: accessFor({ role: u.role, side: u.side, access: u.access, isOwner: u.isOwner }) };
 }
 
-export type Staff = Awaited<ReturnType<typeof requireRole>>;
+type Staff = Awaited<ReturnType<typeof requireRole>>;
 const ANYONE: Role[] = ["committee", "couple", "admin"];
 
 /** For pages: this person, if they may open that page of that family's section; otherwise back to the dashboard. */
@@ -54,9 +54,15 @@ export async function requireAccess(area: Area | "overview", side: FamilySide, n
   return staff;
 }
 
-/** For actions: the same check, answering null instead of redirecting. */
-export async function staffWith(area: Area, side: FamilySide, need: "view" | "full" = "full"): Promise<Staff | null> {
-  const staff = await requireRole(ANYONE);
-  return allows(staff.access, area, side, need) ? staff : null;
+
+/**
+ * Who may change a wedding's guest list: an admin names the wedding, everyone
+ * else is pinned to their own, and it takes full access to the guest list.
+ * null when they may not. Used by every guest-list and import action.
+ */
+export async function guestListScope(requested: string): Promise<{ weddingId: string; access: Access } | null> {
+  const staff = await requireRole(["committee", "couple", "admin"]);
+  const weddingId = staff.role === "admin" ? requested : staff.weddingId;
+  if (!weddingId || staff.access.guests !== "full") return null;
+  return { weddingId, access: staff.access };
 }
-export type { Access };
