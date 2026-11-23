@@ -6,6 +6,7 @@ import { fmtEventDate, fmtEventTime } from "@/lib/format";
 import { sideLabel, type Side } from "@/lib/sides";
 import type { SideNames } from "@/lib/side-names";
 import { googleCalendarLink } from "@/lib/calendar";
+import { safeCall } from "@/lib/safe-call";
 
 type EventProp = {
   id: string;
@@ -65,7 +66,7 @@ export function RsvpForm({
   function submit() {
     setError(null);
     startTransition(async () => {
-      const res = await submitRsvpAction({
+      const res = await safeCall(() => submitRsvpAction({
         token,
         responses: answered.map((e) => ({
           eventId: e.id,
@@ -73,7 +74,7 @@ export function RsvpForm({
           guestIds: statuses[e.id] === "attending" ? who[e.id] : [],
           note: note.trim() ? note.trim() : undefined,
         })),
-      });
+      }));
       if (res.ok) { setEmailedTo(res.emailedTo); setDone(true); }
       else setError(res.error);
     });

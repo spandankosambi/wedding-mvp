@@ -6,6 +6,7 @@ import { db } from "@/db/client";
 import { emailLog, outbox } from "@/db/schema";
 import { InviteEmail } from "@/emails/InviteEmail";
 import { BRAND, CONTACT_EMAIL, SITE_URL } from "@/lib/brand";
+import { env } from "@/config/env";
 
 type SendArgs = {
   familyId: string; to: string; familyName: string; coupleNames: string;
@@ -13,12 +14,12 @@ type SendArgs = {
 };
 
 export const smtpConfigured = () =>
-  process.env.EMAIL_MODE === "smtp" && !!process.env.SMTP_USER && !!process.env.SMTP_PASS;
+  env.email.mode === "smtp" && !!env.email.smtpUser && !!env.email.smtpPass;
 
 export function smtpTransport() {
   return nodemailer.createTransport({
     service: "gmail",
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    auth: { user: env.email.smtpUser, pass: env.email.smtpPass },
   });
 }
 
@@ -29,8 +30,8 @@ export function smtpTransport() {
  * inbox. Quotes and control characters are stripped: they would break the header.
  */
 export function fromHeader(displayName?: string): string | undefined {
-  const configured = process.env.EMAIL_FROM;
-  const address = process.env.SMTP_USER;
+  const configured = env.email.from;
+  const address = env.email.smtpUser;
   if (!displayName || !address) return configured;
   const safe = displayName.replace(/[\r\n"\\]/g, "").trim().slice(0, 78);
   return safe ? `"${safe}" <${address}>` : configured;
@@ -111,7 +112,7 @@ ${list}
 <p style="color:#6b6760;font-size:13px">The link works once and expires in ${args.minutes} minutes. If this wasn't you, ignore this email and nothing will change.</p>
 </div>`;
   if (smtpConfigured()) {
-    await smtpTransport().sendMail({ from: process.env.EMAIL_FROM, to: args.to, subject, html });
+    await smtpTransport().sendMail({ from: env.email.from, to: args.to, subject, html });
   } else {
     await recordOutbox({ to: args.to, subject, kind: "confirm", link: args.link, html });
   }
@@ -127,7 +128,7 @@ ${emailLogo()}
 <p style="color:#6b6760;font-size:13px">Sign in with this email address (${escapeHtml(args.to)}). We&rsquo;ll email you a one-time link each time; there is no password.</p>
 </div>`;
   if (smtpConfigured()) {
-    await smtpTransport().sendMail({ from: process.env.EMAIL_FROM, to: args.to, subject, html });
+    await smtpTransport().sendMail({ from: env.email.from, to: args.to, subject, html });
   } else {
     await recordOutbox({ to: args.to, subject, kind: "access", link: args.link, html });
   }
@@ -146,14 +147,14 @@ ${emailLogo()}
 </div>`;
   const to = CONTACT_EMAIL;
   if (smtpConfigured()) {
-    await smtpTransport().sendMail({ from: process.env.EMAIL_FROM, to, replyTo: `${args.name} <${args.email}>`, subject, html });
+    await smtpTransport().sendMail({ from: env.email.from, to, replyTo: `${args.name} <${args.email}>`, subject, html });
   } else {
     await recordOutbox({ to, subject, kind: "help", html });
   }
 }
 
 /** The address calendar replies go to (the organiser of the invitation). */
-export const calendarOrganizer = () => process.env.SMTP_USER || "onetapinvites@gmail.com";
+export const calendarOrganizer = () => env.email.smtpUser || "onetapinvites@gmail.com";
 
 /**
  * After an RSVP: one calendar invitation per celebration they're coming to.

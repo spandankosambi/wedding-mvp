@@ -3,6 +3,7 @@ import { db } from "@/db/client";
 import { machineText } from "@/db/schema";
 import type { OtherLang } from "./langs";
 import { localize } from "./i18n";
+import { env } from "@/config/env";
 
 /*
  * Azure Translator for the printed cards' own lines: names and blessings are
@@ -18,7 +19,7 @@ export type Machine = { get(kind: MachineKind, src: string): string | undefined 
 const ENDPOINT = "https://api.cognitive.microsofttranslator.com";
 const SCRIPT: Record<OtherLang, string> = { gu: "Gujr", hi: "Deva" };
 
-export const machineOn = () => !!process.env.AZURE_TRANSLATOR_KEY;
+export const machineOn = () => !!env.translator.key;
 
 /** A Machine that only notes what it was asked for (and answers nothing). */
 export function recorder(): Machine & { asked: Map<MachineKind, Set<string>> } {
@@ -33,8 +34,8 @@ async function azure(kind: MachineKind, lang: OtherLang, items: string[]): Promi
   const res = await fetch(url, {
     method: "POST",
     headers: {
-      "Ocp-Apim-Subscription-Key": process.env.AZURE_TRANSLATOR_KEY!,
-      "Ocp-Apim-Subscription-Region": process.env.AZURE_TRANSLATOR_REGION || "centralindia",
+      "Ocp-Apim-Subscription-Key": env.translator.key!,
+      "Ocp-Apim-Subscription-Region": env.translator.region,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(items.map((Text) => ({ Text }))),

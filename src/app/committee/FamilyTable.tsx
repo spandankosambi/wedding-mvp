@@ -13,6 +13,7 @@ import { useBarHeight, useIsPhone } from "./layout-hooks";
 import { EditIcon, IconButton, MailIcon, RsvpIcon, WhatsAppIcon } from "./icons";
 
 import type { StaySent } from "@/db/schema";
+import { safeCall } from "@/lib/safe-call";
 export type Row = {
   id: string;
   name: string;
@@ -120,7 +121,7 @@ export function FamilyTable({
   function sendNow(type: "invite" | "resend" | "remind", familyIds: string[]) {
     setFlash(null);
     startTransition(async () => {
-      const res = await sendInvitesAction({ weddingId, familyIds, type });
+      const res = await safeCall(() => sendInvitesAction({ weddingId, familyIds, type }));
       if (!res.ok) { setFlash(res.error ?? "failed"); return; }
       const sent = res.results.filter((r) => r.ok).length;
       const skipped = res.results.length - sent;

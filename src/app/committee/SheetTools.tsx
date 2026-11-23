@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { sheetUpdateAction, type SheetUpdateResult } from "./sheet-actions";
 import type { SheetPlan } from "@/lib/guest-sheet";
+import { safeCall } from "@/lib/safe-call";
 
 /**
  * Download the guest list (Excel or CSV) as it stands, edit it anywhere, and
@@ -31,7 +32,7 @@ export function SheetTools({ weddingId, admin, family, canEdit }: { weddingId: s
     if (apply) fd.set("apply", "1");
     start(async () => {
       setError(null);
-      const r: SheetUpdateResult = await sheetUpdateAction(fd);
+      const r: SheetUpdateResult = await safeCall(() => sheetUpdateAction(fd));
       if (!r.ok) { setError(r.error); return; }
       if (!("plan" in r)) return;
       setPlan(r.plan);

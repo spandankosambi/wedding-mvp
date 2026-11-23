@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { upsertFamily, deleteFamilyAction } from "./actions";
 import { invitesAll } from "@/lib/travel";
 import { eventForSide, type Side } from "@/lib/sides";
+import { safeCall } from "@/lib/safe-call";
 
 export type FamilyDraft = {
   familyId?: string;
@@ -132,7 +133,7 @@ export function FamilyForm({
     if (!form.familyId) return;
     setError(null);
     startTransition(async () => {
-      const res = await deleteFamilyAction({ weddingId, familyId: form.familyId });
+      const res = await safeCall(() => deleteFamilyAction({ weddingId, familyId: form.familyId }));
       if (res.ok) onClose(true);
       else setError(res.error ?? "failed");
     });

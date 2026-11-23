@@ -6,6 +6,7 @@ import type { Person } from "@/lib/people";
 import { addPersonAction, removePersonAction, renameMeAction, updatePersonAction } from "./actions";
 import { SaveBar } from "@/components/FloatingSave";
 import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
+import { safeCall } from "@/lib/safe-call";
 
 type Draft = Pick<Person, "name" | "role" | "side" | "site" | "guests" | "print">;
 const BLANK: Draft = { name: "", role: "committee", side: "bride", site: "none", guests: "full", print: "none" };
@@ -81,8 +82,8 @@ export function PeopleManager({ weddingId, admin, people, meId, owner, sideNames
       const left: Record<string, Draft> = {};
       for (const [id, d] of Object.entries(edits)) {
         const r = id === meId
-          ? await renameMeAction({ ...wid, name: d.name })
-          : await updatePersonAction({ ...wid, userId: id, ...d });
+          ? await safeCall(() => renameMeAction({ ...wid, name: d.name }))
+          : await safeCall(() => updatePersonAction({ ...wid, userId: id, ...d }));
         if (!r.ok) { failed.push(r.error === "forbidden" ? "You're not allowed to do that." : r.error); left[id] = d; }
       }
       setEdits(left);

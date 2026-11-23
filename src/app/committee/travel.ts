@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { setTravelAction } from "./actions";
+import { safeCall } from "@/lib/safe-call";
 
 type Family = { id: string; name: string; showTravel: boolean };
 
@@ -21,7 +22,7 @@ export function useTravelToggle(weddingId: string, rows: readonly unknown[], fla
     shows: (f: Family) => pending[f.id] ?? f.showTravel,
     set: async (f: Family, show: boolean) => {
       setPending((p) => ({ ...p, [f.id]: show }));
-      const res = await setTravelAction({ weddingId, familyId: f.id, show });
+      const res = await safeCall(() => setTravelAction({ weddingId, familyId: f.id, show }));
       if (res.ok) {
         flash(`Travel & Stay ${show ? "shown to" : "hidden from"} ${f.name}`);
         router.refresh();

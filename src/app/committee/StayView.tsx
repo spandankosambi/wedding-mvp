@@ -7,6 +7,7 @@ import { stayGroups } from "@/lib/stay-groups";
 import type { Row } from "./FamilyTable";
 import { IconButton, MailIcon, WhatsAppIcon } from "./icons";
 import type { StaySent } from "@/db/schema";
+import { safeCall } from "@/lib/safe-call";
 
 /** "18 Nov, 4:05 pm", in India time */
 const when = (iso: string) =>
@@ -66,7 +67,7 @@ export function StayView({
     setBusy(`${r.id}:${via}`);
     // the tab is opened inside the click so browsers don't block it
     const tab = via === "whatsapp" ? window.open("", "_blank") : null;
-    const res = await stayDetailsAction({ weddingId, familyId: r.id, via });
+    const res = await safeCall(() => stayDetailsAction({ weddingId, familyId: r.id, via }));
     setBusy(null);
     if (!res.ok) { tab?.close(); setFlash(`Couldn't send to ${r.name}: ${res.error}`); return; }
     if (res.via === "whatsapp") {

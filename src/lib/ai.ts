@@ -1,3 +1,5 @@
+import { env } from "@/config/env";
+
 /**
  * One seam over any OpenAI-compatible chat endpoint. Groq by default (free tier),
  * swappable to OpenAI / OpenRouter / Ollama with two env vars.
@@ -12,15 +14,15 @@ const DEFAULT_MODEL = "openai/gpt-oss-120b";
 const DEFAULT_VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
 export function aiConfigured(): boolean {
-  return !!process.env.AI_API_KEY;
+  return !!env.ai.key;
 }
 
 export function aiModel(): string {
-  return process.env.AI_MODEL || DEFAULT_MODEL;
+  return env.ai.model || DEFAULT_MODEL;
 }
 
 export function aiVisionModel(): string {
-  return process.env.AI_VISION_MODEL || DEFAULT_VISION_MODEL;
+  return env.ai.visionModel || DEFAULT_VISION_MODEL;
 }
 
 export async function chatComplete(args: {
@@ -32,9 +34,9 @@ export async function chatComplete(args: {
   timeoutMs?: number;
   fetchImpl?: typeof fetch;
 }): Promise<string> {
-  const key = process.env.AI_API_KEY;
+  const key = env.ai.key;
   if (!key) throw new Error("AI not configured (AI_API_KEY unset)");
-  const base = (process.env.AI_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, "");
+  const base = (env.ai.baseUrl || DEFAULT_BASE_URL).replace(/\/+$/, "");
   const images = args.images ?? [];
   const model = images.length ? aiVisionModel() : aiModel();
   const doFetch = args.fetchImpl ?? fetch;

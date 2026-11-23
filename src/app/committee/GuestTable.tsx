@@ -11,6 +11,7 @@ import { useTravelToggle } from "./travel";
 import { useBarHeight } from "./layout-hooks";
 import type { Side } from "@/lib/sides";
 import type { Row } from "./FamilyTable";
+import { safeCall } from "@/lib/safe-call";
 
 const SIDE_BADGE: Record<Row["side"], string> = {
   bride: "bg-rose-50 text-rose-700 border-rose-200",
@@ -74,7 +75,7 @@ export function GuestTable({
     const label = (newColumn ?? "").trim();
     if (!label) return;
     startTransition(async () => {
-      const r = await addGuestColumnAction({ weddingId, label });
+      const r = await safeCall(() => addGuestColumnAction({ weddingId, label }));
       if (r.ok) { setNewColumn(null); setFlash(`Added column “${label}”`); router.refresh(); }
       else setFlash(r.error);
     });
@@ -82,7 +83,7 @@ export function GuestTable({
 
   function removeColumn(columnId: string, label: string) {
     startTransition(async () => {
-      const r = await removeGuestColumnAction({ weddingId, columnId });
+      const r = await safeCall(() => removeGuestColumnAction({ weddingId, columnId }));
       setRemoving(null);
       if (r.ok) { setFlash(`Removed column “${label}”`); router.refresh(); }
       else setFlash(r.error);
@@ -352,7 +353,7 @@ function DetailCell({ weddingId, guestId, column, initial, guestName }: {
   async function commit() {
     if (value.trim() === saved.trim()) return;
     setState("saving");
-    const r = await setGuestDetailAction({ weddingId, guestId, columnId: column.id, value });
+    const r = await safeCall(() => setGuestDetailAction({ weddingId, guestId, columnId: column.id, value }));
     if (r.ok) { setSaved(value.trim()); setState("idle"); } else setState("error");
   }
 

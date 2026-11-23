@@ -3,8 +3,9 @@ import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
 import { PGlite } from "@electric-sql/pglite";
 import { neon } from "@neondatabase/serverless";
 import * as schema from "./schema";
+import { env } from "@/config/env";
 
-const url = process.env.DATABASE_URL;
+const url = env.databaseUrl;
 
 function makeDb() {
   if (url) return drizzleNeon(neon(url), { schema });

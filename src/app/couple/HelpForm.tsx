@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { HELP_TOPICS } from "@/lib/help";
 import { sendHelpAction } from "./help-actions";
+import { safeCall } from "@/lib/safe-call";
 
 /**
  * "Need help?" — a short form in a dialog rather than a bare email address:
@@ -25,11 +26,11 @@ export function HelpForm() {
     const form = e.currentTarget;
     start(async () => {
       setError(null);
-      const r = await sendHelpAction({
+      const r = await safeCall(() => sendHelpAction({
         name: String(f.get("name") ?? ""), email: String(f.get("replyEmail") ?? ""),
         topic: String(f.get("topic") ?? ""), message: String(f.get("message") ?? ""),
         page: window.location.pathname + window.location.search,
-      });
+      }));
       if (r.ok) { setSent(r.replyTo); form.reset(); } else setError(r.error);
     });
   }

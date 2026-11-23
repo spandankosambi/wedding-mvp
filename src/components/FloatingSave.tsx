@@ -1,5 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { unstable_rethrow } from "next/navigation";
+import { UNREACHABLE } from "@/lib/safe-call";
 
 /*
  * One Save for a whole page, floating at the bottom of the screen.
@@ -77,6 +79,7 @@ let justSaved: Set<string> | null = null;
 export function FloatingSave({ action, batch = false, failedPart, label = "Save changes" }: Props) {
   const base = useRef(new Map<HTMLFormElement, string>());
   const [dirty, setDirty] = useState<string[]>([]);
+  const [failed, setFailed] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [pending, start] = useTransition();
   const saving = useRef<Set<string> | null>(null);
@@ -180,24 +183,44 @@ export function FloatingSave({ action, batch = false, failedPart, label = "Save 
     const parts = new Set(changed.map((f) => f.dataset.savePart!));
     justSaved = parts;
     saving.current = parts;
+    const before = new Map(changed.map((f) => [f, base.current.get(f)]));
     for (const f of changed) base.current.set(f, snapshot(f));
+    setFailed(null);
     start(async () => {
-      await action(fd);
+      try {
+        await action(fd);
+      } catch (e) {
+        unstable_rethrow(e); // a save that redirects carries on as it should
+        console.error("[save failed]", e);
+        // nothing was saved: the changes are unsaved again, and say so
+        for (const [f, snap] of before) { if (snap === undefined) base.current.delete(f); else base.current.set(f, snap); }
+        saving.current = null;
+        justSaved = null;
+        recompute();
+        setFailed(UNREACHABLE);
+      }
     });
     setDirty([]);
   };
 
-  return <SaveBar count={dirty.length} pending={pending} onSave={save} label={label} ready={ready} />;
+  return <SaveBar count={dirty.length} pending={pending} onSave={save} label={label} ready={ready} error={failed} />;
 }
 
 /** The floating button itself: grey while nothing has changed, coral once something has. */
-export function SaveBar({ count, pending, onSave, label = "Save changes", ready = true }: {
+export function SaveBar({ count, pending, onSave, label = "Save changes", ready = true, error = null }: {
   count: number; pending: boolean; onSave: () => void; label?: string; ready?: boolean;
+  /** shown above the button when the last save didn't go through */
+  error?: string | null;
 }) {
   const active = count > 0 && !pending;
   const text = pending ? "Saving…" : count > 1 ? `${label} (${count})` : count ? label : "All changes saved";
   return (
-    <div className="floating-save pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4 sm:bottom-6">
+    <div className="floating-save pointer-events-none fixed inset-x-0 bottom-4 z-40 flex flex-col items-center gap-2 px-4 sm:bottom-6">
+      {error && !pending && (
+        <p role="alert" data-testid="floating-save-error" className="pointer-events-auto rounded-lg bg-red-50 px-3 py-1.5 text-xs text-red-800 shadow ring-1 ring-red-200">
+          {error}
+        </p>
+      )}
       <button
         type="button"
         onClick={onSave}

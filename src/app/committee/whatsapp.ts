@@ -1,6 +1,7 @@
 "use client";
 
 import { whatsappInviteAction } from "./actions";
+import { safeCall } from "@/lib/safe-call";
 
 /**
  * Opens WhatsApp with the family's invitation typed out. The tab is opened
@@ -9,7 +10,7 @@ import { whatsappInviteAction } from "./actions";
  */
 export async function openWhatsAppInvite(weddingId: string, familyId: string): Promise<{ ok: boolean; error?: string; to?: string | null }> {
   const tab = window.open("", "_blank");
-  const r = await whatsappInviteAction({ weddingId, familyId });
+  const r = await safeCall(() => whatsappInviteAction({ weddingId, familyId }));
   if (!r.ok) { tab?.close(); return { ok: false, error: r.error }; }
   if (tab) tab.location.href = r.url;
   else window.location.href = r.url; // popup blocked: go there directly

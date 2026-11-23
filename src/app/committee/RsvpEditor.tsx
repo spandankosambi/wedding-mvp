@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { recordRsvpAction } from "./actions";
+import { safeCall } from "@/lib/safe-call";
 
 type Answer = "attending" | "declined" | "none";
 type Member = { id: string; fullName: string; ageGroup: "adult" | "child" };
@@ -80,12 +81,12 @@ export function RsvpEditor({
   function save() {
     setError(null);
     startTransition(async () => {
-      const res = await recordRsvpAction({
+      const res = await safeCall(() => recordRsvpAction({
         weddingId,
         familyId: target.familyId,
         addGuests: added,
         responses: target.events.map((e) => ({ eventId: e.id, status: answers[e.id].status, guestIds: answers[e.id].status === "attending" ? answers[e.id].who : [] })),
-      });
+      }));
       if (res.ok) onClose(true);
       else setError(res.error ?? "failed");
     });

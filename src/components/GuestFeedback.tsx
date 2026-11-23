@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { GUEST_TOPICS } from "@/lib/help";
 import { sendGuestFeedbackAction } from "@/app/feedback-actions";
+import { safeCall } from "@/lib/safe-call";
 
 /**
  * "Questions or feedback? Contact us" at the foot of an invitation: opens a
@@ -24,12 +25,12 @@ export function GuestFeedback() {
     const f = new FormData(form);
     start(async () => {
       setError(null);
-      const r = await sendGuestFeedbackAction({
+      const r = await safeCall(() => sendGuestFeedbackAction({
         name: String(f.get("name") ?? ""), email: String(f.get("email") ?? ""),
         topic: String(f.get("topic") ?? ""), message: String(f.get("message") ?? ""),
         website: String(f.get("website") ?? ""),
         page: window.location.pathname + window.location.search,
-      });
+      }));
       if (r.ok) { setSent(r.replyTo); form.reset(); } else setError(r.error);
     });
   }

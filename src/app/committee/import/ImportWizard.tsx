@@ -14,6 +14,7 @@ import { ScanStep } from "./ScanStep";
 import { sheetUpdateAction } from "../sheet-actions";
 import { SheetPlanView } from "../SheetTools";
 import type { SheetPlan } from "@/lib/guest-sheet";
+import { safeCall } from "@/lib/safe-call";
 
 type Step = "choose" | "upload" | "scan" | "map" | "review" | "done" | "sheet";
 type Mode = "upload" | "direct" | "scan";
@@ -81,7 +82,7 @@ export function ImportWizard({
       fd.set("weddingId", weddingId);
       if (input.file) fd.set("file", input.file);
       if (input.text.trim()) fd.set("text", input.text);
-      const res = await extractDocument(fd);
+      const res = await safeCall(() => extractDocument(fd));
       if (!res.ok) { setError(res.error); return; }
       setRows(res.rows);
       setStats(null);
@@ -126,7 +127,7 @@ export function ImportWizard({
       fd.set("weddingId", weddingId);
       fd.set("file", f);
       if (sheetIndex !== undefined) fd.set("sheetIndex", String(sheetIndex));
-      const res = await analyzeUpload(fd);
+      const res = await safeCall(() => analyzeUpload(fd));
       if (!res.ok) { setError(res.error); return; }
       setAnalysis(res.analysis);
       setMapping(res.analysis.proposal.mapping);

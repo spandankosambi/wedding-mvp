@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { setTheme, copyFromPartnerAction } from "./actions";
 import { THEMES, THEME_META, type Theme } from "@/themes/catalog";
+import { safeCall } from "@/lib/safe-call";
 
 const SWATCHES = THEMES.map((theme) => ({ theme, ...THEME_META[theme] }));
 
@@ -61,7 +62,7 @@ export function ThemeSwitcher({
               type="button"
               disabled={pending}
               onClick={() => startTransition(async () => {
-                const res = await copyFromPartnerAction({ weddingId, family, part: "theme" });
+                const res = await safeCall(() => copyFromPartnerAction({ weddingId, family, part: "theme" }));
                 if (res.ok) { setActive(partnerTheme); router.refresh(); }
               })}
               className="portal-button-secondary"

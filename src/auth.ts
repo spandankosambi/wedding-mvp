@@ -6,6 +6,7 @@ import { db } from "@/db/client";
 import { users, accounts, sessions, verificationTokens } from "@/db/schema";
 import { isProvisionedStaff } from "@/lib/authz";
 import { recordOutbox, smtpConfigured } from "@/lib/mailer";
+import { env } from "@/config/env";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(db, {
@@ -14,8 +15,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   }),
   providers: [
     Nodemailer({
-      server: { service: "gmail", auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } },
-      from: process.env.EMAIL_FROM,
+      server: { service: "gmail", auth: { user: env.email.smtpUser, pass: env.email.smtpPass } },
+      from: env.email.from,
       // no SMTP: record the magic link in the outbox instead of sending
       ...(!smtpConfigured() && {
         sendVerificationRequest: async ({ identifier, url }) => {

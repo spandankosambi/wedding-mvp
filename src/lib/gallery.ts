@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { GalleryInfo, GalleryPhoto } from "@/db/schema";
 import { getLook, updateLook, type FamilySide } from "@/lib/looks";
+import { env } from "@/config/env";
 
 /* Each family's Gallery section: an on/off switch and their own photos.
    Files live in Vercel Blob (public, unguessable URLs — the same exposure as
@@ -17,7 +18,7 @@ export function galleryOf(w: { gallery: GalleryInfo | null }): GalleryInfo {
   return { enabled: w.gallery?.enabled ?? true, photos: w.gallery?.photos ?? [] };
 }
 
-export const photoStorageConfigured = () => !!process.env.BLOB_READ_WRITE_TOKEN;
+export const photoStorageConfigured = () => !!env.blobToken;
 
 async function current(weddingId: string, side: FamilySide): Promise<GalleryInfo | null> {
   try {

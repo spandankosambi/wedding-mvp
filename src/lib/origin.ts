@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { env } from "@/config/env";
 
 /**
  * The origin this request actually arrived on.
@@ -20,5 +21,5 @@ export async function appOrigin(): Promise<string> {
   } catch {
     // outside a request scope (seed script, unit tests)
   }
-  return process.env.APP_URL ?? "http://localhost:3000";
+  return env.appUrl;
 }
