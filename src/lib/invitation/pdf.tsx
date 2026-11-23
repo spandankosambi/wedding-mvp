@@ -8,7 +8,7 @@ import type { Style } from "@react-pdf/stylesheet";
 import type { Theme } from "@/themes/catalog";
 import type { Invitation, EventCard, InsertCard, Details, Line } from "./content";
 import { SAFE_MM, canFold, panelSize, sheetFor, type InvitationOptions, type PrintSheet } from "./options";
-import { dieLine, envelopeFor, flatSheet } from "./envelope";
+import { envelopeFor, flatSheet } from "./envelope";
 import { backgroundPattern, borderBand, icon, symbol, isGlyph, SYMBOL_GLYPHS, type DrawnSymbol } from "./decor";
 import {
   paletteFor, topMotif, dividerMotif, cornerMotif, toranMotif, archPath, crest, scriptRuns, ARCH_CROWN,
@@ -414,7 +414,7 @@ function EnvelopePages({ c, inv }: { c: Ctx; inv: Invitation }) {
   const env = envelopeFor(c.o).mm;
   const p = c.p;
   const fit = flatSheet(env);
-  const d = dieLine(env, fit.t);
+  const d = fit.die;
   const [SW, SH] = fit.mm.map(pt);
   const ox = (SW - pt(d.width)) / 2, oy = (SH - pt(d.height)) / 2;
   const X = (mm: number) => ox + pt(mm), Y = (mm: number) => oy + pt(mm);
@@ -426,14 +426,14 @@ function EnvelopePages({ c, inv }: { c: Ctx; inv: Invitation }) {
     // top flap: a point with a soft tip
     `L ${X(mid - 9)} ${Y(4)} Q ${X(mid)} ${Y(-1)} ${X(mid + 9)} ${Y(4)} L ${X(R)} ${Y(T)}`,
     // right flap
-    `L ${X(R + d.side - r)} ${Y(T + d.H * 0.12)} Q ${X(R + d.side)} ${Y(T + d.H * 0.12 + 1)} ${X(R + d.side)} ${Y(T + d.H * 0.12 + r)}`,
-    `L ${X(R + d.side)} ${Y(B - d.H * 0.12 - r)} Q ${X(R + d.side)} ${Y(B - d.H * 0.12 - 1)} ${X(R + d.side - r)} ${Y(B - d.H * 0.12)} L ${X(R)} ${Y(B)}`,
+    `L ${X(R + d.side - r)} ${Y(T + d.taper)} Q ${X(R + d.side)} ${Y(T + d.taper + 1)} ${X(R + d.side)} ${Y(T + d.taper + r)}`,
+    `L ${X(R + d.side)} ${Y(B - d.taper - r)} Q ${X(R + d.side)} ${Y(B - d.taper - 1)} ${X(R + d.side - r)} ${Y(B - d.taper)} L ${X(R)} ${Y(B)}`,
     // bottom flap
-    `L ${X(R - d.W * 0.06)} ${Y(B + d.bottom - r)} Q ${X(R - d.W * 0.06 - 1)} ${Y(B + d.bottom)} ${X(R - d.W * 0.06 - r)} ${Y(B + d.bottom)}`,
-    `L ${X(L + d.W * 0.06 + r)} ${Y(B + d.bottom)} Q ${X(L + d.W * 0.06 + 1)} ${Y(B + d.bottom)} ${X(L + d.W * 0.06)} ${Y(B + d.bottom - r)} L ${X(L)} ${Y(B)}`,
+    `L ${X(R - d.inset)} ${Y(B + d.bottom - r)} Q ${X(R - d.inset - 1)} ${Y(B + d.bottom)} ${X(R - d.inset - r)} ${Y(B + d.bottom)}`,
+    `L ${X(L + d.inset + r)} ${Y(B + d.bottom)} Q ${X(L + d.inset + 1)} ${Y(B + d.bottom)} ${X(L + d.inset)} ${Y(B + d.bottom - r)} L ${X(L)} ${Y(B)}`,
     // left flap
-    `L ${X(r)} ${Y(B - d.H * 0.12)} Q ${X(0)} ${Y(B - d.H * 0.12 - 1)} ${X(0)} ${Y(B - d.H * 0.12 - r)}`,
-    `L ${X(0)} ${Y(T + d.H * 0.12 + r)} Q ${X(0)} ${Y(T + d.H * 0.12 + 1)} ${X(r)} ${Y(T + d.H * 0.12)} Z`,
+    `L ${X(r)} ${Y(B - d.taper)} Q ${X(0)} ${Y(B - d.taper - 1)} ${X(0)} ${Y(B - d.taper - r)}`,
+    `L ${X(0)} ${Y(T + d.taper + r)} Q ${X(0)} ${Y(T + d.taper + 1)} ${X(r)} ${Y(T + d.taper)} Z`,
   ].join(" ");
   // an accent line just inside the top flap's edge
   const flapLine = `M ${X(L + 6)} ${Y(T - 1.5)} L ${X(mid - 7)} ${Y(8)} Q ${X(mid)} ${Y(4.5)} ${X(mid + 7)} ${Y(8)} L ${X(R - 6)} ${Y(T - 1.5)}`;

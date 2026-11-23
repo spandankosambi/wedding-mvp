@@ -149,7 +149,7 @@ describe("cards in Gujarati and Hindi", () => {
     const paper = (size: string, eventLayout: "together" | "folded" = "together") =>
       flatSheet(envelopeFor({ size: size as "5x7", orientation: "portrait", eventLayout }).mm).label;
     expect(paper("a5")).toBe("A3 (297 × 420 mm)"); // C5: was over A3 before
-    expect(paper("5x5")).toBe("A4 (210 × 297 mm)");
+    expect(paper("5x5")).toBe("A3 (297 × 420 mm)"); // a closed back needs the taller bottom flap
     expect(paper("4.25x5.5")).toBe("A4 (210 × 297 mm)");
     expect(paper("a4")).toBe("A2 (420 × 594 mm)"); // C4 needs a big sheet
     expect(paper("a4", "folded")).toBe("A3 (297 × 420 mm)"); // A4 folds to A5: a C5
