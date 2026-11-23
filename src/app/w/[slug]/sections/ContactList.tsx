@@ -23,6 +23,11 @@ export function ContactList({ contacts, className = "" }: { contacts: RsvpPerson
       {contacts.map((c, i) => (
         <li key={i} className="whitespace-nowrap text-base">
           {c.name && <span className="block text-sm opacity-75">{c.name}</span>}
+          {c.phone.replace(/\D/g, "").length < 7 ? (
+            // a placeholder (the example wedding): shown, not dialled
+            <span className="inline-flex items-center gap-1.5" data-testid="contact-placeholder">{c.whatsapp ? <WhatsAppIcon /> : <PhoneIcon />}
+            {c.phone}</span>
+          ) : (
           <a
             href={contactHref(c)}
             {...(c.whatsapp && { target: "_blank", rel: "noopener noreferrer" })}
@@ -32,6 +37,7 @@ export function ContactList({ contacts, className = "" }: { contacts: RsvpPerson
             {c.whatsapp ? <WhatsAppIcon /> : <PhoneIcon />}
             {c.phone}
           </a>
+          )}
         </li>
       ))}
     </ul>

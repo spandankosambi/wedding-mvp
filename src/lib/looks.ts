@@ -3,6 +3,7 @@ import { db } from "@/db/client";
 import { weddings, weddingSides, type GalleryInfo, type KnowItem, type SiteMusic, type TravelInfo } from "@/db/schema";
 import { decorOf, type Decor } from "@/lib/site-decor";
 import { contactLine, contactsOf, type RsvpPerson } from "@/lib/contacts";
+import { SAMPLE_PHONE, isSample, sampleContacts, sampleReplyBy } from "@/lib/sample";
 import { newShareKey } from "@/lib/share";
 import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/side-names";
 
@@ -66,11 +67,21 @@ export function withLook<W extends {
   theme: Look["theme"]; heroTagline: string | null; story: string | null; hashtag: string | null; contactPhone: string | null;
   travel: TravelInfo | null; gallery: GalleryInfo | null; rsvpOpen: boolean; rsvpDeadline: Date | null;
 }>(w: W, look: Look): W & Wording & { contacts: RsvpPerson[]; decor: Decor; know: KnowItem[]; music: SiteMusic | null } {
-  return {
+  const out = {
     ...w, theme: look.theme, heroTagline: look.heroTagline, story: look.story, hashtag: look.hashtag, contactPhone: look.contactPhone,
     travel: look.travel, gallery: look.gallery, rsvpOpen: look.rsvpOpen, rsvpDeadline: look.rsvpDeadline, ...wordingOf(look),
     contacts: contactsOf(look), decor: decorOf(look), know: look.know ?? [], music: look.music ?? null,
   };
+  // the example wedding: no real numbers, and a reply-by date that moves with its wedding day
+  if ("slug" in w && isSample((w as { slug?: string }).slug) && "weddingDate" in w) {
+    const contacts = sampleContacts(out.contacts);
+    return {
+      ...out, contacts, contactPhone: out.contactPhone ? SAMPLE_PHONE : null,
+      rsvpContacts: contacts.length ? contacts.map(contactLine).join("\n") : out.rsvpContacts,
+      rsvpDeadline: sampleReplyBy((w as { weddingDate: Date }).weddingDate, out.rsvpDeadline),
+    };
+  }
+  return out;
 }
 
 /**

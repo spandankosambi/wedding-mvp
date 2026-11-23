@@ -47,8 +47,12 @@ test("the wording is typed once in Edit your site — the website opens with it,
   await expect(page.locator("h1").first()).toHaveText(/Arjun\s*with\s*Ananya/);
   await expect(page.getByText("daughter of Sunita & Rajesh Sharma")).toBeVisible();
   const contacts = page.getByTestId("rsvp-contacts");
-  await expect(contacts.getByRole("link", { name: "WhatsApp Vikram Mehta on +91 98200 11111" })).toHaveAttribute("href", "https://wa.me/919820011111");
-  await expect(contacts.getByRole("link", { name: "Call Kavita Mehta on 98200 33333" })).toHaveAttribute("href", "tel:+919820033333");
+  // this is the example wedding (Ananya & Arjun): the names show, the numbers never do
+  await expect(contacts).toContainText("Vikram Mehta");
+  await expect(contacts).toContainText("Kavita Mehta");
+  await expect(contacts.getByTestId("contact-placeholder")).toHaveText(["+91 XXXXX XXXXX", "+91 XXXXX XXXXX"]);
+  await expect(contacts.getByRole("link")).toHaveCount(0);
+  await expect(page.locator("body")).not.toContainText("98200");
   await expect(page.getByTestId("closing")).toContainText("Your blessings are our gifts");
   await expect(page.getByTestId("closing")).toContainText("With best compliments from");
   if (shots) await page.screenshot({ path: `${shots}/site-wording.png` });

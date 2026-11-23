@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { asSampleDates } from "@/lib/sample";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { weddings, events, families, guests, eventInvites, rsvps } from "@/db/schema";
@@ -18,7 +19,8 @@ export async function getPublicWedding(slug: string) {
   const evs = await db.select().from(events)
     .where(and(eq(events.weddingId, wedding.id), eq(events.isPublished, true)))
     .orderBy(events.sortOrder);
-  return { wedding, events: evs };
+  // the example wedding stays 60 days away
+  return asSampleDates(wedding, evs);
 }
 
 export function rsvpWindow(w: { rsvpOpen: boolean; rsvpDeadline: Date | null; weddingDate: Date }, now = new Date()) {
