@@ -11,6 +11,9 @@ const PHONE = /(\+?\d[\d\s\-().]{5,}\d)/;
 export function parseContactLine(line: string): RsvpPerson | null {
   const t = line.trim();
   if (!t) return null;
+  // a placeholder in place of a number (the example wedding): shown, never dialled
+  const ph = t.match(/\+91 X{5} X{5}/);
+  if (ph) return { name: t.replace(ph[0], " ").replace(/[()\-:,–—|]+/g, " ").replace(/\s+/g, " ").trim(), phone: ph[0], whatsapp: true };
   const m = t.match(PHONE);
   if (!m || digits(m[1]).length < 7) return null;
   const name = t.replace(m[1], " ").replace(/[()\-:,–—|]+/g, " ").replace(/\s+/g, " ").trim();

@@ -4,8 +4,9 @@ export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs" || !process.env.DATABASE_URL) return;
   if (process.env.NEXT_PHASE === "phase-production-build") return;
   try {
-    const { ensureColumns } = await import("./db/ensure");
+    const { ensureColumns, scrubSamplePhone } = await import("./db/ensure");
     await ensureColumns();
+    await scrubSamplePhone();
   } catch (e) {
     console.error("ensureColumns failed", e);
   }

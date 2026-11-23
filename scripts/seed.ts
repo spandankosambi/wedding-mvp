@@ -82,7 +82,7 @@ async function main() {
     heroTagline: "Two families, five celebrations, one big yes.",
     story: "They met over a spilled filter coffee at a Bengaluru hackathon in 2021. Four years, two cities and one very persistent golden retriever later — here we are.",
     city: "Mumbai", brideParents: "Sunita & Rajesh Sharma", groomParents: "Kavita & Vikram Mehta", hashtag: "AnanyaKaArjun",
-    contactPhone: "+91 98200 00000 (Rohit)",
+    contactPhone: "+91 XXXXX XXXXX (Rohit)",
     travel: {
       stays: [
         { name: "Taj Lands End, Bandra", note: "Home of the Sangeet. A wedding block is reserved — mention the couple's names when booking." },
