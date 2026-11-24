@@ -10,10 +10,12 @@ import { saveEventAction, addPresetEventAction, toggleEventAction, removeEventAc
 import { Field } from "@/components/Field";
 
 /** Edit your site: the celebrations list, each event's details, and adding one. */
-export function EventsSection({ evs, hidden, family, sn, iconsOn, section, saved, wid }: {
+export function EventsSection({ evs, hidden, family, sn, iconsOn, section, saved, wid, oneSide = false }: {
   evs: (typeof events.$inferSelect)[];
   /** how many are switched off */
   hidden: number;
+  /** works one family's side only: may not make a common event one family's own */
+  oneSide?: boolean;
   family: FamilySide;
   sn: SideNames;
   /** whether celebration icons are on (design touches) */
@@ -80,7 +82,7 @@ export function EventsSection({ evs, hidden, family, sn, iconsOn, section, saved
                   <Field label="Map link" hint="Google Maps share link"><input name="mapUrl" type="url" defaultValue={e.mapUrl ?? ""} maxLength={500} placeholder="https://maps.app.goo.gl/…" className="portal-input" /></Field>
                   <Field label="Dress code"><input name="dressCode" defaultValue={e.dressCode ?? ""} maxLength={80} placeholder="Yellows / Traditional / Cocktail" className="portal-input" /></Field>
                   <Field label="A line about it" className="md:col-span-2"><input name="description" defaultValue={e.description ?? ""} maxLength={400} className="portal-input" /></Field>
-                  <EventSideField initial={e.side} eventName={e.name} family={family} names={sn} />
+                  <EventSideField initial={e.side} eventName={e.name} family={family} names={sn} locked={oneSide && e.side === "both"} />
                   <EventIconField initial={e.icon} initialImage={e.iconImage} eventName={e.name} enabled={iconsOn} />
                   <label className="flex items-center gap-2 text-sm md:col-span-2">
                     <input type="checkbox" name="isPublished" defaultChecked={e.isPublished} className="h-4 w-4" />

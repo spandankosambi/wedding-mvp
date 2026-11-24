@@ -10,7 +10,11 @@ import type { Side } from "@/lib/site/sides";
  * family's section and site, and only their households can be invited to it.
  * Posts as `side` with the event form.
  */
-export function EventSideField({ initial, eventName, family, names = DEFAULT_SIDE_NAMES }: { initial: Side; eventName: string; family: "bride" | "groom"; names?: SideNames }) {
+export function EventSideField({ initial, eventName, family, names = DEFAULT_SIDE_NAMES, locked = false }: {
+  initial: Side; eventName: string; family: "bride" | "groom"; names?: SideNames;
+  /** someone who works one side: a common event stays common (only the couple can split it) */
+  locked?: boolean;
+}) {
   const [common, setCommon] = useState(initial === "both");
   const own = `${names[family]}'s family's`;
   return (
@@ -21,13 +25,16 @@ export function EventSideField({ initial, eventName, family, names = DEFAULT_SID
           type="checkbox"
           checked={common}
           onChange={(e) => setCommon(e.target.checked)}
+          disabled={locked}
           aria-label={`${eventName} is common for both families`}
           className="mt-0.5 h-4 w-4"
         />
         <span>
           Common for both families
           <span className="block text-xs text-neutral-500">
-            {common
+            {locked
+              ? "Shown on both families' sites. Only the couple can make it one family's own, because that takes it away from the other family's guests."
+              : common
               ? "Shown on both families' sites and in both sections. Untick if each family holds its own (e.g. a separate Haldi at each home)."
               : `Only ${own} event — the other family adds its own.`}
           </span>

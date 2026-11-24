@@ -253,7 +253,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
           </section>
 
           {/* ── Events ──────────────────────────────────────────── */}
-          <EventsSection evs={evs} hidden={hidden} family={family} sn={sn} iconsOn={decor.icons} section={sp.section} saved={sp.saved} wid={wid} />
+          <EventsSection evs={evs} hidden={hidden} family={family} sn={sn} iconsOn={decor.icons} section={sp.section} saved={sp.saved} wid={wid} oneSide={staff.access.side !== "both"} />
 
           {/* ── Travel ──────────────────────────────────────────── */}
           <section id="travel" className="portal-panel p-6">

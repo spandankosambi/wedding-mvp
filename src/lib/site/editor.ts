@@ -2,6 +2,7 @@ import { z } from "zod";
 import { DEFAULT_ZONE, isZone, zonedDate } from "@/lib/core/timezones";
 import { expandMapLink } from "@/lib/site/maplinks";
 import { getLook, saveTravelLook, updateLook, type FamilySide, type LookPatch } from "@/lib/site/looks";
+import type { Side } from "@/lib/site/sides";
 import { contactsOf, MAX_CONTACTS } from "@/lib/guests/contacts";
 import { decorSchema, knowSchema } from "@/lib/site/site-decor";
 import { ICONS } from "@/lib/invitation/decor";
@@ -198,16 +199,32 @@ export async function updateTravel(weddingId: string, side: FamilySide, input: u
   return { ok: true };
 }
 
-export async function upsertEvent(weddingId: string, input: unknown): Promise<Result & { id?: string }> {
+/* Who may change which events. The couple (and anyone with both sides) any
+   event; someone who works one family's side only the common events and that
+   side's own. Checked in each query, not just by what the editor shows. */
+export const NOT_YOUR_EVENT = "You can only change your own family's events and the common ones.";
+export const COUPLE_SPLITS = "Only the couple can make a common event one family's own, because that takes it away from the other family's guests.";
+const reachable = (reach: Side) => (reach === "both" ? undefined : inArray(events.side, ["both", reach]));
+
+export async function upsertEvent(weddingId: string, input: unknown, reach: Side = "both"): Promise<Result & { id?: string }> {
   const p = eventSchema.safeParse(input);
   if (!p.success) return { ok: false, error: "invalid input" };
   const { id, date, time, durationHours, ...rest } = p.data;
+  // one side's member: a new or changed event is common or their own, never the other family's
+  if (reach !== "both" && rest.side !== "both" && rest.side !== reach) return { ok: false, error: NOT_YOUR_EVENT };
   // a short Maps link is stored as its full google.com/maps address
   const values = { ...rest, durationMinutes: Math.round(durationHours * 60), mapUrl: rest.mapUrl ? await expandMapLink(rest.mapUrl) : null, startsAt: zonedDate(date, time, rest.timeZone) };
   if (id) {
+    // one side's member may make an event common, or keep their own one theirs; turning a
+    // common event into their own would drop the other family's guests, so only if it already is
+    const may = reach === "both" ? undefined : rest.side === "both" ? inArray(events.side, ["both", reach]) : eq(events.side, reach);
     const [row] = await db.update(events).set(values)
-      .where(and(eq(events.id, id), eq(events.weddingId, weddingId))).returning();
-    if (!row) return { ok: false, error: "event not found" };
+      .where(and(eq(events.id, id), eq(events.weddingId, weddingId), may)).returning();
+    if (!row) {
+      if (reach === "both") return { ok: false, error: "event not found" };
+      const [was] = await db.select({ side: events.side }).from(events).where(and(eq(events.id, id), eq(events.weddingId, weddingId)));
+      return { ok: false, error: was?.side === "both" ? COUPLE_SPLITS : NOT_YOUR_EVENT };
+    }
     if (row.side !== "both") await dropOtherSide(weddingId, row.id, row.side);
     return { ok: true, id: row.id };
   }
@@ -229,20 +246,22 @@ async function dropOtherSide(weddingId: string, eventId: string, side: "bride" |
   await db.delete(rsvps).where(and(eq(rsvps.eventId, eventId), inArray(rsvps.familyId, theirs)));
 }
 
-export async function setEventPublished(weddingId: string, eventId: string, isPublished: boolean): Promise<Result> {
+export async function setEventPublished(weddingId: string, eventId: string, isPublished: boolean, reach: Side = "both"): Promise<Result> {
   const [row] = await db.update(events).set({ isPublished })
-    .where(and(eq(events.id, eventId), eq(events.weddingId, weddingId))).returning();
-  return row ? { ok: true } : { ok: false, error: "event not found" };
+    .where(and(eq(events.id, eventId), eq(events.weddingId, weddingId), reachable(reach))).returning();
+  return row ? { ok: true } : { ok: false, error: reach === "both" ? "event not found" : NOT_YOUR_EVENT };
 }
 
-export async function deleteEvent(weddingId: string, eventId: string): Promise<Result> {
+export async function deleteEvent(weddingId: string, eventId: string, reach: Side = "both"): Promise<Result> {
   const [row] = await db.delete(events)
-    .where(and(eq(events.id, eventId), eq(events.weddingId, weddingId))).returning();
-  return row ? { ok: true } : { ok: false, error: "event not found" };
+    .where(and(eq(events.id, eventId), eq(events.weddingId, weddingId), reachable(reach))).returning();
+  return row ? { ok: true } : { ok: false, error: reach === "both" ? "event not found" : NOT_YOUR_EVENT };
 }
 
-/** Swap sort order with the neighbour; renumbers first so gaps never matter. */
-export async function moveEvent(weddingId: string, eventId: string, dir: "up" | "down"): Promise<Result> {
+/** Swap sort order with the neighbour; renumbers first so gaps never matter.
+    One side's member moves among the events they can see, and only those two change. */
+export async function moveEvent(weddingId: string, eventId: string, dir: "up" | "down", reach: Side = "both"): Promise<Result> {
+  if (reach !== "both") return moveWithin(weddingId, eventId, dir, reach);
   const rows = await db.select().from(events).where(eq(events.weddingId, weddingId)).orderBy(events.sortOrder, events.startsAt);
   const i = rows.findIndex((r) => r.id === eventId);
   if (i < 0) return { ok: false, error: "event not found" };
@@ -255,8 +274,31 @@ export async function moveEvent(weddingId: string, eventId: string, dir: "up" | 
   return { ok: true };
 }
 
-/** Sort events by their start time — one click after the couple has typed the dates in. */
-export async function sortEventsByTime(weddingId: string): Promise<Result> {
+async function moveWithin(weddingId: string, eventId: string, dir: "up" | "down", reach: "bride" | "groom"): Promise<Result> {
+  const rows = await db.select().from(events).where(and(eq(events.weddingId, weddingId), reachable(reach))).orderBy(events.sortOrder, events.startsAt);
+  const i = rows.findIndex((r) => r.id === eventId);
+  if (i < 0) return { ok: false, error: NOT_YOUR_EVENT };
+  const j = dir === "up" ? i - 1 : i + 1;
+  if (j < 0 || j >= rows.length) return { ok: true };
+  const [a, b] = [rows[i], rows[j]];
+  // swap their places; on a tie, just step past the neighbour
+  const [toA, toB] = a.sortOrder === b.sortOrder ? [b.sortOrder + (dir === "up" ? -1 : 1), b.sortOrder] : [b.sortOrder, a.sortOrder];
+  await db.update(events).set({ sortOrder: toA }).where(and(eq(events.id, a.id), reachable(reach)));
+  await db.update(events).set({ sortOrder: toB }).where(and(eq(events.id, b.id), reachable(reach)));
+  return { ok: true };
+}
+
+/** Sort events by their start time — one click after the couple has typed the dates in.
+    One side's member sorts only the events they can see, within the places they hold. */
+export async function sortEventsByTime(weddingId: string, reach: Side = "both"): Promise<Result> {
+  if (reach !== "both") {
+    const mine = await db.select().from(events).where(and(eq(events.weddingId, weddingId), reachable(reach))).orderBy(events.startsAt);
+    const slots = mine.map((e) => e.sortOrder).sort((x, y) => x - y);
+    for (let k = 0; k < mine.length; k++) {
+      if (mine[k].sortOrder !== slots[k]) await db.update(events).set({ sortOrder: slots[k] }).where(and(eq(events.id, mine[k].id), reachable(reach)));
+    }
+    return { ok: true };
+  }
   const rows = await db.select().from(events).where(eq(events.weddingId, weddingId)).orderBy(events.startsAt);
   for (let k = 0; k < rows.length; k++) {
     if (rows[k].sortOrder !== k) await db.update(events).set({ sortOrder: k }).where(eq(events.id, rows[k].id));

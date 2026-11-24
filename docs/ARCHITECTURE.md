@@ -93,6 +93,9 @@ There's no separate API server. Two kinds of server entry point, both in `src/ap
   one family's side is offered that side's events, and rows are matched only against that side's
   households, in preview and commit. Commit re-checks the household's side in the database and never
   updates or merges one from the other side; "update" never moves a household to the other side.
+- **Events and sides** (`src/lib/site/editor.ts`): someone who works one family's side may edit,
+  publish, delete, move and sort only the common events and that side's own, checked in each query.
+  Only the couple (or both-side access) can turn a common event into one family's own.
 - **Rate limits** live in the database (`src/lib/auth/ratelimit.ts`), never in memory. The
   visitor's IP comes from Vercel's own `x-vercel-forwarded-for` header, which visitors can't fake.
   Sign-in links: 3 per address per 15 minutes, 10 a day, 10 per visitor per 15 minutes, counted

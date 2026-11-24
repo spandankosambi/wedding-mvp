@@ -143,7 +143,7 @@ const applyEvent = (ctx: Ctx, formData: FormData): Promise<Applied> =>
     // in a family's editor an event is common, or that family's own
     side: str(formData, "side") === "both" ? "both" : ctx.family,
     icon: str(formData, "icon"), iconImage: str(formData, "iconImage"),
-  });
+  }, ctx.access.side);
 export async function saveEventAction(formData: FormData) {
   const ctx = await scoped(formData);
   const id = str(formData, "id") || undefined;
@@ -163,33 +163,33 @@ export async function addPresetEventAction(formData: FormData) {
     name: preset?.name ?? "New celebration", date: parts.date, time: parts.time, timeZone,
     venueName: "Venue to be announced", address: "To be announced",
     dressCode: preset?.dressCode ?? "", description: preset?.blurb ?? "", isPublished: true, side: "both",
-  });
+  }, ctx.access.side);
   done(ctx, r.ok && r.id ? `event-${r.id}` : "events", r.ok ? undefined : r.error);
 }
 
 export async function toggleEventAction(formData: FormData) {
   const ctx = await scoped(formData);
   const id = str(formData, "id");
-  const r = await editor.setEventPublished(ctx.weddingId, id, formData.get("isPublished") === "true");
+  const r = await editor.setEventPublished(ctx.weddingId, id, formData.get("isPublished") === "true", ctx.access.side);
   done(ctx, `event-${id}`, r.ok ? undefined : r.error);
 }
 
 export async function removeEventAction(formData: FormData) {
   const ctx = await scoped(formData);
-  const r = await editor.deleteEvent(ctx.weddingId, str(formData, "id"));
+  const r = await editor.deleteEvent(ctx.weddingId, str(formData, "id"), ctx.access.side);
   done(ctx, "events", r.ok ? undefined : r.error);
 }
 
 export async function moveEventAction(formData: FormData) {
   const ctx = await scoped(formData);
   const id = str(formData, "id");
-  const r = await editor.moveEvent(ctx.weddingId, id, str(formData, "dir") === "up" ? "up" : "down");
+  const r = await editor.moveEvent(ctx.weddingId, id, str(formData, "dir") === "up" ? "up" : "down", ctx.access.side);
   done(ctx, `event-${id}`, r.ok ? undefined : r.error);
 }
 
 export async function sortEventsAction(formData: FormData) {
   const ctx = await scoped(formData);
-  await editor.sortEventsByTime(ctx.weddingId);
+  await editor.sortEventsByTime(ctx.weddingId, ctx.access.side);
   done(ctx, "events");
 }
 
