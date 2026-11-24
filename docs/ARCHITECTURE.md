@@ -89,6 +89,10 @@ There's no separate API server. Two kinds of server entry point, both in `src/ap
   a new household on the link's side, for that side's events only (`src/lib/guests/open-rsvp.ts`).
   If its phone or email matches a household there, it is flagged "Needs a look" and the couple or
   committee merges it or keeps it separate (`src/lib/guests/possible-match.ts`).
+- **Guest-list import keeps to the importer's side** (`src/lib/import/commit.ts`): someone who works
+  one family's side is offered that side's events, and rows are matched only against that side's
+  households, in preview and commit. Commit re-checks the household's side in the database and never
+  updates or merges one from the other side; "update" never moves a household to the other side.
 - **Rate limits** live in the database (`src/lib/auth/ratelimit.ts`), never in memory. The
   visitor's IP comes from Vercel's own `x-vercel-forwarded-for` header, which visitors can't fake.
   Sign-in links: 3 per address per 15 minutes, 10 a day, 10 per visitor per 15 minutes, counted

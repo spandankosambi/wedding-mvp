@@ -2,9 +2,9 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { events, families } from "@/db/schema";
+import { events } from "@/db/schema";
 import { aiConfigured } from "@/lib/core/ai";
 import { parseWorkbook, defaultSheetIndex, ImportError, MAX_COLS, MAX_ROWS, type Sheet } from "@/lib/import/spreadsheet";
 import { profileColumns, type ColumnProfile } from "@/lib/import/profile";
@@ -16,6 +16,8 @@ import { commitImport, findExistingFamilies, type CommitResult } from "@/lib/imp
 import { matchExisting, type ExistingFamily } from "@/lib/import/match";
 import { aiExtractHouseholds, extractTextFromFile, householdsToRows, parseGuestText, type ScanHousehold } from "@/lib/import/scan";
 import { guestListScope } from "@/lib/auth/authz";
+import { eventForSide } from "@/lib/site/sides";
+import type { FamilySide } from "@/lib/site/looks";
 
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 const MAX_SCAN_BYTES = 6 * 1024 * 1024;
@@ -33,16 +35,22 @@ function applyMatches(rows: ImportRow[], existing: ExistingFamily[]): number {
   return n;
 }
 
-/* Same rule as the rest of /committee (see guestListScope). */
+/* Same rule as the rest of /committee (see guestListScope). Someone who works
+   one family's side imports onto that side only: they're offered its events and
+   the common ones, and rows are compared only with its households, so the other
+   side's list is never shown, matched or changed. The side comes from their
+   access, never from the browser. */
 const scoped = guestListScope;
-async function scopedWeddingId(requested: string): Promise<string | null> {
-  return (await scoped(requested))?.weddingId ?? null;
+async function scope(requested: string): Promise<{ weddingId: string; side?: FamilySide } | null> {
+  const s = await scoped(requested);
+  if (!s) return null;
+  return { weddingId: s.weddingId, side: s.access.side === "both" ? undefined : s.access.side };
 }
 
-async function weddingEvents(weddingId: string): Promise<EventRef[]> {
-  const rows = await db.select({ id: events.id, name: events.name, sortOrder: events.sortOrder })
+async function weddingEvents(weddingId: string, side?: FamilySide): Promise<EventRef[]> {
+  const rows = await db.select({ id: events.id, name: events.name, sortOrder: events.sortOrder, side: events.side })
     .from(events).where(eq(events.weddingId, weddingId)).orderBy(events.sortOrder);
-  return rows;
+  return rows.filter((e) => !side || eventForSide(e.side, side)).map(({ id, name, sortOrder }) => ({ id, name, sortOrder }));
 }
 
 export type Analysis = {
@@ -58,8 +66,8 @@ export type Analysis = {
 export async function analyzeUploadAction(formData: FormData): Promise<{ ok: true; analysis: Analysis } | { ok: false; error: string }> {
   const weddingIdRaw = String(formData.get("weddingId") ?? "");
   if (!z.string().uuid().safeParse(weddingIdRaw).success) return { ok: false, error: "invalid input" };
-  const weddingId = await scopedWeddingId(weddingIdRaw);
-  if (!weddingId) return { ok: false, error: "forbidden" };
+  const sc = await scope(weddingIdRaw);
+  if (!sc) return { ok: false, error: "forbidden" };
 
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Choose a spreadsheet first." };
@@ -77,7 +85,7 @@ export async function analyzeUploadAction(formData: FormData): Promise<{ ok: tru
     ? requestedIndex : defaultSheetIndex(sheets);
   const sheet = sheets[sheetIndex];
 
-  const evs = await weddingEvents(weddingId);
+  const evs = await weddingEvents(sc.weddingId, sc.side);
   const profiles = profileColumns(sheet);
   const base = heuristicMapping(profiles, evs);
   let mapping: Mapping = base;
@@ -136,12 +144,12 @@ export async function previewRowsAction(input: unknown): Promise<
 > {
   const parsed = previewSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid input" };
-  const weddingId = await scopedWeddingId(parsed.data.weddingId);
-  if (!weddingId) return { ok: false, error: "forbidden" };
+  const sc = await scope(parsed.data.weddingId);
+  if (!sc) return { ok: false, error: "forbidden" };
 
-  const evs = await weddingEvents(weddingId);
+  const evs = await weddingEvents(sc.weddingId, sc.side);
   const { rows, stats } = buildRows(parsed.data.sheet, parsed.data.mapping as Mapping, parsed.data.answers, evs);
-  const existsCount = applyMatches(rows, await findExistingFamilies(weddingId));
+  const existsCount = applyMatches(rows, await findExistingFamilies(sc.weddingId, sc.side));
   return { ok: true, rows, stats: { ...stats, withIssues: rows.filter((r) => r.issues.length).length }, existsCount };
 }
 
@@ -167,10 +175,10 @@ const checkSchema = z.object({
 export async function checkRowsAction(input: unknown): Promise<{ ok: true; rows: ImportRow[]; existsCount: number } | { ok: false; error: string }> {
   const parsed = checkSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid input" };
-  const weddingId = await scopedWeddingId(parsed.data.weddingId);
-  if (!weddingId) return { ok: false, error: "forbidden" };
+  const sc = await scope(parsed.data.weddingId);
+  if (!sc) return { ok: false, error: "forbidden" };
   const rows = parsed.data.rows as ImportRow[];
-  const existsCount = applyMatches(rows, await findExistingFamilies(weddingId));
+  const existsCount = applyMatches(rows, await findExistingFamilies(sc.weddingId, sc.side));
   return { ok: true, rows, existsCount };
 }
 
@@ -185,8 +193,8 @@ export async function extractDocumentAction(formData: FormData): Promise<
 > {
   const weddingIdRaw = String(formData.get("weddingId") ?? "");
   if (!z.string().uuid().safeParse(weddingIdRaw).success) return { ok: false, error: "invalid input" };
-  const weddingId = await scopedWeddingId(weddingIdRaw);
-  if (!weddingId) return { ok: false, error: "forbidden" };
+  const sc = await scope(weddingIdRaw);
+  if (!sc) return { ok: false, error: "forbidden" };
 
   const file = formData.get("file");
   const hasFile = file instanceof File && file.size > 0;
@@ -194,7 +202,7 @@ export async function extractDocumentAction(formData: FormData): Promise<
   if (!hasFile && !pasted) return { ok: false, error: "Add a photo, a document, or some text first." };
   if (hasFile && file.size > MAX_SCAN_BYTES) return { ok: false, error: "That file is over 6 MB. A phone screenshot or a smaller export works." };
 
-  const evs = await weddingEvents(weddingId);
+  const evs = await weddingEvents(sc.weddingId, sc.side);
   let text = pasted;
   const images: string[] = [];
   if (hasFile) {
@@ -231,7 +239,7 @@ export async function extractDocumentAction(formData: FormData): Promise<
   if (!households.length) return { ok: false, error: "We couldn't find any households in that. One household per line works best — “Sharma family - 4”, “Rajesh Mehta, Kavita Mehta”." };
 
   const rows = householdsToRows(households, evs);
-  const existsCount = applyMatches(rows, await findExistingFamilies(weddingId));
+  const existsCount = applyMatches(rows, await findExistingFamilies(sc.weddingId, sc.side));
   return { ok: true, rows, existsCount, engine, notes, textPreview };
 }
 
@@ -247,22 +255,10 @@ export async function commitRowsAction(input: unknown): Promise<{ ok: true; resu
     const bad = parsed.error.issues.find((i) => i.path.includes("email"));
     return { ok: false, error: bad ? "One of the emails isn't valid — fix it or clear it." : "invalid input" };
   }
-  const sc = await scoped(parsed.data.weddingId);
+  const sc = await scope(parsed.data.weddingId);
   if (!sc) return { ok: false, error: "forbidden" };
-  const weddingId = sc.weddingId;
-  let rows = parsed.data.rows as ImportRow[];
-  const mine = sc.access.side;
-  if (mine !== "both") {
-    // someone working one family's side imports into that side only, and never over the other's households
-    const matched = rows.map((r) => r.match?.id).filter((id): id is string => !!id && z.string().uuid().safeParse(id).success);
-    const others = matched.length
-      ? await db.select({ id: families.id }).from(families)
-          .where(and(eq(families.weddingId, weddingId), inArray(families.id, matched), ne(families.side, mine)))
-      : [];
-    if (others.length) return { ok: false, error: "Some of these households are on the other family's list, which you can't change." };
-    rows = rows.map((r) => ({ ...r, side: mine }));
-  }
-  const result = await commitImport(weddingId, rows, { onExisting: parsed.data.onExisting });
+  // matches are worked out again on the server, within the importer's side; any sent are ignored
+  const result = await commitImport(sc.weddingId, parsed.data.rows as ImportRow[], { onExisting: parsed.data.onExisting, side: sc.side });
   revalidatePath("/committee");
   return { ok: true, result };
 }

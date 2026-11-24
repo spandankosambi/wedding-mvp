@@ -1,13 +1,18 @@
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { pruneAttendees } from "@/lib/guests/household";
 import { syncHousehold } from "@/lib/guests/primary";
 import { db } from "@/db/client";
 import { events, families, guests, eventInvites } from "@/db/schema";
 import { eventForSide } from "@/lib/site/sides";
+import type { FamilySide } from "@/lib/site/looks";
 import type { ImportRow, Member } from "./normalize";
 import { matchExisting, normalizePersonName, type ExistingFamily } from "./match";
 
-type CommitOptions = { onExisting: "skip" | "update" | "merge" };
+type CommitOptions = {
+  onExisting: "skip" | "update" | "merge";
+  /** someone who works one family's side: imports onto it, and matches and changes only its households */
+  side?: FamilySide;
+};
 export type CommitResult = {
   created: number;
   /** updated + merged */
@@ -16,15 +21,17 @@ export type CommitResult = {
   errors: { key: string; error: string }[];
 };
 
-/** Everything duplicate detection needs about the households already on the list. */
-export async function findExistingFamilies(weddingId: string): Promise<ExistingFamily[]> {
-  const fams = await db.select({ id: families.id, name: families.name, email: families.email })
-    .from(families).where(eq(families.weddingId, weddingId));
+/** Everything duplicate detection needs about the households already on the list:
+    the whole wedding, or only one family's side for someone who works that side
+    (the other side's households are never shown, matched or changed). */
+export async function findExistingFamilies(weddingId: string, side?: FamilySide): Promise<ExistingFamily[]> {
+  const fams = await db.select({ id: families.id, name: families.name, email: families.email, side: families.side })
+    .from(families).where(and(eq(families.weddingId, weddingId), side ? eq(families.side, side) : undefined));
   if (!fams.length) return [];
   const members = await db.select({ familyId: guests.familyId, fullName: guests.fullName })
     .from(guests).where(inArray(guests.familyId, fams.map((f) => f.id))).orderBy(guests.seq);
   return fams.map((f) => ({
-    id: f.id, name: f.name, email: f.email,
+    id: f.id, name: f.name, email: f.email, side: f.side,
     members: members.filter((m) => m.familyId === f.id).map((m) => m.fullName),
   }));
 }
@@ -54,28 +61,35 @@ export async function commitImport(weddingId: string, rows: ImportRow[], opts: C
   const result: CommitResult = { created: 0, updated: 0, skipped: 0, errors: [] };
   const weddingEvents = await db.select({ id: events.id, side: events.side }).from(events).where(eq(events.weddingId, weddingId));
   const validEvents = new Set(weddingEvents.map((e) => e.id));
-  const existing = await findExistingFamilies(weddingId);
+  const existing = await findExistingFamilies(weddingId, opts.side);
 
   for (let row of rows) {
     const name = row.name.trim();
     const email = row.email.trim().toLowerCase();
     if (!name) { result.errors.push({ key: row.key, error: "household name is required" }); continue; }
     if (!row.eventIds.every((id) => validEvents.has(id))) { result.errors.push({ key: row.key, error: "invited to an event that isn't part of this wedding" }); continue; }
-    // every household belongs to one family (an unclear one joins the bride's)
-    if (row.side !== "bride" && row.side !== "groom") row = { ...row, side: "bride" };
-    // "all events" for a bride's-side household means common ones and the bride's own
-    row = { ...row, eventIds: row.eventIds.filter((id) => eventForSide(weddingEvents.find((e) => e.id === id)!.side, row.side)) };
+    // every household belongs to one family (an unclear one joins the bride's);
+    // a one-side importer's rows all join their own side
+    if (opts.side) row = { ...row, side: opts.side };
+    else if (row.side !== "bride" && row.side !== "groom") row = { ...row, side: "bride" };
     const members = row.members.map((m) => ({ fullName: m.fullName.trim(), ageGroup: m.ageGroup })).filter((m) => m.fullName);
     if (!members.length) { result.errors.push({ key: row.key, error: "at least one member is required" }); continue; }
 
     const relation = row.relation.trim() || null;
-    const match = matchExisting(row, existing);
+    let match = matchExisting(row, existing);
+    // Safety net, from the database: a one-side importer never touches a household
+    // on the other side, whatever was matched or sent. It becomes a new one instead.
+    let current = match ? (await db.select().from(families).where(and(eq(families.id, match.id), eq(families.weddingId, weddingId))))[0] : undefined;
+    if (match && (!current || (opts.side && current.side !== opts.side))) { match = null; current = undefined; }
+    // an existing household keeps its own side; its invitations follow that side
+    if (current && (current.side === "bride" || current.side === "groom")) row = { ...row, side: current.side };
+    // "all events" for a bride's-side household means common ones and the bride's own
+    row = { ...row, eventIds: row.eventIds.filter((id) => eventForSide(weddingEvents.find((e) => e.id === id)!.side, row.side)) };
 
     if (match && opts.onExisting === "skip") { result.skipped++; continue; }
 
-    if (match && opts.onExisting === "merge") {
+    if (match && current && opts.onExisting === "merge") {
       const ex = existing.find((f) => f.id === match.id)!;
-      const [current] = await db.select().from(families).where(eq(families.id, ex.id));
       await db.update(families).set({
         relation: current.relation ?? relation,
         email: current.email.trim() ? current.email : email,
@@ -100,10 +114,11 @@ export async function commitImport(weddingId: string, rows: ImportRow[], opts: C
 
     let familyId: string;
     if (match) {
-      // update: this version wins, but never blank out an email we already have
+      // update: this version wins, but never blank out an email we already have,
+      // and never move the household to the other family's list
       const ex = existing.find((f) => f.id === match.id)!;
-      await db.update(families).set({ name, side: row.side, relation, email: email || ex.email })
-        .where(eq(families.id, ex.id));
+      await db.update(families).set({ name, relation, email: email || ex.email })
+        .where(and(eq(families.id, ex.id), eq(families.weddingId, weddingId)));
       await db.delete(guests).where(eq(guests.familyId, ex.id));
       await db.delete(eventInvites).where(eq(eventInvites.familyId, ex.id));
       familyId = ex.id;
@@ -112,7 +127,7 @@ export async function commitImport(weddingId: string, rows: ImportRow[], opts: C
     } else {
       const [f] = await db.insert(families).values({ weddingId, name, side: row.side, relation, email }).returning();
       familyId = f.id;
-      existing.push({ id: f.id, name, email, members: members.map((m) => m.fullName) });
+      existing.push({ id: f.id, name, email, side: row.side, members: members.map((m) => m.fullName) });
       result.created++;
     }
 

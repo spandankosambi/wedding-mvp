@@ -1,7 +1,7 @@
 import type { ImportRow } from "./normalize";
 
 /** What we know about a family already on the list, for duplicate detection. */
-export type ExistingFamily = { id: string; name: string; email: string; members: string[] };
+export type ExistingFamily = { id: string; name: string; email: string; members: string[]; side?: "bride" | "groom" | "both" };
 export type MatchReason = "email" | "name" | "members";
 export type Match = { id: string; reason: MatchReason };
 
