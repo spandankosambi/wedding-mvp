@@ -1,7 +1,10 @@
 import Link from "next/link";
-import { eq, inArray } from "drizzle-orm";
+import { count, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
-import { weddings, families, rsvps } from "@/db/schema";
+import { weddings, families, rsvps, outbox } from "@/db/schema";
+import { sentToday, SIGNIN_RESERVE } from "@/lib/email/mailer";
+import { env } from "@/config/env";
+import { sendQueuedAction } from "./actions";
 import { requireRole } from "@/lib/auth/authz";
 import { fmtWeddingDate } from "@/lib/core/format";
 
@@ -23,6 +26,13 @@ export default async function AdminPage() {
   );
   const familyCount = rows.reduce((total, wedding) => total + wedding.familyCount, 0);
   const responded = rows.reduce((total, wedding) => total + wedding.responded, 0);
+  // the daily email budget: what's gone out in the last 24 hours, and what's waiting
+  const [sent, [queued]] = await Promise.all([
+    sentToday(),
+    db.select({ n: count() }).from(outbox).where(eq(outbox.status, "queued")),
+  ]);
+  const waiting = Number(queued?.n ?? 0);
+  const budget = env.email.dailyBudget;
 
   return (
     <main className="portal-page">
@@ -36,7 +46,7 @@ export default async function AdminPage() {
         <Link href="/admin/mailroom" className="portal-button-secondary">Mailroom →</Link>
       </header>
 
-      <div className="mb-8 grid gap-3 sm:grid-cols-3">
+      <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="portal-panel portal-stat">
           <p className="portal-stat-label">Weddings</p>
           <p className="portal-stat-value tabular-nums">{rows.length}</p>
@@ -51,6 +61,19 @@ export default async function AdminPage() {
           <p className="portal-stat-label">Responses</p>
           <p className="portal-stat-value tabular-nums">{responded}/{familyCount}</p>
           <p className="portal-stat-note">families with an RSVP recorded</p>
+        </div>
+        <div className="portal-panel portal-stat" data-testid="email-budget">
+          <p className="portal-stat-label">Emails today</p>
+          <p className="portal-stat-value tabular-nums">{sent}/{budget}</p>
+          <p className="portal-stat-note">
+            in the last 24 hours; the last {SIGNIN_RESERVE} are kept for sign-in links
+          </p>
+          {waiting > 0 && (
+            <form action={sendQueuedAction} className="mt-3">
+              <p className="text-sm font-medium text-amber-800">{waiting} queued, waiting for the allowance to free up</p>
+              <button type="submit" className="portal-button-secondary mt-2">Send queued emails</button>
+            </form>
+          )}
         </div>
       </div>
 

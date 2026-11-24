@@ -9,7 +9,7 @@ import { users, weddings } from "@/db/schema";
 import { requireRole } from "@/lib/auth/authz";
 import { appOrigin } from "@/lib/core/origin";
 import { rateLimit } from "@/lib/auth/ratelimit";
-import { sendConfirmEmail } from "@/lib/email/mailer";
+import { EmailBudgetError, sendConfirmEmail } from "@/lib/email/mailer";
 import { photoStorageConfigured } from "@/lib/site/gallery";
 import { createAction, carryOut, resetScopeSchema, resetItems, CONFIRM_MINUTES } from "@/lib/auth/account";
 import type { ResetScope } from "@/db/schema";
@@ -31,7 +31,7 @@ async function request(kind: "delete" | "reset", scope?: ResetScope): Promise<Re
   const c = await couple();
   if (!c) return { ok: false, error: "No wedding is linked to this login." };
   if (kind === "delete" && !c.owner) return { ok: false, error: "Only the person who set this wedding up can delete it." };
-  if (!rateLimit(`account-action:${c.userId}`, { max: 3, windowMs: 10 * 60_000 }))
+  if (!await rateLimit(`account-action:${c.userId}`, { max: 3, windowMs: 10 * 60_000 }))
     return { ok: false, error: "Too many requests. Wait a few minutes, then try again." };
   const { token } = await createAction(kind, c.weddingId, c.userId, scope);
   const link = `${await appOrigin()}/confirm/${token}`;
@@ -40,8 +40,13 @@ async function request(kind: "delete" | "reset", scope?: ResetScope): Promise<Re
       to: c.email, kind, coupleNames: c.coupleNames, link, minutes: CONFIRM_MINUTES,
       items: scope ? resetItems(scope, c.sideNames) : undefined,
     });
-  } catch {
-    return { ok: false, error: "We couldn't send the confirmation email. Try again in a minute." };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof EmailBudgetError
+        ? "Today's email allowance is used up, so we can't send the confirmation email. Please try again tomorrow."
+        : "We couldn't send the confirmation email. Try again in a minute.",
+    };
   }
   return { ok: true, email: c.email, minutes: CONFIRM_MINUTES };
 }

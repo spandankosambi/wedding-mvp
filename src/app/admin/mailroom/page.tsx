@@ -77,7 +77,8 @@ export default async function MailroomPage() {
                   return (
                     <tr key={m.id} className="border-b border-neutral-100 last:border-0">
                       <td>
-                        <span className="portal-badge">{isSignIn ? "sign-in" : "invite"}</span>
+                        <span className="portal-badge">{isSignIn ? "sign-in" : m.kind}</span>
+                        {m.status === "queued" && <span className="ml-1 text-xs font-medium text-amber-700">queued</span>}
                       </td>
                       <td>
                         <p className="font-medium text-neutral-800">{m.to}</p>

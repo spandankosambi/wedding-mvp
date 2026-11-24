@@ -6,7 +6,7 @@ import { headers } from "next/headers";
 import { db } from "@/db/client";
 import { users, weddings } from "@/db/schema";
 import { sendHelpRequest } from "@/lib/email/mailer";
-import { rateLimit } from "@/lib/auth/ratelimit";
+import { rateLimit, visitorIp } from "@/lib/auth/ratelimit";
 import { HELP_TOPICS } from "@/lib/core/help";
 
 const schema = z.object({
@@ -27,8 +27,8 @@ export async function sendHelpAction(input: unknown): Promise<HelpResult> {
   if (!userId) return { ok: false, error: "Please sign in again, then send your message." };
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the form." };
-  const ip = ((await headers()).get("x-forwarded-for") ?? "local").split(",")[0].trim();
-  if (!rateLimit(`help:${userId}`, { max: 5, windowMs: 60 * 60_000 }) || !rateLimit(`help-ip:${ip}`, { max: 10, windowMs: 60 * 60_000 }))
+  const ip = visitorIp(await headers());
+  if (!await rateLimit(`help:${userId}`, { max: 5, windowMs: 60 * 60_000 }) || !await rateLimit(`help-ip:${ip}`, { max: 10, windowMs: 60 * 60_000 }))
     return { ok: false, error: "You've sent a few messages already — we'll be in touch soon. Try again in an hour if it's urgent." };
 
   const [u] = await db.select({ email: users.email, weddingId: users.weddingId }).from(users).where(eq(users.id, userId));

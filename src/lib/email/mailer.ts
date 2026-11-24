@@ -3,7 +3,8 @@ import path from "node:path";
 import nodemailer from "nodemailer";
 import { render } from "@react-email/components";
 import { db } from "@/db/client";
-import { emailLog, outbox } from "@/db/schema";
+import { and, asc, count, eq, gt } from "drizzle-orm";
+import { emailLog, outbox, type QueuedMail } from "@/db/schema";
 import { InviteEmail } from "@/emails/InviteEmail";
 import { BRAND, CONTACT_EMAIL, SITE_URL } from "@/lib/core/brand";
 import { env } from "@/config/env";
@@ -16,11 +17,16 @@ type SendArgs = {
 export const smtpConfigured = () =>
   env.email.mode === "smtp" && !!env.email.smtpUser && !!env.email.smtpPass;
 
+/** The mail server, from settings only (see src/config/env.ts). Sign-in links use it too. */
+export function smtpServer() {
+  const auth = { user: env.email.smtpUser, pass: env.email.smtpPass };
+  return env.email.smtpHost
+    ? { host: env.email.smtpHost, port: env.email.smtpPort, secure: env.email.smtpSecure, auth }
+    : { service: env.email.smtpService, auth };
+}
+
 function smtpTransport() {
-  return nodemailer.createTransport({
-    service: "gmail",
-    auth: { user: env.email.smtpUser, pass: env.email.smtpPass },
-  });
+  return nodemailer.createTransport(smtpServer());
 }
 
 /**
@@ -42,10 +48,10 @@ export function fromHeader(displayName?: string): string | undefined {
  * /admin/mailroom, works on Vercel's read-only filesystem) plus, best-effort,
  * the local outbox file that dev tooling and tests read.
  */
-export async function recordOutbox(m: {
-  to: string; subject: string; kind: "signin" | "invite" | "confirm" | "access" | "help" | "calendar" | "stay"; link?: string; html?: string; attachment?: string;
+async function recordOutbox(m: {
+  to: string; subject: string; kind: Kind; link?: string; html?: string; attachment?: string;
 }) {
-  await db.insert(outbox).values({ to: m.to, subject: m.subject, kind: m.kind, link: m.link ?? null });
+  await db.insert(outbox).values({ to: m.to, subject: m.subject, kind: m.kind, link: m.link ?? null, status: "recorded", sentAt: new Date() });
   try {
     const dir = path.join(process.cwd(), "var/outbox");
     fs.mkdirSync(dir, { recursive: true });
@@ -63,21 +69,113 @@ export async function recordOutbox(m: {
   }
 }
 
-async function deliver(to: string, subject: string, html: string, rsvpUrl: string, from?: string) {
+/* ── The daily email budget ─────────────────────────────────────────────
+   Every email, real or recorded, is a row in the outbox with the time it went
+   out. Sign-in links may use the whole budget; everything else stops 50
+   short of it, so people can always sign in. Past that, mail that can wait
+   (invitations, reminders, stay details, calendar invitations, access and
+   help emails) is queued and sent later from /admin; a confirmation link,
+   which expires in minutes, fails with a clear message instead. */
+
+export const SIGNIN_RESERVE = 50;
+type Kind = "signin" | "invite" | "confirm" | "access" | "help" | "calendar" | "stay";
+const CAN_WAIT = new Set<Kind>(["invite", "calendar", "stay", "access", "help"]);
+
+/** The daily email allowance is used up for this kind of email. */
+export class EmailBudgetError extends Error {
+  constructor() { super("daily email budget reached"); }
+}
+
+/** Emails sent (or recorded) in the last 24 hours. */
+export async function sentToday(): Promise<number> {
+  const [r] = await db.select({ n: count() }).from(outbox).where(gt(outbox.sentAt, new Date(Date.now() - 86_400_000)));
+  return Number(r?.n ?? 0);
+}
+
+const roomFor = (kind: Kind) => (kind === "signin" ? env.email.dailyBudget : env.email.dailyBudget - SIGNIN_RESERVE);
+
+type Mail = { kind: Kind; to: string; subject: string; link?: string; attachment?: string } & QueuedMail;
+
+async function deliverNow(m: Mail) {
   if (smtpConfigured()) {
-    await smtpTransport().sendMail({ from, to, subject, html });
+    await smtpTransport().sendMail({ from: m.from, to: m.to, subject: m.subject, html: m.html, replyTo: m.replyTo, icalEvent: m.icalEvent });
+    // a real send keeps no link: the database never holds a working sign-in or RSVP link
+    await db.insert(outbox).values({ to: m.to, subject: m.subject, kind: m.kind, status: "sent", sentAt: new Date() });
   } else {
-    await recordOutbox({ to, subject, kind: "invite", link: rsvpUrl, html });
+    await recordOutbox({ to: m.to, subject: m.subject, kind: m.kind, link: m.link, html: m.html, attachment: m.attachment ?? m.icalEvent?.content });
   }
 }
 
-export async function sendInvite(args: SendArgs): Promise<{ ok: boolean; error?: string }> {
+/** Send now if the budget allows; otherwise queue it (or, for mail that can't wait, throw). */
+async function dispatch(m: Mail): Promise<"sent" | "queued"> {
+  if (await sentToday() < roomFor(m.kind)) {
+    await deliverNow(m);
+    return "sent";
+  }
+  if (!CAN_WAIT.has(m.kind)) throw new EmailBudgetError();
+  await db.insert(outbox).values({
+    to: m.to, subject: m.subject, kind: m.kind, link: m.link ?? null, status: "queued",
+    payload: { from: m.from, html: m.html, replyTo: m.replyTo, icalEvent: m.icalEvent, log: m.log },
+  });
+  return "queued";
+}
+
+/** A sign-in link. Auth.js renders it; this checks the budget and records it. */
+export async function sendSignInLink(to: string, url: string, viaSmtp: () => Promise<void>) {
+  if (await sentToday() >= roomFor("signin")) throw new EmailBudgetError();
+  if (smtpConfigured()) {
+    await viaSmtp();
+    await db.insert(outbox).values({ to, subject: "Sign in", kind: "signin", status: "sent", sentAt: new Date() });
+  } else {
+    await recordOutbox({ to, subject: "Sign in", kind: "signin", link: url });
+  }
+}
+
+/** Send what's queued, oldest first, while the budget allows. */
+export async function sendQueued(max = 100): Promise<{ sent: number; left: number }> {
+  const waiting = await db.select().from(outbox).where(eq(outbox.status, "queued")).orderBy(asc(outbox.at)).limit(max);
+  let sent = 0;
+  for (const row of waiting) {
+    if (await sentToday() >= roomFor("invite")) break;
+    // claim it first, so two people pressing the button can't send it twice
+    const [mine] = await db.update(outbox).set({ status: "sending" }).where(and(eq(outbox.id, row.id), eq(outbox.status, "queued"))).returning();
+    if (!mine || !row.payload) continue;
+    const p = row.payload;
+    try {
+      if (smtpConfigured()) {
+        await smtpTransport().sendMail({ from: p.from, to: row.to, subject: row.subject, html: p.html, replyTo: p.replyTo, icalEvent: p.icalEvent });
+      } else {
+        await recordOutbox({ to: row.to, subject: row.subject, kind: row.kind as Kind, link: row.link ?? undefined, html: p.html });
+      }
+    } catch (e) {
+      await db.update(outbox).set({ status: "queued" }).where(eq(outbox.id, row.id));
+      console.error("[mail] a queued email failed to send:", e instanceof Error ? e.message : e);
+      continue;
+    }
+    if (smtpConfigured()) {
+      await db.update(outbox).set({ status: "sent", sentAt: new Date(), payload: null, link: null }).where(eq(outbox.id, row.id));
+    } else {
+      await db.delete(outbox).where(eq(outbox.id, row.id)); // recordOutbox wrote its own row
+    }
+    if (p.log) {
+      await db.insert(emailLog).values({ familyId: p.log.familyId, type: p.log.type, status: "sent" }).catch(() => { /* household since removed */ });
+    }
+    sent += 1;
+  }
+  const [r] = await db.select({ n: count() }).from(outbox).where(eq(outbox.status, "queued"));
+  return { sent, left: Number(r?.n ?? 0) };
+}
+
+export async function sendInvite(args: SendArgs): Promise<{ ok: boolean; queued?: boolean; error?: string }> {
   const subject = `${args.coupleNames} — you're invited! Please RSVP`;
   const html = await render(InviteEmail(args));
   try {
-    await deliver(args.to, subject, html, args.rsvpUrl, fromHeader(args.coupleNames));
-    await db.insert(emailLog).values({ familyId: args.familyId, type: args.type, status: "sent" });
-    return { ok: true };
+    const how = await dispatch({
+      kind: "invite", to: args.to, subject, html, link: args.rsvpUrl, from: fromHeader(args.coupleNames),
+      log: { familyId: args.familyId, type: args.type },
+    });
+    await db.insert(emailLog).values({ familyId: args.familyId, type: args.type, status: how });
+    return how === "queued" ? { ok: true, queued: true } : { ok: true };
   } catch (e) {
     const error = e instanceof Error ? e.message : String(e);
     await db.insert(emailLog).values({ familyId: args.familyId, type: args.type, status: `failed: ${error}` });
@@ -111,11 +209,7 @@ ${list}
 <p><a href="${args.link}" style="display:inline-block;background:#9b1c1c;color:#fff;text-decoration:none;padding:10px 16px;border-radius:8px;font-weight:600">Review and confirm</a></p>
 <p style="color:#6b6760;font-size:13px">The link works once and expires in ${args.minutes} minutes. If this wasn't you, ignore this email and nothing will change.</p>
 </div>`;
-  if (smtpConfigured()) {
-    await smtpTransport().sendMail({ from: env.email.from, to: args.to, subject, html });
-  } else {
-    await recordOutbox({ to: args.to, subject, kind: "confirm", link: args.link, html });
-  }
+  await dispatch({ kind: "confirm", to: args.to, subject, html, link: args.link, from: env.email.from });
 }
 
 /** Tells someone the couple has given them a sign-in for the wedding. */
@@ -127,11 +221,7 @@ ${emailLogo()}
 <p><a href="${args.link}" style="display:inline-block;background:#292723;color:#fff;text-decoration:none;padding:10px 16px;border-radius:8px;font-weight:600">Sign in</a></p>
 <p style="color:#6b6760;font-size:13px">Sign in with this email address (${escapeHtml(args.to)}). We&rsquo;ll email you a one-time link each time; there is no password.</p>
 </div>`;
-  if (smtpConfigured()) {
-    await smtpTransport().sendMail({ from: env.email.from, to: args.to, subject, html });
-  } else {
-    await recordOutbox({ to: args.to, subject, kind: "access", link: args.link, html });
-  }
+  return dispatch({ kind: "access", to: args.to, subject, html, link: args.link, from: env.email.from });
 }
 
 /** A "Need help?" message from the site, to our own inbox; replying goes straight to the person who wrote. */
@@ -146,11 +236,7 @@ ${emailLogo()}
 <p style="white-space:pre-wrap;margin:0;padding:12px 14px;background:#f6f4ef;border-radius:8px">${escapeHtml(args.message)}</p>
 </div>`;
   const to = CONTACT_EMAIL;
-  if (smtpConfigured()) {
-    await smtpTransport().sendMail({ from: env.email.from, to, replyTo: `${args.name} <${args.email}>`, subject, html });
-  } else {
-    await recordOutbox({ to, subject, kind: "help", html });
-  }
+  return dispatch({ kind: "help", to, subject, html, from: env.email.from, replyTo: `${args.name} <${args.email}>` });
 }
 
 /** The address calendar replies go to (the organiser of the invitation). */
@@ -181,15 +267,11 @@ ${cancel
 <p>Press <b>Yes</b> on the invitation above this message to add it to your calendar. Not seeing the buttons? Open the attached <b>invite.ics</b>, or <a href="${e.google}" style="color:#b23a26">add it to Google Calendar</a>.</p>`}
 <p style="color:#6b6760;font-size:13px">Plans change? <a href="${args.rsvpUrl}">Update your RSVP</a> from the same link.</p>
 </div>`;
-  if (smtpConfigured()) {
-    await smtpTransport().sendMail({
-      from: fromHeader(args.coupleNames), to: args.to, subject, html,
-      // the invitation itself, which mail apps turn into Yes / Maybe / No
-      icalEvent: { method: args.method, filename: "invite.ics", content: args.ics },
-    });
-  } else {
-    await recordOutbox({ to: args.to, subject, kind: "calendar", link: args.rsvpUrl, html, attachment: args.ics });
-  }
+  return dispatch({
+    kind: "calendar", to: args.to, subject, html, link: args.rsvpUrl, from: fromHeader(args.coupleNames),
+    // the invitation itself, which mail apps turn into Yes / Maybe / No
+    icalEvent: { method: args.method, filename: "invite.ics", content: args.ics },
+  });
 }
 
 /** A household's hotel, rooms and map links, from the couple. */
@@ -211,9 +293,5 @@ ${args.groups.map(block).join("")}
 ${args.gettingThere.trim() ? `<p style="margin-top:18px;font-weight:600">Getting there</p><p style="white-space:pre-wrap;margin-top:4px">${escapeHtml(args.gettingThere.trim())}</p>` : ""}
 <p>See you soon!</p>
 </div>`;
-  if (smtpConfigured()) {
-    await smtpTransport().sendMail({ from: fromHeader(args.coupleNames), to: args.to, subject, html });
-  } else {
-    await recordOutbox({ to: args.to, subject, kind: "stay", html });
-  }
+  return dispatch({ kind: "stay", to: args.to, subject, html, from: fromHeader(args.coupleNames) });
 }

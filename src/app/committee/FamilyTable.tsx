@@ -32,7 +32,7 @@ export type Row = {
   rsvpByEvent: Record<string, { status: "attending" | "declined"; headcount: number; note: string | null; guestIds: string[] | null }>;
   lastEmail: { type: string; status: string; sentAt: string } | null;
   /** the latest invitation by each route */
-  inviteSent?: { whatsappAt: string | null; email: { at: string; type: string; ok: boolean } | null };
+  inviteSent?: { whatsappAt: string | null; email: { at: string; type: string; ok: boolean; queued?: boolean } | null };
   /** a reply from the family's shared link whose phone or email matched this household on the list */
   possibleMatch?: { name: string; by: "phone" | "email" } | null;
 };
@@ -126,9 +126,10 @@ export function FamilyTable({
     startTransition(async () => {
       const res = await safeCall(() => sendInvitesAction({ weddingId, familyIds, type }));
       if (!res.ok) { setFlash(res.error ?? "failed"); return; }
-      const sent = res.results.filter((r) => r.ok).length;
-      const skipped = res.results.length - sent;
-      setFlash(`${sent} sent${skipped ? `, ${skipped} skipped` : ""}`);
+      const queued = res.results.filter((r) => r.ok && r.queued).length;
+      const sent = res.results.filter((r) => r.ok).length - queued;
+      const skipped = res.results.length - sent - queued;
+      setFlash(`${sent} sent${queued ? `, ${queued} queued (today's email allowance is used up; they go out later)` : ""}${skipped ? `, ${skipped} skipped` : ""}`);
       setSelected(new Set());
       router.refresh();
     });
@@ -265,7 +266,9 @@ export function FamilyTable({
     if (!s?.email && !s?.whatsappAt) return <span className="text-xs text-neutral-400">Not sent yet</span>;
     return (
       <div className="sent-lines text-xs leading-relaxed" data-testid="invite-sent">
-        {s.email && (s.email.ok
+        {s.email && (s.email.queued
+          ? <p className="text-amber-700" title="Today's email allowance is used up; it goes out once it frees up">⏳ Email queued {sentWhen(s.email.at)}</p>
+          : s.email.ok
           ? <p className="text-emerald-700">✓ {s.email.type === "remind" ? "Reminded" : "Emailed"} {sentWhen(s.email.at)}{r.email && <span className="text-neutral-400"> · {r.email}</span>}</p>
           : <p className="font-medium text-red-600">
               ✗ Email failed {sentWhen(s.email.at)}

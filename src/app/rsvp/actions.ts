@@ -1,5 +1,6 @@
 "use server";
 import { headers } from "next/headers";
+import { rateLimit, visitorIp } from "@/lib/auth/ratelimit";
 import { getFamilyByToken, submitRsvp } from "@/lib/guests/rsvp";
 import { googleCalendarLink, icsFile, maskEmail } from "@/lib/email/calendar";
 import { namesFor } from "@/lib/site/looks";
@@ -14,7 +15,7 @@ export async function submitRsvpAction(input: {
   responses: { eventId: string; status: "attending" | "declined"; guestIds?: string[]; headcount?: number; note?: string }[];
 }): Promise<{ ok: true; emailedTo: string | null } | { ok: false; error: string }> {
   const h = await headers();
-  const ip = (h.get("x-forwarded-for") ?? "local").split(",")[0].trim();
+  const ip = visitorIp(h);
   const before = await getFamilyByToken(input.token);
   const res = await submitRsvp(input, ip);
   if (!res.ok || !before) return res.ok ? { ok: true, emailedTo: null } : res;
@@ -39,6 +40,10 @@ export async function submitRsvpAction(input: {
   try {
     for (const [list, method] of [[added, "REQUEST"], [dropped, "CANCEL"]] as const) {
       for (const e of list) {
+        // at most one invitation and one cancellation per household per celebration
+        // an hour (so a quick yes-then-no still takes it off their calendar); the
+        // answer is saved either way and the calendar download still works
+        if (!await rateLimit(`calendar:${before.family.id}:${e.id}:${method}`, { max: 1, windowMs: 60 * 60_000 })) continue;
         await sendCalendarInvite({
           to: to!, familyName: before.family.name, coupleNames: couple, rsvpUrl, method,
           ics: icsFile([e], { couple, link: rsvpUrl, invite: invite(method) }),

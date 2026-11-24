@@ -89,6 +89,14 @@ There's no separate API server. Two kinds of server entry point, both in `src/ap
   a new household on the link's side, for that side's events only (`src/lib/guests/open-rsvp.ts`).
   If its phone or email matches a household there, it is flagged "Needs a look" and the couple or
   committee merges it or keeps it separate (`src/lib/guests/possible-match.ts`).
+- **Rate limits** live in the database (`src/lib/auth/ratelimit.ts`), never in memory. The
+  visitor's IP comes from Vercel's own `x-vercel-forwarded-for` header, which visitors can't fake.
+  Sign-in links: 3 per address per 15 minutes, 10 a day, 10 per visitor per 15 minutes, counted
+  for every address (known or not) in Auth.js's `signIn` step, so the page and `/api/auth` both
+  obey them (`src/lib/auth/signin-limits.ts`).
+- **Email budget** (`src/lib/email/mailer.ts`): every email goes through one `dispatch`, which
+  counts the last 24 hours. Past `EMAIL_DAILY_BUDGET − 50`, mail that can wait is queued; sign-in
+  links may use the last 50. `/admin` shows the count and sends the queue.
 
 ## The data
 
@@ -102,7 +110,8 @@ Postgres via Drizzle (`src/db/schema.ts`). Main tables:
 | `families`, `guests` | households and the people in them; one primary guest per household |
 | `event_invites`, `rsvps` | who's invited to what, and their replies |
 | `users`, `accounts`, `sessions`, `verification_tokens` | sign-in (Auth.js) |
-| `email_log`, `outbox` | what was sent, and mail recorded instead of sent |
+| `email_log`, `outbox` | invitations sent per household; every email sent, recorded or queued (counts against the daily budget) |
+| `rate_limits` | shared rate-limit counters, so every server sees the same counts |
 | `account_actions` | email-confirmed resets and deletions |
 | `machine_text` | saved Azure translations, so each line is translated once |
 

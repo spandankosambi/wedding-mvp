@@ -63,7 +63,7 @@ export async function submitRsvp(input: unknown, clientKey = "local"):
   if (!parsed.success) return { ok: false, error: "invalid input" };
   const { token, responses } = parsed.data;
 
-  if (!rateLimit(`rsvp:${clientKey}`) || !rateLimit(`rsvp:tok:${token.slice(0, 12)}`))
+  if (!await rateLimit(`rsvp:${clientKey}`) || !await rateLimit(`rsvp:tok:${token.slice(0, 12)}`))
     return { ok: false, error: "too many requests" };
 
   const fam = await getFamilyByToken(token);

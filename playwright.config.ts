@@ -20,7 +20,8 @@ export default defineConfig({
     url: `http://localhost:${port}/favicon.ico`,
     // Never reuse a dev server that already holds the data dir.
     reuseExistingServer: false,
-    env: { EMAIL_MODE: "file" },
+    // test accounts may sign in as often as the tests need; plenty of sites per hour
+    env: { EMAIL_MODE: "file", RELAXED_TEST_LIMITS: "1", NEW_SITES_PER_HOUR: "1000" },
     timeout: 120_000,
   },
   projects: [{ name: "chromium", use: { browserName: "chromium" } }],

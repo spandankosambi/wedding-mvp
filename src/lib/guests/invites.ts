@@ -16,7 +16,7 @@ function inviteUrl(origin: string, slug: string, token: string) {
   return `${origin}/w/${slug}?invite=${token}`;
 }
 
-type IssueResult = { familyId: string; ok: boolean; error?: string };
+type IssueResult = { familyId: string; ok: boolean; queued?: boolean; error?: string };
 
 // Hash-only token storage means every send mints a fresh link — we cannot
 // recover the original token to re-use it for reminders. Acceptable: the old
@@ -70,7 +70,7 @@ export async function issueInvites(
       theme: (await getLook(wedding.id, family.side === "groom" ? "groom" : "bride")).theme,
       type: type === "remind" ? "reminder" : type,
     });
-    results.push(res.ok ? { familyId, ok: true } : { familyId, ok: false, error: res.error });
+    results.push(res.ok ? { familyId, ok: true, ...(res.queued && { queued: true }) } : { familyId, ok: false, error: res.error });
   }
   return results;
 }

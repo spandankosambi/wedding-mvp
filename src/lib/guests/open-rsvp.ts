@@ -79,7 +79,7 @@ export async function submitOpenRsvp(input: unknown, clientKey = "local"): Promi
   const email = d.email || null;
   const phone = normalizePhone(d.phone);
   if (!email && !phone) return { ok: false, error: "phone or email required" };
-  if (!rateLimit(`open-rsvp:${clientKey}`, { max: 10 })) return { ok: false, error: "too many requests" };
+  if (!await rateLimit(`open-rsvp:${clientKey}`, { max: 10 })) return { ok: false, error: "too many requests" };
 
   const data = await getPublicWedding(d.slug);
   if (!data) return { ok: false, error: "wedding not found" };

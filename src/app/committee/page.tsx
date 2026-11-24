@@ -110,7 +110,7 @@ export default async function CommitteePage({
       const em = logs.find((x) => x.status !== "whatsapp");
       return {
         whatsappAt: wa?.sentAt.toISOString() ?? null,
-        email: em ? { at: em.sentAt.toISOString(), type: em.type, ok: em.status === "sent" } : null,
+        email: em ? { at: em.sentAt.toISOString(), type: em.type, ok: em.status === "sent", queued: em.status === "queued" } : null,
       };
     })(),
   }));

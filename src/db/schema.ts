@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, text, integer, boolean, jsonb, timestamp, uuid, primaryKey, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, pgEnum, text, integer, boolean, jsonb, timestamp, uuid, primaryKey, uniqueIndex, index } from "drizzle-orm/pg-core";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
 export const themeEnum = pgEnum("theme", ["ivory-editorial", "raj-mahal", "gulaab-rococo", "mehfil-noor", "pichwai-bagh", "neel-chhapa"]);
@@ -255,9 +255,31 @@ export const outbox = pgTable("outbox", {
   id: uuid("id").defaultRandom().primaryKey(),
   to: text("to").notNull(),
   subject: text("subject").notNull(),
-  kind: text("kind").notNull(), // "signin" | "invite"
+  kind: text("kind").notNull(), // "signin" | "invite" | "calendar" | "stay" | …
   link: text("link"),
   at: timestamp("at", { withTimezone: true }).defaultNow().notNull(),
+  /** "recorded": outbox mode, nothing sent · "sent": went out by SMTP ·
+      "queued": waiting for the daily email allowance to free up */
+  status: text("status").notNull().default("recorded"),
+  /** when it went out (or was recorded); counts against the daily email budget */
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  /** what a queued email needs to be sent later; cleared once it's sent */
+  payload: jsonb("payload").$type<QueuedMail>(),
+}, (t) => [index("outbox_sent_at").on(t.sentAt)]);
+
+export type QueuedMail = {
+  from?: string; html: string; replyTo?: string;
+  icalEvent?: { method: string; filename: string; content: string };
+  /** an invitation: log it against the household once it goes out */
+  log?: { familyId: string; type: "invite" | "reminder" | "resend" };
+};
+
+/** Shared rate-limit counters: one row per key, counted within a window.
+    In the database so every server sees the same counts. */
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+  count: integer("count").notNull(),
 });
 
 /** What a couple can choose to wipe in a reset. Their own login, names, date,

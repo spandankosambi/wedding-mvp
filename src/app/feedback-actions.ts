@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { headers } from "next/headers";
 import { sendHelpRequest } from "@/lib/email/mailer";
-import { rateLimit } from "@/lib/auth/ratelimit";
+import { rateLimit, visitorIp } from "@/lib/auth/ratelimit";
 import { GUEST_TOPICS } from "@/lib/core/help";
 
 const schema = z.object({
@@ -27,8 +27,8 @@ export async function sendGuestFeedbackAction(input: unknown): Promise<FeedbackR
     if (bot) return { ok: true, replyTo: "" };
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the form." };
   }
-  const ip = ((await headers()).get("x-forwarded-for") ?? "local").split(",")[0].trim();
-  if (!rateLimit(`feedback-ip:${ip}`, { max: 4, windowMs: 60 * 60_000 }))
+  const ip = visitorIp(await headers());
+  if (!await rateLimit(`feedback-ip:${ip}`, { max: 4, windowMs: 60 * 60_000 }))
     return { ok: false, error: "You've sent a few messages already — we'll be in touch soon." };
   const d = parsed.data;
   // which invitation they were reading (the address only, never the private code)

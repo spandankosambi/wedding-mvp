@@ -28,7 +28,23 @@ export const env = {
     get smtpPass() { return read("SMTP_PASS"); },
     /** The From header, e.g. "One Tap Invites <onetapinvites@gmail.com>". */
     get from() { return read("EMAIL_FROM"); },
+    /** The mail server. Unset: the well-known service in SMTP_SERVICE (Gmail
+        by default). Moving to another provider is only these settings. */
+    get smtpHost() { return read("SMTP_HOST"); },
+    get smtpPort() { return Number(read("SMTP_PORT") ?? 465) || 465; },
+    get smtpSecure() { return read("SMTP_SECURE") !== "false"; },
+    get smtpService() { return read("SMTP_SERVICE") ?? "gmail"; },
+    /** Most emails sent in any 24 hours (Gmail allows about 500). The last 50
+        are kept for sign-in links; other mail waits in a queue instead. */
+    get dailyBudget() { return Math.max(60, Number(read("EMAIL_DAILY_BUDGET") ?? 400) || 400); },
   },
+
+  /** Browser tests only: the seeded @example.com accounts sign in many times a
+      run, so sign-in limits skip them. Never applies to a production build. */
+  get relaxedTestLimits() { return process.env.NODE_ENV !== "production" && read("RELAXED_TEST_LIMITS") === "1"; },
+
+  /** Most new wedding sites that may be created in any hour, from /start. */
+  get newSitesPerHour() { return Math.max(1, Number(read("NEW_SITES_PER_HOUR") ?? 20) || 20); },
 
   /** Vercel Blob, for photos. */
   get blobToken() { return read("BLOB_READ_WRITE_TOKEN"); },

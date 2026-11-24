@@ -82,6 +82,10 @@ setting that's missing.
 | `AUTH_SECRET` | Sign-in sessions |
 | `APP_URL` | Links built outside a request (seed, tests) |
 | `EMAIL_MODE`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` | Sending email (Gmail SMTP) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_SERVICE` | The mail server (unset host: Gmail). Another provider is just these settings |
+| `EMAIL_DAILY_BUDGET` | Most emails in any 24 hours (default 400). The last 50 are kept for sign-in links; other mail queues (see `/admin`) |
+| `NEW_SITES_PER_HOUR` | Most new wedding sites from `/start` in any hour (default 20) |
+| `RELAXED_TEST_LIMITS` | Browser tests only: seeded `@example.com` accounts skip sign-in limits. Ignored in production |
 | `BLOB_READ_WRITE_TOKEN` | Photo and music uploads |
 | `AZURE_TRANSLATOR_KEY`, `AZURE_TRANSLATOR_REGION` | Optional: better Gujarati/Hindi on printed cards |
 | `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`, `AI_VISION_MODEL` | Optional: AI help in the guest-list import |

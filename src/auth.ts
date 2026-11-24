@@ -1,13 +1,25 @@
 import NextAuth from "next-auth";
+import { headers } from "next/headers";
 import Nodemailer from "next-auth/providers/nodemailer";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users, accounts, sessions, verificationTokens } from "@/db/schema";
 import { isProvisionedStaff } from "@/lib/auth/authz";
-import { recordOutbox, smtpConfigured } from "@/lib/email/mailer";
+import { sendSignInLink, smtpServer } from "@/lib/email/mailer";
+import { signInAllowed, SignInLimited } from "@/lib/auth/signin-limits";
+import { visitorIp } from "@/lib/auth/ratelimit";
 import { env } from "@/config/env";
 
+/** The visitor's IP for this request (sign-in runs inside a page action or the /api/auth route). */
+async function requestIp(): Promise<string> {
+  try { return visitorIp(await headers()); } catch { return "local"; }
+}
+
+// settings only (src/config/env.ts): switching mail provider is a change of settings
+const server = smtpServer();
+/** Auth.js's own sign-in email, used to send the link once it's allowed */
+const standard = Nodemailer({ server, from: env.email.from });
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(db, {
     usersTable: users as any, accountsTable: accounts as any,
@@ -15,18 +27,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   }),
   providers: [
     Nodemailer({
-      server: { service: "gmail", auth: { user: env.email.smtpUser, pass: env.email.smtpPass } },
+      server,
       from: env.email.from,
-      // no SMTP: record the magic link in the outbox instead of sending
-      ...(!smtpConfigured() && {
-        sendVerificationRequest: async ({ identifier, url }) => {
-          await recordOutbox({ to: identifier, subject: "Sign in", kind: "signin", link: url });
-        },
-      }),
+      // every sign-in link is counted against the daily email budget
+      sendVerificationRequest: async (params) => {
+        await sendSignInLink(params.identifier, params.url, async () => { await standard.sendVerificationRequest(params); });
+      },
     }),
   ],
   callbacks: {
-    async signIn({ user }) {
+    async signIn({ user, email }) {
+      // Asking for a sign-in link, from any page or a direct POST to /api/auth.
+      // Counted for every address, known or not, so "please wait" never gives
+      // away whether an address has an account.
+      if (email?.verificationRequest && !await signInAllowed(user.email ?? "", await requestIp())) {
+        throw new SignInLimited("too many sign-in links");
+      }
       return isProvisionedStaff(user.email);
     },
     async session({ session, user }) {

@@ -6,7 +6,7 @@ to draw PDFs.) Grouped by area:
 
 | Folder | What's in it |
 |---|---|
-| `auth/` | Who may do what. `access` (roles, areas, levels), `authz` (`requireRole`, `requireAccess`, `guestListScope`, where each role lands), `people` (who can sign in to a wedding), `signup`, `account` (email-confirmed reset/delete), `tokens` (private-link tokens, stored hashed), `ratelimit` |
+| `auth/` | Who may do what. `access` (roles, areas, levels), `authz` (`requireRole`, `requireAccess`, `guestListScope`, where each role lands), `people` (who can sign in to a wedding), `signup`, `account` (email-confirmed reset/delete), `tokens` (private-link tokens, stored hashed), `ratelimit` (shared counters, visitor IP), `signin-limits` |
 | `guests/` | The guest list. `household` (households and guests), `primary` (one primary guest per household), `invites` (where an invitation points), `rsvp` and `open-rsvp` (replies by private link or shared link), `possible-match` (merging a shared-link reply into a household it matched), `attendance`, `contacts` (RSVP contacts), `guest-sheet` (spreadsheet round trip), `stay`, `stay-groups`, `travel` (hotels, rooms, Travel & Stay) |
 | `site/` | The wedding site and each family's settings. `looks` (a family's look and wording over the shared details), `editor` (saving what the couple edits), `presets` (ceremonies to add in one tap), `gallery`, `site-decor`, `share` (the family's shared link), `sides`, `side-names`, `slug`, `maplinks`, `checklist`, `sample` (the example wedding) |
 | `email/` | `mailer` (every email we send) and `calendar` (.ics files and meeting requests) |

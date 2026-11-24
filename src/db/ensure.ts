@@ -11,6 +11,11 @@ export async function ensureColumns() {
   await db.execute(sql`ALTER TABLE "families" ADD COLUMN IF NOT EXISTS "stay_sent" jsonb`);
   await db.execute(sql`ALTER TABLE "families" ADD COLUMN IF NOT EXISTS "possible_match_family_id" uuid REFERENCES "families"("id") ON DELETE SET NULL`);
   await db.execute(sql`ALTER TABLE "families" ADD COLUMN IF NOT EXISTS "possible_match_by" text`);
+  await db.execute(sql`ALTER TABLE "outbox" ADD COLUMN IF NOT EXISTS "status" text DEFAULT 'recorded' NOT NULL`);
+  await db.execute(sql`ALTER TABLE "outbox" ADD COLUMN IF NOT EXISTS "sent_at" timestamp with time zone`);
+  await db.execute(sql`ALTER TABLE "outbox" ADD COLUMN IF NOT EXISTS "payload" jsonb`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS "outbox_sent_at" ON "outbox" ("sent_at")`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS "rate_limits" ("key" text PRIMARY KEY NOT NULL, "window_start" timestamp with time zone NOT NULL, "count" integer NOT NULL)`);
   await db.execute(sql`ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "time_zone" text DEFAULT 'Asia/Kolkata' NOT NULL`);
   await db.execute(sql`ALTER TABLE "wedding_sides" ADD COLUMN IF NOT EXISTS "print_text" jsonb`);
   await db.execute(sql`CREATE TABLE IF NOT EXISTS "machine_text" ("lang" text NOT NULL, "kind" text NOT NULL, "src" text NOT NULL, "out" text NOT NULL, "created_at" timestamp with time zone DEFAULT now() NOT NULL, CONSTRAINT "machine_text_lang_kind_src_pk" PRIMARY KEY("lang","kind","src"))`);

@@ -26,7 +26,7 @@ async function manager(requested: unknown) {
 export async function addPersonAction(input: { weddingId?: string; email: string } & Record<string, unknown>): Promise<Out> {
   const m = await manager(input?.weddingId);
   if (!m) return { ok: false, error: "forbidden" };
-  if (!rateLimit(`people-add:${m.actor.userId}`, { max: 20, windowMs: 10 * 60_000 })) return { ok: false, error: "Too many at once. Wait a few minutes, then try again." };
+  if (!await rateLimit(`people-add:${m.actor.userId}`, { max: 20, windowMs: 10 * 60_000 })) return { ok: false, error: "Too many at once. Wait a few minutes, then try again." };
   const r = await people.addPerson(m.weddingId, m.actor, input.email, input);
   if (!r.ok) return r;
   revalidatePath("/couple/people");
