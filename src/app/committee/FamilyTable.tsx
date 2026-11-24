@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { sendInvitesAction, bulkFamilyRsvpAction } from "./actions";
+import { sendInvitesAction, bulkFamilyRsvpAction, resolvePossibleMatchAction } from "./actions";
 import { useTravelToggle } from "./travel";
 import type { Side } from "@/lib/site/sides";
 import { FamilyForm, draftFromFamily, type FamilyDraft } from "./FamilyForm";
@@ -33,6 +33,8 @@ export type Row = {
   lastEmail: { type: string; status: string; sentAt: string } | null;
   /** the latest invitation by each route */
   inviteSent?: { whatsappAt: string | null; email: { at: string; type: string; ok: boolean } | null };
+  /** a reply from the family's shared link whose phone or email matched this household on the list */
+  possibleMatch?: { name: string; by: "phone" | "email" } | null;
 };
 
 /** "19 Nov, 12:44 am", in India time */
@@ -71,6 +73,7 @@ export function FamilyTable({
   const travel = useTravelToggle(weddingId, rows, setFlash);
   const [query, setQuery] = useState("");
   const [waitingOnly, setWaitingOnly] = useState(false);
+  const [lookOnly, setLookOnly] = useState(false);
   const bar = useBarHeight<HTMLDivElement>();
   const phone = useIsPhone();
 
@@ -135,10 +138,12 @@ export function FamilyTable({
 
   // find a family by its name, relation, anyone in it, or a phone or email
   const waiting = rows.filter((r) => Object.keys(r.rsvpByEvent).length === 0);
+  const needsLook = rows.filter((r) => r.possibleMatch);
   const q = query.trim().toLowerCase();
   const digits = q.replace(/\s/g, "");
   const shown = rows.filter((r) => {
     if (waitingOnly && Object.keys(r.rsvpByEvent).length > 0) return false;
+    if (lookOnly && !r.possibleMatch) return false;
     if (!q) return true;
     return r.name.toLowerCase().includes(q) || (r.relation ?? "").toLowerCase().includes(q)
       || r.email.toLowerCase().includes(q) || (r.phone ?? "").replace(/\s/g, "").includes(digits)
@@ -153,6 +158,60 @@ export function FamilyTable({
       {r.source === "guest" && <span className="ml-1 rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 font-medium text-violet-700">via link</span>}
       {r.diet && <span className="ml-1 rounded border border-neutral-200 px-1.5 py-0.5">{r.diet}</span>}
     </p>
+  );
+  /** "4 coming to Sangeet, Pheras. Can't make Haldi." */
+  const replySummary = (r: Row) => {
+    const answered = events.filter((e) => r.rsvpByEvent[e.id]);
+    const yes = answered.filter((e) => r.rsvpByEvent[e.id].status === "attending");
+    const no = answered.filter((e) => r.rsvpByEvent[e.id].status === "declined");
+    const most = Math.max(0, ...yes.map((e) => r.rsvpByEvent[e.id].headcount));
+    return [
+      yes.length ? `${most} coming to ${yes.map((e) => e.name).join(", ")}.` : "",
+      no.length ? `Can't make ${no.map((e) => e.name).join(", ")}.` : "",
+    ].filter(Boolean).join(" ");
+  };
+  function resolve(r: Row, merge: boolean) {
+    setFlash(null);
+    startTransition(async () => {
+      const res = await safeCall(() => resolvePossibleMatchAction({ weddingId, familyId: r.id, merge }));
+      if (!res.ok) {
+        setFlash(res.error === "not allowed"
+          ? "Couldn't do that: this reply may already have been sorted. Refresh the page to see the latest."
+          : res.error ?? "Something went wrong. Please try again.");
+        return;
+      }
+      setFlash(merge ? `${r.name}'s reply is now part of ${r.possibleMatch!.name}` : `${r.name} kept as a separate household`);
+      router.refresh();
+    });
+  }
+  /* a shared-link reply that may be a household already on the list */
+  const lookNotice = (r: Row) => r.possibleMatch && (
+    <div className="mt-2 rounded border border-amber-200 bg-amber-50 p-2.5 text-xs leading-relaxed text-amber-900" data-testid="needs-look">
+      <p className="font-medium">Needs a look</p>
+      <p className="break-words">
+        Possible match: {r.possibleMatch.name} (same {r.possibleMatch.by}). {replySummary(r)}
+      </p>
+      {!readOnly && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={pending}
+            className="portal-button"
+            onClick={() => setConfirm({
+              title: `Add this reply to ${r.possibleMatch!.name}?`,
+              body: `Their answers move onto ${r.possibleMatch!.name}, which keeps its own members, contact details and private link. Where both answered the same event, the newer answer is kept. This separate entry, ${r.name}, is then removed.`,
+              go: "Yes, that's them",
+              run: () => resolve(r, true),
+            })}
+          >
+            Yes, that&apos;s them
+          </button>
+          <button type="button" disabled={pending} className="portal-button-secondary" onClick={() => resolve(r, false)}>
+            No, keep separate
+          </button>
+        </div>
+      )}
+    </div>
   );
   const contact = (r: Row) => {
     const p = r.members.find((m) => m.isPrimary);
@@ -254,6 +313,7 @@ export function FamilyTable({
   const actions = (r: Row) => <span className="row-actions">{sendIcons(r)}{rsvpIcon(r)}{editIcon(r)}</span>;
   const empty = rows.length === 0
     ? readOnly ? <>No families yet.</> : <>No families yet — add the first one, or <a href={importHref} className="portal-link">import a spreadsheet</a>.</>
+    : lookOnly && !q ? <>Nothing needs a look right now.</>
     : waitingOnly && !q ? <>Everyone has answered. 🎉</> : <>No family matches that search.</>;
 
   return (
@@ -278,6 +338,17 @@ export function FamilyTable({
         >
           Still waiting · {waiting.length}
         </button>
+        {needsLook.length > 0 && (
+          <button
+            type="button"
+            aria-pressed={lookOnly}
+            onClick={() => setLookOnly((v) => !v)}
+            title="Replies from your shared link that may be a household already on the list"
+            className={lookOnly ? "portal-button" : "portal-button-secondary"}
+          >
+            Needs a look · {needsLook.length}
+          </button>
+        )}
         <div className="mx-1 hidden h-6 w-px bg-neutral-200 sm:block" />
         {!readOnly && <>
         <button
@@ -323,7 +394,7 @@ export function FamilyTable({
         <p className="text-xs font-medium text-neutral-500" aria-live="polite">
           {pending ? "Sending…" : flash ?? (ids.length
             ? `${ids.length} household${ids.length === 1 ? "" : "s"} selected`
-            : q || waitingOnly ? `${shown.length} of ${rows.length} families` : readOnly ? "View only" : "Select households to email")}
+            : q || waitingOnly || lookOnly ? `${shown.length} of ${rows.length} families` : readOnly ? "View only" : "Select households to email")}
         </p>
       </div>
 
@@ -351,6 +422,7 @@ export function FamilyTable({
                     <p className="whitespace-nowrap text-xs text-neutral-500">{r.members.length} {r.members.length === 1 ? "guest" : "guests"}</p>
                   </div>
                   {tags(r)}
+                  {lookNotice(r)}
                   <div className="mt-2 text-neutral-600">{contact(r)}</div>
                   <div className="mt-3">{chips(r)}</div>
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-600">
@@ -389,7 +461,8 @@ export function FamilyTable({
           </thead>
           <tbody>
             {shown.map((r) => (
-              <tr key={r.id}>
+              <Fragment key={r.id}>
+              <tr>
                 <td>
                   <input type="checkbox" aria-label={`Select ${r.name}`} checked={selected.has(r.id)} onChange={() => toggle(r.id)} />
                 </td>
@@ -406,6 +479,13 @@ export function FamilyTable({
                 <td className="text-center">{rsvpIcon(r)}</td>
                 <td className="text-center">{editIcon(r)}</td>
               </tr>
+              {r.possibleMatch && (
+                <tr>
+                  <td />
+                  <td colSpan={8} className="pt-0">{lookNotice(r)}</td>
+                </tr>
+              )}
+              </Fragment>
             ))}
             {shown.length === 0 && (
               <tr>

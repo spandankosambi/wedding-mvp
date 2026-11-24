@@ -90,6 +90,30 @@ test("a couple signs up, edits their site, and a guest RSVPs from the shared lin
   // an APP_URL left pointing elsewhere would hand 300 guests a dead link
   const shareUrl = await page.locator("#share input[readonly]").inputValue();
   expect(shareUrl).toBe(new URL(link.pathname + link.search, page.url()).toString());
+
+
+  // ── someone else uses the shared link with the Kapoors' number ──
+  // the Kapoors stay as they are; the reply waits on the guest list for a look
+  await page.goto(replyHref!);
+  await page.fill("input[placeholder='The Mehtas / Priya Nair']", "Kapoor cousin");
+  await page.fill("input[inputmode=tel]", "098765 43210");
+  await page.getByTestId("event-card").nth(1).getByRole("button", { name: /^attending$/i }).click();
+  await page.getByRole("button", { name: /send rsvp/i }).click();
+  await expect(page.getByText(/see you at the/i)).toBeVisible();
+  await expect(page.getByText(/Kapoors/)).toHaveCount(0); // never shown the matched household
+  await page.goto("/committee?family=bride");
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.getByRole("button", { name: "Needs a look · 1" }).click();
+  const notice = page.getByTestId("needs-look");
+  await expect(notice).toContainText("Possible match: The Kapoors (same phone).");
+  await expect(notice).toContainText("coming to");
+  await notice.getByRole("button", { name: "Yes, that's them" }).click();
+  const confirm = page.getByRole("alertdialog");
+  await expect(confirm).toContainText("Add this reply to The Kapoors?");
+  await confirm.getByRole("button", { name: "Yes, that's them" }).click();
+  await expect(page.getByText("Kapoor cousin's reply is now part of The Kapoors")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Needs a look/ })).toHaveCount(0);
+  await expect(page.getByTestId("needs-look")).toHaveCount(0);
 });
 
 test("each family decides whether people who are not on its guest list can reply", async ({ page }) => {

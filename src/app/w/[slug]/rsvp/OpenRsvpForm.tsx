@@ -16,7 +16,8 @@ export function OpenRsvpForm({ slug, events, initialSide = "bride", shareKey, na
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [side, setSide] = useState<"bride" | "groom">(initialSide);
+  // the link decides whose side they reply on
+  const side = initialSide;
   const [diet, setDiet] = useState<string>("");
   const [guestNames, setGuestNames] = useState("");
   const [note, setNote] = useState("");
@@ -27,8 +28,8 @@ export function OpenRsvpForm({ slug, events, initialSide = "bride", shareKey, na
   const [done, setDone] = useState<{ editUrl: string; attending: string[] } | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // once they say whose side they're from, only that side's events (and common ones)
-  const shown = side ? events.filter((e) => eventForSide(e.side, side)) : events;
+  // this family's events and the common ones
+  const shown = events.filter((e) => eventForSide(e.side, side));
   const answered = shown.filter((e) => statuses[e.id] !== null);
   const canSubmit = name.trim().length >= 2 && (phone.trim() || email.trim()) && answered.length > 0 && !pending;
 
@@ -93,13 +94,6 @@ export function OpenRsvpForm({ slug, events, initialSide = "bride", shareKey, na
           <label className="block">
             <span className="text-xs" style={{ color: "var(--ink-soft)" }}>Email (optional)</span>
             <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" maxLength={254} placeholder="you@example.com" className="mt-1.5 w-full px-4 py-3 text-sm outline-none" style={field} />
-          </label>
-          <label className="block">
-            <span className="text-xs" style={{ color: "var(--ink-soft)" }}>You&apos;re here for</span>
-            <select value={side} onChange={(e) => setSide(e.target.value as typeof side)} className="mt-1.5 w-full px-4 py-3 text-sm outline-none" style={field}>
-              <option value="bride">{names.bride}&apos;s side</option>
-              <option value="groom">{names.groom}&apos;s side</option>
-            </select>
           </label>
           <label className="block">
             <span className="text-xs" style={{ color: "var(--ink-soft)" }}>Food preference</span>

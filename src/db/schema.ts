@@ -1,4 +1,5 @@
 import { pgTable, pgEnum, text, integer, boolean, jsonb, timestamp, uuid, primaryKey, uniqueIndex } from "drizzle-orm/pg-core";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
 export const themeEnum = pgEnum("theme", ["ivory-editorial", "raj-mahal", "gulaab-rococo", "mehfil-noor", "pichwai-bagh", "neel-chhapa"]);
 export const sideEnum = pgEnum("side", ["bride", "groom", "both"]);
@@ -155,6 +156,11 @@ export const families = pgTable("families", {
   showTravel: boolean("show_travel"),
   /** when this household was last sent its stay details, and how */
   staySent: jsonb("stay_sent").$type<StaySent>(),
+  /** A reply from a family's shared link whose phone or email matched this
+      existing household. The reply is kept apart until the couple or
+      committee merges it ("Yes, that's them") or keeps it separate. */
+  possibleMatchFamilyId: uuid("possible_match_family_id").references((): AnyPgColumn => families.id, { onDelete: "set null" }),
+  possibleMatchBy: text("possible_match_by").$type<"phone" | "email">(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

@@ -61,6 +61,12 @@ export default async function CommitteePage({
     return `/committee?${q}`;
   };
   const famIds = fams.map((f) => f.id);
+  // shared-link replies that may be a household already on this side's list
+  const matchIds = [...new Set(fams.map((f) => f.possibleMatchFamilyId).filter((id): id is string => !!id))];
+  const matchNames = new Map(matchIds.length
+    ? (await db.select({ id: families.id, name: families.name }).from(families)
+        .where(and(eq(families.weddingId, weddingId), eq(families.side, family), inArray(families.id, matchIds)))).map((f) => [f.id, f.name])
+    : []);
   const [allGuests, allInvites, allRsvps, allLogs] = famIds.length
     ? await Promise.all([
         db.select().from(guests).where(inArray(guests.familyId, famIds)).orderBy(guests.seq),
@@ -79,6 +85,9 @@ export default async function CommitteePage({
     phone: f.phone,
     diet: f.diet,
     source: f.source,
+    possibleMatch: f.possibleMatchFamilyId
+      ? { name: matchNames.get(f.possibleMatchFamilyId) ?? "a household on your list", by: f.possibleMatchBy === "email" ? "email" as const : "phone" as const }
+      : null,
     members: allGuests.filter((g) => g.familyId === f.id)
       .map((g) => ({ id: g.id, fullName: g.fullName, ageGroup: g.ageGroup, details: g.details ?? {}, email: g.email, phone: g.phone, isPrimary: g.isPrimary })),
     eventIds: allInvites.filter((i) => i.familyId === f.id).map((i) => i.eventId),

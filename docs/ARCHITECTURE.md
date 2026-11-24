@@ -85,6 +85,10 @@ There's no separate API server. Two kinds of server entry point, both in `src/ap
   people who aren't signed in.
 - **Guests never sign in.** A household's private link carries a token, stored only as a hash.
   A family's shared link carries a short code (`?k=…`, `src/lib/site/share.ts`).
+- **A shared link never touches a household already on the list.** Every reply through it becomes
+  a new household on the link's side, for that side's events only (`src/lib/guests/open-rsvp.ts`).
+  If its phone or email matches a household there, it is flagged "Needs a look" and the couple or
+  committee merges it or keeps it separate (`src/lib/guests/possible-match.ts`).
 
 ## The data
 

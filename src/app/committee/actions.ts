@@ -11,6 +11,7 @@ import { syncHousehold } from "@/lib/guests/primary";
 import { eventForSide } from "@/lib/site/sides";
 import { sendStayDetails } from "@/lib/guests/stay";
 import { guestListScope } from "@/lib/auth/authz";
+import { mergePossibleMatch, keepSeparate } from "@/lib/guests/possible-match";
 
 /* Admin may act on any wedding (passes it explicitly); everyone else is pinned
    to their own. Every action re-resolves this server-side — never trust input.
@@ -143,6 +144,22 @@ export async function deleteFamilyAction(input: unknown): Promise<{ ok: boolean;
   revalidatePath("/committee");
   revalidatePath("/couple");
   return res;
+}
+
+/** "Needs a look": a shared-link reply that may be a household already on the
+    list. Both households are re-checked against the wedding and the person's
+    side in the database (see possible-match.ts). */
+export async function resolvePossibleMatchAction(input: unknown): Promise<{ ok: boolean; error?: string }> {
+  const parsed = idsSchema.extend({ merge: z.boolean() }).safeParse(input);
+  if (!parsed.success) return { ok: false, error: "invalid input" };
+  const s = await scope(parsed.data.weddingId);
+  if (!s) return { ok: false, error: "forbidden" };
+  const res = parsed.data.merge
+    ? await mergePossibleMatch(s.weddingId, parsed.data.familyId, s.access)
+    : await keepSeparate(s.weddingId, parsed.data.familyId, s.access);
+  if (!res.ok) return res;
+  done();
+  return { ok: true };
 }
 
 export async function recordRsvpAction(input: { weddingId: string } & Record<string, unknown>): Promise<{ ok: boolean; error?: string }> {
