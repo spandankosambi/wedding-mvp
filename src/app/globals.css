@@ -1544,3 +1544,22 @@ html[data-keyboard="open"] .floating-save { bottom: calc(var(--kb-h, 18rem) + 0.
 @media (prefers-reduced-motion: reduce) {
   .press-overlay, .press-roller, .press-sheet, .press-ink, .press-done { animation: none; }
 }
+
+/* ── Rishta Corner guest pages: built on each wedding theme's own colours ── */
+.r-card { background: var(--surface); border: 1px solid var(--hairline); padding: 1.25rem; }
+.r-label { display: block; font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 0.35rem; }
+.r-input { width: 100%; background: var(--surface); border: 1px solid var(--hairline); color: var(--ink); padding: 0.7rem 0.8rem; font-size: 1rem; border-radius: 0; }
+.r-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.r-btn { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; padding: 0.7rem 1.4rem; background: var(--accent); color: var(--surface); font-size: 0.9rem; letter-spacing: 0.04em; }
+.r-btn:disabled { opacity: 0.45; }
+.r-btn-quiet { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; padding: 0.6rem 1.1rem; border: 1px solid var(--hairline); color: var(--ink); background: transparent; font-size: 0.9rem; }
+.r-note { font-size: 0.8rem; line-height: 1.5; color: var(--ink-soft); }
+.r-alert { border: 1px solid var(--hairline); border-left: 3px solid var(--accent); padding: 0.75rem 1rem; font-size: 0.9rem; color: var(--ink); background: var(--surface); }
+.r-choice { display: inline-flex; flex: 1; min-height: 44px; align-items: center; gap: 0.5rem; border: 1px solid var(--hairline); padding: 0.55rem 0.8rem; color: var(--ink); font-size: 0.95rem; cursor: pointer; }
+.r-choice:has(input:checked) { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.r-choice input, .r-check input { accent-color: var(--accent); width: 1.1rem; height: 1.1rem; flex: none; }
+.r-check { display: flex; align-items: flex-start; gap: 0.6rem; font-size: 0.9rem; line-height: 1.45; color: var(--ink); cursor: pointer; }
+.r-check input { margin-top: 0.15rem; }
+.r-tabs { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--hairline); overflow-x: auto; }
+.r-tabs a { padding: 0.7rem 0.9rem; font-size: 0.9rem; color: var(--ink-soft); white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.r-tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); }

@@ -12,6 +12,7 @@ to draw PDFs.) Grouped by area:
 | `email/` | `mailer` (every email we send) and `calendar` (.ics files and meeting requests) |
 | `core/` | Shared helpers. `format` and `timezones` (dates), `brand`, `origin` (this request's address), `retry`, `safe-call` (screens calling the server), `ai` (any OpenAI-compatible service), `help`, `justify` (photo rows), `icon-mask`, `icon-png` |
 | `tours/` | Page tours: `tours` (every tour's wording, who sees which step, when one starts by itself), `progress` (who has seen which, saved per person) |
+| `rishta/` | Rishta Corner: `rules` (ages, window, consent wording, allowed links), `photo-meta` (removes location and other hidden data from photos), `profiles` (household drafts, the single's passcode and session, publish, photos), `match` (who sees whom, interest, matches, introductions, block, report), `host` (counts, approval, reports, the deletion promise) |
 | `plan/` | Plan: `spaces` (who reaches Both families and each family's space; who may delete), `tasks`, `meetings`, `starter` (the suggested first list). Every query pinned to the wedding and the person's spaces |
 | `import/` | Bringing in a guest list: `spreadsheet` → `profile` → `heuristic`/`ai` mapping → `normalize` → `match` → `commit`; `scan` reads photos, Word, PDF and text |
 | `invitation/` | Printed cards and envelopes: `options` (choices and paper maths), `content` (the card's words), `i18n`/`langs`/`translit`/`machine` (Gujarati and Hindi), `words` (the wording page), `envelope`, `motifs`/`decor`/`shapes` (ornaments), `pdf/` (the drawing), `fonts/` |

@@ -8,7 +8,7 @@ const LONG_EDGE = 2000;
 
 /** Phone photos are 3–10 MB; shrink to a 2000px JPEG (~300–600 KB) in the
     browser so uploads are quick on mobile data and fit the server's limits. */
-async function shrink(file: File): Promise<{ blob: Blob; width: number; height: number }> {
+export async function shrink(file: File): Promise<{ blob: Blob; width: number; height: number }> {
   const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
   const scale = Math.min(1, LONG_EDGE / Math.max(bmp.width, bmp.height));
   const width = Math.round(bmp.width * scale);

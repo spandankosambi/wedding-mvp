@@ -204,6 +204,13 @@
       "when": 1795713494146,
       "tag": "0028_tours",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1795719552606,
+      "tag": "0029_rishta",
+      "breakpoints": true
     }
   ]
 }

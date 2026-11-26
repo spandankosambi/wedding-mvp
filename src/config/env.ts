@@ -18,7 +18,18 @@ const read = (name: string): string | undefined => {
 export const env = {
   /** Neon Postgres. Unset locally: the embedded PGlite database is used. */
   get databaseUrl() { return read("DATABASE_URL"); },
+  /** Signs sessions (Auth.js) and Rishta Corner's own short sessions. Required live. */
+  get authSecret() {
+    const v = read("AUTH_SECRET");
+    if (v) return v;
+    if (process.env.NODE_ENV === "production") throw new Error("AUTH_SECRET is not set");
+    return "local-only-secret-not-for-production";
+  },
   /** Fallback address for links built outside a request (seed, tests). */
+  /** Where people write to us (the grievance officer); else the address emails come from. */
+  get contactEmail() { return read("CONTACT_EMAIL") ?? read("EMAIL_FROM")?.match(/[^<\s]+@[^>\s]+/)?.[0] ?? null; },
+  /** Vercel Cron sends this as a bearer token; unset means the cron route refuses. */
+  get cronSecret() { return read("CRON_SECRET"); },
   get appUrl() { return read("APP_URL") ?? "http://localhost:3000"; },
 
   email: {

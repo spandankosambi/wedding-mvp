@@ -78,7 +78,7 @@ async function recordOutbox(m: {
    which expires in minutes, fails with a clear message instead. */
 
 export const SIGNIN_RESERVE = 50;
-type Kind = "signin" | "invite" | "confirm" | "access" | "help" | "calendar" | "stay";
+type Kind = "signin" | "invite" | "confirm" | "access" | "help" | "calendar" | "stay" | "rishta";
 const CAN_WAIT = new Set<Kind>(["invite", "calendar", "stay", "access", "help"]);
 
 /** The daily email allowance is used up for this kind of email. */
@@ -294,4 +294,35 @@ ${args.gettingThere.trim() ? `<p style="margin-top:18px;font-weight:600">Getting
 <p>See you soon!</p>
 </div>`;
   return dispatch({ kind: "stay", to: args.to, subject, html, from: fromHeader(args.coupleNames) });
+}
+
+/* ── Rishta Corner. Time-critical, so never queued: past the budget they fail
+   with a clear message (see dispatch). Everything typed is escaped. ─────── */
+
+const rishtaShell = (body: string) => `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.55;color:#22201c;max-width:520px">
+${emailLogo()}
+${body}
+<p style="color:#6b6760;font-size:13px">Rishta Corner is for matrimonial introductions only, not a dating service. One Tap Invites does not verify profile information.</p>
+</div>`;
+
+/** To the single: your family started a profile for you; open it to check and publish. */
+export async function sendRishtaLink(args: { to: string; firstName: string; coupleNames: string; link: string }) {
+  const subject = `${args.firstName}, a Rishta Corner profile is waiting for you`;
+  const html = rishtaShell(`<p>Hi ${escapeHtml(args.firstName)},</p>
+<p>Your family started a profile for you in <b>Rishta Corner</b> at ${escapeHtml(args.coupleNames)}'s wedding: a private place where singles invited to the wedding can be introduced, with their families.</p>
+<p>Nobody can see it until <b>you</b> check it, change anything you like, and publish it. If you'd rather not, just ignore this email or delete the draft from the page.</p>
+<p><a href="${args.link}" style="display:inline-block;background:#292723;color:#fff;text-decoration:none;padding:10px 16px;border-radius:8px;font-weight:600">Open my profile</a></p>
+<p style="color:#6b6760;font-size:13px">This link is only for you. Please don't forward it.</p>`);
+  // the link is kept only in local test mode; a real send stores no link (see deliverNow)
+  await dispatch({ kind: "rishta", to: args.to, subject, html, link: args.link, from: env.email.from });
+}
+
+/** The 6-digit passcode that proves the single is the one opening their page. */
+export async function sendRishtaCode(args: { to: string; code: string; minutes: number }) {
+  // the code stays out of the subject: subjects are kept in the email log
+  const subject = "Your Rishta Corner code";
+  const html = rishtaShell(`<p>Your code is</p>
+<p style="font-size:28px;font-weight:700;letter-spacing:6px;margin:8px 0">${escapeHtml(args.code)}</p>
+<p>It works for ${args.minutes} minutes. If you didn't ask for it, ignore this email: nobody can open your profile without it.</p>`);
+  await dispatch({ kind: "rishta", to: args.to, subject, html, from: env.email.from });
 }

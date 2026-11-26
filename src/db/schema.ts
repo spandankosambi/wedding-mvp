@@ -370,3 +370,99 @@ export const tourProgress = pgTable("tour_progress", {
   how: text("how").notNull(),
   at: timestamp("at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [primaryKey({ columns: [t.userId, t.tour] })]);
+
+/* ── Rishta Corner: host-vouched introductions between singles at one
+   wedding. Everything about a profile is deleted when the wedding's window
+   closes; only consent records and reports are kept (180 days). ───────── */
+
+export type RishtaGender = "woman" | "man";
+export type RishtaStatus = "draft" | "pending" | "live" | "removed";
+export type RishtaPhoto = { pathname: string; url: string; width: number; height: number };
+export type RishtaConsent = { notice: string; lang: string; at: string; declarations: string[] };
+
+/** Per wedding: switched on by admin during the pilot; the couple sets the window. */
+export const rishtaSettings = pgTable("rishta_settings", {
+  weddingId: uuid("wedding_id").primaryKey().references(() => weddings.id, { onDelete: "cascade" }),
+  enabled: boolean("enabled").notNull().default(false),
+  opensOn: date("opens_on", { mode: "string" }).notNull(),
+  closesOn: date("closes_on", { mode: "string" }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const rishtaProfiles = pgTable("rishta_profiles", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  weddingId: uuid("wedding_id").notNull().references(() => weddings.id, { onDelete: "cascade" }),
+  /** the invited household that started it (from its own private RSVP link) */
+  familyId: uuid("family_id").notNull().references(() => families.id, { onDelete: "cascade" }),
+  status: text("status").$type<RishtaStatus>().notNull().default("draft"),
+  firstName: text("first_name").notNull(),
+  gender: text("gender").$type<RishtaGender>().notNull(),
+  lookingFor: text("looking_for").$type<RishtaGender>().notNull(),
+  birthYear: integer("birth_year").notNull(),
+  city: text("city").notNull().default(""),
+  education: text("education").notNull().default(""),
+  profession: text("profession").notNull().default(""),
+  bio: text("bio").notNull().default(""),
+  /** e.g. "Ananya's cousin": shown only if the single agrees and the host approves the wording */
+  relation: text("relation"),
+  relationShown: boolean("relation_shown").notNull().default(false),
+  relationApproved: boolean("relation_approved").notNull().default(false),
+  /** Jeevansathi / Shaadi.com profile; shown only after a mutual match */
+  externalUrl: text("external_url"),
+  familyContactName: text("family_contact_name"),
+  familyContactPhone: text("family_contact_phone"),
+  photos: jsonb("photos").$type<RishtaPhoto[]>().notNull().default([]),
+  /** the single's own email; their private link and passcodes go here */
+  email: text("email").notNull(),
+  tokenHash: text("token_hash").notNull(),
+  otpHash: text("otp_hash"),
+  otpExpiresAt: timestamp("otp_expires_at", { withTimezone: true }),
+  otpTries: integer("otp_tries").notNull().default(0),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  consent: jsonb("consent").$type<RishtaConsent>(),
+  marketingOptIn: boolean("marketing_opt_in").notNull().default(false),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [index("rishta_profiles_wedding").on(t.weddingId), uniqueIndex("rishta_profiles_token").on(t.tokenHash)]);
+
+/** A private "Interested". Two of them, each way, are a match. */
+export const rishtaInterests = pgTable("rishta_interests", {
+  fromId: uuid("from_id").notNull().references(() => rishtaProfiles.id, { onDelete: "cascade" }),
+  toId: uuid("to_id").notNull().references(() => rishtaProfiles.id, { onDelete: "cascade" }),
+  /** this side agreed to "Introduce our families" */
+  introduce: boolean("introduce").notNull().default(false),
+  at: timestamp("at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [primaryKey({ columns: [t.fromId, t.toId] })]);
+
+export const rishtaBlocks = pgTable("rishta_blocks", {
+  fromId: uuid("from_id").notNull().references(() => rishtaProfiles.id, { onDelete: "cascade" }),
+  toId: uuid("to_id").notNull().references(() => rishtaProfiles.id, { onDelete: "cascade" }),
+  at: timestamp("at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [primaryKey({ columns: [t.fromId, t.toId] })]);
+
+/** Kept 180 days after the window closes, for the grievance officer. */
+export const rishtaReports = pgTable("rishta_reports", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  weddingId: uuid("wedding_id").notNull().references(() => weddings.id, { onDelete: "cascade" }),
+  profileId: uuid("profile_id").references(() => rishtaProfiles.id, { onDelete: "set null" }),
+  reporterId: uuid("reporter_id").references(() => rishtaProfiles.id, { onDelete: "set null" }),
+  /** a first name only, so the report still makes sense once the profile is gone */
+  aboutName: text("about_name").notNull(),
+  reason: text("reason").notNull(),
+  note: text("note"),
+  at: timestamp("at", { withTimezone: true }).defaultNow().notNull(),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+});
+
+/** Proof of each publish: kept 180 days after close; the email is stored scrambled. */
+export const rishtaConsents = pgTable("rishta_consents", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  weddingId: uuid("wedding_id").notNull().references(() => weddings.id, { onDelete: "cascade" }),
+  emailHash: text("email_hash").notNull(),
+  consent: jsonb("consent").$type<RishtaConsent>().notNull(),
+  closesOn: date("closes_on", { mode: "string" }).notNull(),
+  at: timestamp("at", { withTimezone: true }).defaultNow().notNull(),
+});

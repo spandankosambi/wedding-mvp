@@ -112,6 +112,17 @@ There's no separate API server. Two kinds of server entry point, both in `src/ap
   counts the last 24 hours. Past `EMAIL_DAILY_BUDGET − 50`, mail that can wait is queued; sign-in
   links may use the last 50. `/admin` shows the count and sends the queue.
 
+## Rishta Corner (pilot)
+
+Singles at a wedding meet other singles at the same wedding. Admin switches it on per wedding; it's open between two dates (by default 10 days before the wedding to 3 after).
+
+- **Household** (`/rsvp/[token]/rishta`): from its own private RSVP link only, never the shared link or QR. Starts a draft and emails the single their own link. Once the single opens it, the household can't change or delete it.
+- **Single** (`/rishta/me/[token]`): their link plus a 6-digit code emailed to them, then a signed 12-hour cookie (`rishta_s`, path `/rishta`). They edit, add up to 3 photos, tick three declarations and publish. Age gate: 18 for women, 21 for men.
+- **Host** (`/couple/rishta`, couple or admin): approves each published profile (and any relation wording), removes any. Sees counts only, never interests or matches. Reports and the switch are admin only (the grievance officer).
+- **Who sees what**: a live single sees other live singles at the same wedding whom they'd want to meet and who'd want to meet them, minus blocks. Interest is private; two make a match. Family contacts appear only after both choose "Introduce our families".
+- **Photos**: shrunk in the browser, stripped of hidden data on the server, stored under random names, and served only through `/rishta/photo/[id]/[n]` with the same checks. The storage address is never sent out.
+- **Deletion**: profiles, photos, interests and blocks go when the window closes (hourly as pages are visited, and daily via `/api/cron/rishta`). Consent records and reports go 180 days later.
+
 ## The data
 
 Postgres via Drizzle (`src/db/schema.ts`). Main tables:

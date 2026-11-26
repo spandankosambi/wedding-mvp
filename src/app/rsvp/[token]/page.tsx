@@ -6,6 +6,7 @@ import { fmtWeddingDate } from "@/lib/core/format";
 import { Ornament } from "@/themes/ornaments";
 import { RsvpForm } from "./RsvpForm";
 import { namesFor } from "@/lib/site/looks";
+import { stateFor } from "@/lib/rishta/profiles";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,7 @@ export default async function RsvpPage({
   }
 
   const { family, wedding, members, events } = data;
+  const rishta = (await stateFor(wedding.id)).phase;
   const coupleNames = namesFor(wedding, family.side === "groom" ? "groom" : "bride").couple; // their family's order
 
   return (
@@ -95,6 +97,15 @@ export default async function RsvpPage({
             rsvp: e.rsvp,
           }))}
         />
+        {/* only on the household's own link, never the shared one */}
+        {(rishta === "open" || rishta === "before") && (
+          <a href={`/rsvp/${token}/rishta`} className="r-card mt-10 block" data-testid="rishta-card">
+            <span className="font-display text-xl">Rishta Corner</span>
+            <span className="mt-1 block text-sm" style={{ color: "var(--ink-soft)" }}>
+              Someone single in your family? Start a profile for them to meet other guests of this wedding. They decide whether to publish it.
+            </span>
+          </a>
+        )}
       </div>
       <MadeWith className="mt-10 pb-8 text-center" />
     </main>

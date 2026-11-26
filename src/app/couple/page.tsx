@@ -19,6 +19,8 @@ import { saveDetailsAction } from "./site/actions";
 import { Stat, weddingStats } from "./stats";
 import { Field } from "@/components/Field";
 import { PageTour } from "@/app/_tour/PageTour";
+import { settingsFor } from "@/lib/rishta/profiles";
+import { hostCounts } from "@/lib/rishta/host";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +60,8 @@ export default async function CouplePage({
   const adminQ = staff.role === "admin" ? `?wedding=${weddingId}` : "";
   const wid = staff.role === "admin" ? <input type="hidden" name="weddingId" value={weddingId} /> : null;
   const attending = all.guests.length;
+  // Rishta Corner: the couple's (and admin's) door to it, once it's switched on
+  const rishta = staff.role !== "committee" && (await settingsFor(weddingId)).enabled ? await hostCounts(weddingId) : null;
 
   return (
     <main className="portal-page">
@@ -128,6 +132,18 @@ export default async function CouplePage({
           );
         })}
       </div>
+
+      {rishta && (
+        <section className="portal-panel mb-8 flex flex-wrap items-center justify-between gap-4 p-6" aria-label="Rishta Corner">
+          <div>
+            <h2 className="font-semibold">Rishta Corner</h2>
+            <p className="mt-1 text-sm text-neutral-600">
+              {rishta.waiting ? `${rishta.waiting} profile${rishta.waiting === 1 ? "" : "s"} waiting for you to check` : "Nothing waiting for you"} · {rishta.live} live · {rishta.matches} match{rishta.matches === 1 ? "" : "es"}
+            </p>
+          </div>
+          <Link href={`/couple/rishta${adminQ}`} className="portal-button-secondary">Open Rishta Corner</Link>
+        </section>
+      )}
 
       {staff.access.manage && (<>
       {/* ── shared details ──────────────────────────────────────── */}
