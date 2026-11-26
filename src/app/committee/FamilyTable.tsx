@@ -357,6 +357,7 @@ export function FamilyTable({
         <button
           onClick={() => setEditing("new")}
           className="portal-button"
+          data-tour="add-family"
         >
           Add family
         </button>
@@ -376,6 +377,7 @@ export function FamilyTable({
           disabled={!ids.length || pending}
           onClick={() => send("invite", ids)}
           className="portal-button-secondary"
+          data-tour="send-invites"
         >
           Send invites
         </button>

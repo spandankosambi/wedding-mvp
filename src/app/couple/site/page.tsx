@@ -30,6 +30,7 @@ import { galleryOf, photoStorageConfigured, MAX_GALLERY_PHOTOS } from "@/lib/sit
 import { saveWordsAction, saveWordingAction, saveDecorAction, saveKnowAction, removeMusicAction, saveTravelAction, saveGallerySettingsAction, removeGalleryPhotoAction, moveGalleryPhotoAction, copyPartAction, saveChangesAction } from "./actions";
 import { Field } from "@/components/Field";
 import { EventsSection } from "./_sections/EventsSection";
+import { PageTour } from "@/app/_tour/PageTour";
 
 export const dynamic = "force-dynamic";
 
@@ -84,6 +85,7 @@ export default async function SiteEditorPage({ searchParams }: { searchParams: P
   return (
     <main className="portal-page">
       <PortalNav sideNames={sn} names={coupleNames} current={family} page="site" weddingId={weddingId} admin={!!adminQ} access={staff.access} />
+      <PageTour id="site" />
       {/* keyed by family: moving from one family's editor to the other's starts
           every field afresh, rather than carrying over what the first showed */}
       <PortalFrame

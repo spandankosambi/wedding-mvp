@@ -96,6 +96,10 @@ There's no separate API server. Two kinds of server entry point, both in `src/ap
 - **Events and sides** (`src/lib/site/editor.ts`): someone who works one family's side may edit,
   publish, delete, move and sort only the common events and that side's own, checked in each query.
   Only the couple (or both-side access) can turn a common event into one family's own.
+- **Page tours** (`src/app/_tour/`, wording in `src/lib/tours/tours.ts`): each signed-in page renders
+  `<PageTour id=… />`, a "?" button plus short steps pointing at the page's own anchors. A tour starts by
+  itself once per person (saved in `tour_progress`), never for admin; steps whose target isn't on screen
+  for that person are skipped. No tour library and no tracking: completion is our own table.
 - **Plan** (`src/lib/plan/`): three spaces per wedding, Both families and each family's own. The couple
   (and anyone on both sides) reach all three; a one-side committee member reaches Both families and
   theirs, and the other family's items read as not found. Only an item's creator or the couple may delete.
@@ -122,6 +126,7 @@ Postgres via Drizzle (`src/db/schema.ts`). Main tables:
 | `users`, `accounts`, `sessions`, `verification_tokens` | sign-in (Auth.js) |
 | `email_log`, `outbox` | invitations sent per household; every email sent, recorded or queued (counts against the daily budget) |
 | `rate_limits` | shared rate-limit counters, so every server sees the same counts |
+| `tour_progress` | which page tours each person has finished or skipped |
 | `plan_tasks`, `plan_meetings` | Plan: to-dos and meeting notes. `side` null = Both families, else one family's private space |
 | `account_actions` | email-confirmed resets and deletions |
 | `machine_text` | saved Azure translations, so each line is translated once |

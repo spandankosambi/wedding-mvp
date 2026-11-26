@@ -13,6 +13,7 @@ import { PortalFrame } from "../../couple/PortalFrame";
 import { aiConfigured } from "@/lib/core/ai";
 import { ImportWizard } from "./ImportWizard";
 import { asFamilySide } from "@/lib/site/looks";
+import { PageTour } from "@/app/_tour/PageTour";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,7 @@ export default async function ImportPage({
   return (
     <main className="portal-page">
       <PortalNav sideNames={sideNamesOf(wedding)} names={namesFor(wedding, family).couple} current={family} page="guests" weddingId={weddingId} admin={staff.role === "admin"} access={staff.access} />
+      <PageTour id="import" />
       <PortalFrame>
         <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3">
           <div className="max-w-2xl">

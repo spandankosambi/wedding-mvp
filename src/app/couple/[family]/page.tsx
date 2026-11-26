@@ -19,6 +19,7 @@ import { saveRsvpSettingsAction, renewShareLinkAction } from "../site/actions";
 import { PortalNav } from "../PortalNav";
 import { DangerZone } from "../danger/DangerZone";
 import { istParts } from "@/lib/site/editor";
+import { PageTour } from "@/app/_tour/PageTour";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,7 @@ export default async function FamilySection({
   return (
     <main className="portal-page">
       <PortalNav sideNames={sn} names={coupleNames} current={family} page="overview" weddingId={weddingId} admin={admin} access={staff.access} />
+      <PageTour id="family" />
       <PortalFrame key={family}
         jump={[["share", "Link to share"], ["numbers", "Replies so far"], ["rsvp", "RSVP settings"], ...(staff.role === "couple" ? [["reset", "Reset"] as [string, string]] : [])]}
         right={<Checklist title={`${who}'s side: what's done`} items={checklist} />}

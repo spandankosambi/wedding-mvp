@@ -23,6 +23,7 @@ import { StayView } from "./StayView";
 import { GuestTable } from "./GuestTable";
 import { FloatingSave } from "@/components/FloatingSave";
 import { saveStaysAction } from "./actions";
+import { PageTour } from "@/app/_tour/PageTour";
 
 export const dynamic = "force-dynamic";
 
@@ -122,6 +123,7 @@ export default async function CommitteePage({
   return (
     <main className="portal-page">
       <PortalNav sideNames={sn} names={namesFor(wedding, family).couple} current={family} page="guests" weddingId={weddingId} admin={staff.role === "admin"} access={staff.access} />
+      <PageTour id="guests" />
       <PortalFrame key={family} jump={[["replies", "Replies so far"], ["list", "The list"]]}>
       <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3">
         <div className="max-w-2xl">

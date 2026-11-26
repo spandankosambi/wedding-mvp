@@ -7,6 +7,7 @@ import { listPeople } from "@/lib/auth/people";
 import { PortalNav } from "../PortalNav";
 import { PortalFrame } from "../PortalFrame";
 import { PeopleManager } from "./PeopleManager";
+import { PageTour } from "@/app/_tour/PageTour";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
   return (
     <main className="portal-page">
       <PortalNav sideNames={sideNamesOf(w)} names={`${w.brideName} & ${w.groomName}`} current="people" weddingId={weddingId} admin={staff.role === "admin"} access={staff.access} />
+      <PageTour id="people" />
       <PortalFrame jump={[["add", "Add a person"], ["list", "Everyone with access"], ["levels", "What the levels mean"]]}>
         <header className="mb-8">
           <h1 className="portal-heading">People &amp; access</h1>

@@ -14,6 +14,7 @@ import { FloatingSave } from "@/components/FloatingSave";
 import { PortalNav } from "../PortalNav";
 import { saveTaskAction, saveMeetingAction } from "./actions";
 import { TaskBoard, FollowUps, DeleteButton, FollowUpRow, type Group, type TaskRow } from "./PlanClient";
+import { PageTour } from "@/app/_tour/PageTour";
 
 /*
  * Plan: the couple's and each family committee's to-dos and meeting notes.
@@ -100,6 +101,7 @@ export async function PlanScreen({ base, sp }: { base: "/couple/plan" | "/commit
   return (
     <main className="portal-page">
       <PortalNav sideNames={names} names={`${w.brideName} & ${w.groomName}`} current="plan" weddingId={weddingId} admin={admin} access={staff.access} />
+      <PageTour id="plan" />
       <div className="portal-shell">
         <div className="mx-auto max-w-6xl">
           <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">

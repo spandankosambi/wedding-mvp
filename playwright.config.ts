@@ -21,7 +21,7 @@ export default defineConfig({
     // Never reuse a dev server that already holds the data dir.
     reuseExistingServer: false,
     // test accounts may sign in as often as the tests need; plenty of sites per hour
-    env: { EMAIL_MODE: "file", RELAXED_TEST_LIMITS: "1", NEW_SITES_PER_HOUR: "1000" },
+    env: { EMAIL_MODE: "file", RELAXED_TEST_LIMITS: "1", NEW_SITES_PER_HOUR: "1000", TOURS_AUTOSTART: "0" },
     timeout: 120_000,
   },
   projects: [{ name: "chromium", use: { browserName: "chromium" } }],

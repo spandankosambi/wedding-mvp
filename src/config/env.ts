@@ -43,6 +43,10 @@ export const env = {
       run, so sign-in limits skip them. Never applies to a production build. */
   get relaxedTestLimits() { return process.env.NODE_ENV !== "production" && read("RELAXED_TEST_LIMITS") === "1"; },
 
+  /** Page tours start by themselves the first time someone opens a page.
+      Browser tests turn this off ("0") so tours don't cover what they click. */
+  get toursAutostart() { return read("TOURS_AUTOSTART") !== "0"; },
+
   /** Most new wedding sites that may be created in any hour, from /start. */
   get newSitesPerHour() { return Math.max(1, Number(read("NEW_SITES_PER_HOUR") ?? 20) || 20); },
 

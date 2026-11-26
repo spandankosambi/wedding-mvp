@@ -13,6 +13,7 @@ import { decorOf } from "@/lib/site/site-decor";
 import { THEME_META } from "@/themes/catalog";
 import { PortalNav } from "../../PortalNav";
 import { PrintInvitation } from "../../_print/PrintInvitation";
+import { PageTour } from "@/app/_tour/PageTour";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,7 @@ export default async function PrintCards({
   return (
     <main className="portal-page">
       <PortalNav sideNames={sn} names={namesFor(wedding, family).couple} current={family} page="print" weddingId={weddingId} admin={admin} access={staff.access} />
+      <PageTour id="print" />
       <PortalFrame key={family}
         roomy
         jump={[["print-options", "Card options"], ["print-preview", "Preview & download"]]}

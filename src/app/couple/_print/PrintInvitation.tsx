@@ -688,7 +688,7 @@ export function PrintInvitation(props: Props) {
                 Next: design →
               </button>
             ) : (
-              <button type="button" onClick={download} disabled={busy || !customOk} className="portal-button">
+              <button type="button" onClick={download} disabled={busy || !customOk} className="portal-button" data-tour="download">
                 {busy ? "Making PDF…" : "Download PDF"}
               </button>
             )}

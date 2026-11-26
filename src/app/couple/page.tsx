@@ -18,6 +18,7 @@ import { FloatingSave } from "@/components/FloatingSave";
 import { saveDetailsAction } from "./site/actions";
 import { Stat, weddingStats } from "./stats";
 import { Field } from "@/components/Field";
+import { PageTour } from "@/app/_tour/PageTour";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +62,7 @@ export default async function CouplePage({
   return (
     <main className="portal-page">
       <PortalNav sideNames={sn} names={coupleNames} current="dashboard" weddingId={weddingId} admin={staff.role === "admin"} access={staff.access} />
+      <PageTour id="overview" />
       <PortalFrame
         jump={[["numbers", "The numbers"], ["families", one ? "Your section" : "The two families"], ...(staff.access.manage ? [["details", "Shared details"], ["people", "People & access"]] as [string, string][] : [])]}
         right={mySides.length > 1

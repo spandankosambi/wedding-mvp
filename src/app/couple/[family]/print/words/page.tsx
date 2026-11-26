@@ -13,6 +13,7 @@ import { PortalNav } from "../../../PortalNav";
 import { FloatingSave } from "@/components/FloatingSave";
 import { saveCardWordsAction } from "../../../card-words-actions";
 import { CardWordsEditor } from "./CardWordsEditor";
+import { PageTour } from "@/app/_tour/PageTour";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,7 @@ export default async function CardWords({
   return (
     <main className="portal-page">
       <PortalNav sideNames={sn} names={namesFor(wedding, family).couple} current={family} page="print" weddingId={weddingId} admin={admin} access={staff.access} />
+      <PageTour id="words" />
       <PortalFrame key={`${family}-${lang}`} roomy jump={[]}>
         <header className="mb-6">
           <Link href={printHref} className="text-sm text-neutral-500 underline underline-offset-4 hover:text-neutral-800">← Back to print cards</Link>

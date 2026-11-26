@@ -193,7 +193,7 @@ export function ImportWizard({
       {error && <p className="mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{error}</p>}
 
       {step === "choose" && (
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-3" data-tour="import-ways">
           <button type="button" onClick={() => reset("upload")} className="portal-panel group p-6 text-left transition hover:border-stone-400">
             <p className="portal-eyebrow">Option one</p>
             <h2 className="mt-2 text-xl font-semibold tracking-tight">Upload a spreadsheet</h2>

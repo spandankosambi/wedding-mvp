@@ -360,3 +360,13 @@ export const planTasks = pgTable("plan_tasks", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [index("plan_tasks_wedding").on(t.weddingId)]);
+
+/** Page tours: which tours each person has finished or skipped, so they're
+    shown once, on any device. */
+export const tourProgress = pgTable("tour_progress", {
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tour: text("tour").notNull(),
+  /** "finished" or "skipped" */
+  how: text("how").notNull(),
+  at: timestamp("at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [primaryKey({ columns: [t.userId, t.tour] })]);
