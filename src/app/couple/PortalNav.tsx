@@ -5,7 +5,7 @@ import { BrandLogo, BrandSymbol } from "@/components/BrandLogo";
 import { BRAND } from "@/lib/core/brand";
 import { DEFAULT_SIDE_NAMES, type SideNames } from "@/lib/site/side-names";
 
-type Section = "dashboard" | "bride" | "groom" | "people";
+type Section = "dashboard" | "bride" | "groom" | "people" | "plan";
 type Page = "overview" | "site" | "guests" | "print";
 
 /**
@@ -59,6 +59,8 @@ export function PortalNav({ names: _names, sideNames = DEFAULT_SIDE_NAMES, curre
             ))}
           </nav>
         )}
+        {/* Plan: to-dos and meeting notes, for the couple and every committee member */}
+        <Link href={`${access.role === "committee" ? "/committee/plan" : "/couple/plan"}${q()}`} className="portal-nav-people" aria-current={current === "plan" ? "page" : undefined}>Plan</Link>
         {access.manage && (
           <Link href={`/couple/people${q()}`} className="portal-nav-people" aria-current={current === "people" ? "page" : undefined}>People</Link>
         )}

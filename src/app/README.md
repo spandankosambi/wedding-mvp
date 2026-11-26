@@ -13,6 +13,7 @@ Business rules live in `src/lib`, not here.
 | `/couple/[family]` | `couple/[family]/` | one family's section; `print/` (Print cards) and `print/words/` (Gujarati/Hindi wording) |
 | `/couple/site` | `couple/site/` | Edit your site; `_sections/` holds its larger sections |
 | `/couple/people` | `couple/people/` | People & access |
+| `/couple/plan`, `/committee/plan` | `couple/plan/`, `committee/plan/` | Plan: tasks and meeting notes (one screen, `PlanScreen`, at both addresses) |
 | — | `couple/_print/` | the Print cards screen's pieces (form, controls, preview, printing press) |
 | — | `couple/PortalFrame`, `PortalNav`, `JumpNav` | the frame, top bar and section menu every couple page shares |
 | `/committee` | `committee/` | the guest list (Families, Guests, Hotels & rooms); `import/`, `export/` |

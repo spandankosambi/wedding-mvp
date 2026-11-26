@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, text, integer, boolean, jsonb, timestamp, uuid, primaryKey, uniqueIndex, index } from "drizzle-orm/pg-core";
+import { pgTable, pgEnum, text, integer, boolean, jsonb, timestamp, uuid, primaryKey, uniqueIndex, index, date } from "drizzle-orm/pg-core";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
 export const themeEnum = pgEnum("theme", ["ivory-editorial", "raj-mahal", "gulaab-rococo", "mehfil-noor", "pichwai-bagh", "neel-chhapa"]);
@@ -318,3 +318,45 @@ export const machineText = pgTable("machine_text", {
   out: text("out").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [primaryKey({ columns: [t.lang, t.kind, t.src] })]);
+
+/* ── Plan: the couple's and committees' to-dos and meeting notes ──────────
+   Three spaces per wedding: "Both families" (side null) and one private
+   space for each family ("bride" / "groom", shown by the child's first name). */
+
+export type PlanSide = "bride" | "groom";
+export type MeetingType = "family" | "vendor" | "other_family";
+
+export const planMeetings = pgTable("plan_meetings", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  weddingId: uuid("wedding_id").notNull().references(() => weddings.id, { onDelete: "cascade" }),
+  /** null = Both families */
+  side: text("side").$type<PlanSide>(),
+  meetingDate: date("meeting_date", { mode: "string" }).notNull(),
+  title: text("title").notNull(),
+  type: text("type").$type<MeetingType>().notNull().default("family"),
+  attendees: text("attendees"),
+  notes: text("notes"),
+  decisions: text("decisions"),
+  createdByUserId: uuid("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [index("plan_meetings_wedding").on(t.weddingId)]);
+
+export const planTasks = pgTable("plan_tasks", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  weddingId: uuid("wedding_id").notNull().references(() => weddings.id, { onDelete: "cascade" }),
+  /** null = Both families */
+  side: text("side").$type<PlanSide>(),
+  title: text("title").notNull(),
+  ownerUserId: uuid("owner_user_id").references(() => users.id, { onDelete: "set null" }),
+  /** for someone without a login */
+  ownerName: text("owner_name"),
+  dueDate: date("due_date", { mode: "string" }),
+  done: boolean("done").notNull().default(false),
+  doneAt: timestamp("done_at", { withTimezone: true }),
+  /** deleting the meeting keeps the task, just unlinked */
+  meetingId: uuid("meeting_id").references(() => planMeetings.id, { onDelete: "set null" }),
+  createdByUserId: uuid("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [index("plan_tasks_wedding").on(t.weddingId)]);

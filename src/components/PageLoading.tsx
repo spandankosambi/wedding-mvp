@@ -19,6 +19,7 @@ export const LOADING_LINES = {
   guests: ["Counting the chairs…", "Opening the guest book…", "Finding everyone a seat…"],
   import: ["Clearing a table for your spreadsheet…", "Sharpening the pencils…"],
   people: ["Gathering your helpers…", "Checking who holds which keys…"],
+  plan: ["Opening the to-do list…", "Finding what's due this week…"],
   admin: ["Opening the back office…", "Dusting off the ledgers…"],
 } as const;
 

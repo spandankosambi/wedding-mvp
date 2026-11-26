@@ -41,6 +41,7 @@ a.portal-nav-brand:hover { color: #7a5f2f; }
 .portal-nav-people:hover, .portal-nav-people[aria-current="page"] { background: #efece6; color: #272624; }
 .portal-nav-form { flex: none; margin-left: auto; }
 .portal-nav-people + .portal-nav-form { margin-left: 0; }
+.portal-nav-people + .portal-nav-people { margin-left: 0; }
 .portal-nav-out { border-radius: 0.5rem; padding: 0.4rem 0.7rem; color: #625c54; cursor: pointer; white-space: nowrap; }
 .portal-nav-out:hover { background: #efece6; color: #272624; }
 .portal-page section[id], .portal-page div[id] { scroll-margin-top: calc(var(--nav-h) + 1.25rem); }
