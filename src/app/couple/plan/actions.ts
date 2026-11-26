@@ -120,6 +120,19 @@ export async function addFollowUpAction(input: unknown): Promise<Out> {
   return r;
 }
 
+/** The "Add a task" box at the top of a list: just a name, in that space. */
+export async function quickAddTaskAction(input: unknown): Promise<Out> {
+  const p = z.object({ weddingId: z.string().optional(), space: z.string(), title: z.string() }).safeParse(input);
+  if (!p.success) return { ok: false, error: "invalid input" };
+  const ctx = await ctxFor(p.data.weddingId);
+  if (!ctx) return { ok: false, error: "forbidden" };
+  const space = asSpace(p.data.space);
+  if (!space) return { ok: false, error: "invalid input" };
+  const r = await createTask(ctx, space, { title: p.data.title });
+  if (r.ok) refresh();
+  return r;
+}
+
 export async function addStarterTasksAction(input: unknown): Promise<Out> {
   const p = z.object({ weddingId: z.string().optional() }).safeParse(input ?? {});
   if (!p.success) return { ok: false, error: "invalid input" };

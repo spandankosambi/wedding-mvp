@@ -113,3 +113,12 @@ export async function tasksIn(ctx: PlanCtx, s: Space) {
     .where(and(eq(planTasks.weddingId, ctx.weddingId), inSpace(planTasks.side, s))).orderBy(asc(planTasks.createdAt));
   return rows.sort((a, b) => Number(a.done) - Number(b.done) || (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999"));
 }
+
+/** Open tasks in each space this person may reach (for the tab counts). */
+export async function openCounts(ctx: PlanCtx): Promise<Record<Space, number>> {
+  const rows = await db.select({ side: planTasks.side }).from(planTasks)
+    .where(and(eq(planTasks.weddingId, ctx.weddingId), eq(planTasks.done, false), reachable(planTasks.side, ctx.access)));
+  const out: Record<Space, number> = { both: 0, bride: 0, groom: 0 };
+  for (const r of rows) out[spaceOf(r.side)] += 1;
+  return out;
+}

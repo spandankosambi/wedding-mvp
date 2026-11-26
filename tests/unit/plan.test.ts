@@ -4,7 +4,7 @@ import { db, migrateDb } from "@/db/client";
 import { weddings, users, planTasks, planMeetings } from "@/db/schema";
 import { accessFor } from "@/lib/auth/access";
 import { spacesFor, canReach, canDelete, meetingTypeAllowed, spaceLabel } from "@/lib/plan/spaces";
-import { tasksIn } from "@/lib/plan/tasks";
+import { tasksIn, openCounts } from "@/lib/plan/tasks";
 import { meetingsIn } from "@/lib/plan/meetings";
 import { STARTER_TASKS } from "@/lib/plan/starter";
 
@@ -193,6 +193,20 @@ describe("should be refused", () => {
     as("couple");
     expect(await post(A.saveTaskAction, form({ space: "bride", title: "For Spandan's cousin", ownerUserId: ids.spandanCousin }))).toContain("Pick someone who can see this space");
     expect(await post(A.saveTaskAction, form({ space: "bride", title: "For the aunt", ownerUserId: ids.poojaAunt }))).toContain("saved=");
+  });
+  it("quick add: into your own spaces only", async () => {
+    await seed();
+    as("spandanCousin");
+    expect((await A.quickAddTaskAction({ space: "groom", title: "Safa for the baraat" })).ok).toBe(true);
+    expect((await A.quickAddTaskAction({ space: "bride", title: "Into their space" })).ok).toBe(false);
+    expect((await A.quickAddTaskAction({ space: "both", title: "" })).ok).toBe(false);
+    expect(await db.select().from(planTasks).where(eq(planTasks.title, "Into their space"))).toHaveLength(0);
+  });
+  it("tab counts never include the other family's tasks", async () => {
+    await seed();
+    const mine = await openCounts({ weddingId, userId: ids.spandanCousin, access: committee("groom") });
+    expect(mine).toEqual({ both: 1, bride: 0, groom: 0 });
+    expect(await openCounts({ weddingId, userId: ids.couple, access: couple })).toEqual({ both: 1, bride: 1, groom: 0 });
   });
   it("signed out: the actions send you to sign in", async () => {
     signedIn = null;

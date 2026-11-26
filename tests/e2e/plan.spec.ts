@@ -28,7 +28,7 @@ test("the couple add a task, a meeting, and a follow-up task from the meeting", 
   await page.getByRole("link", { name: "Plan", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Plan", exact: true })).toBeVisible();
   const tabs = page.getByRole("navigation", { name: "Spaces" });
-  await expect(tabs.getByRole("link")).toHaveText(["Both families", "Ananya's family", "Arjun's family"]);
+  await expect(tabs.getByRole("link")).toHaveText([/^Both families/, /^Ananya's family/, /^Arjun's family/]);
   // every family is its child's name on screen
   await expect(page.locator("main .portal-shell")).not.toContainText(/\b(bride|groom)\b/i);
 
@@ -45,9 +45,9 @@ test("the couple add a task, a meeting, and a follow-up task from the meeting", 
   await expect(page.getByTestId("plan-empty")).toBeVisible();
   await expect(page.getByRole("button", { name: "Add suggested tasks" })).toHaveCount(0);
 
-  // a task in Both families
+  // a task in Both families, with a date: the full form
   await open("Both families", "both");
-  await page.getByRole("link", { name: "Add a task" }).click();
+  await page.getByRole("link", { name: "Add with an owner and date" }).click();
   await expect(page.getByRole("heading", { name: "New task in Both families" })).toBeVisible();
   await page.getByLabel("What needs doing").fill("Book the venue");
   await page.getByLabel("Due").fill("2026-12-10");
@@ -59,7 +59,7 @@ test("the couple add a task, a meeting, and a follow-up task from the meeting", 
   // a meeting in Ananya's family, then a follow-up from it
   await open("Ananya's family", "bride");
   await page.getByRole("link", { name: "Add a meeting" }).click();
-  await expect(page.getByRole("heading", { name: "New meeting in Ananya's family" })).toBeVisible();
+  await expect(page.getByText("New meeting in Ananya's family")).toBeVisible();
   await expect(page.getByLabel("With the other family")).toHaveCount(0); // only in Both families
   await page.getByLabel("Title").fill("Caterer tasting");
   await page.getByLabel("Vendor").check();
@@ -76,13 +76,31 @@ test("the couple add a task, a meeting, and a follow-up task from the meeting", 
   if (shots) await page.screenshot({ path: `${shots}/plan-meeting.png`, fullPage: true });
 
   // on the family's list, linked to the meeting; Both families doesn't show it
-  await page.getByRole("link", { name: "← Ananya's family" }).click();
-  await expect(page.getByTestId("plan-task").filter({ hasText: "Send the final menu" })).toContainText("From: Caterer tasting");
+  await page.getByRole("link", { name: "Ananya's family", exact: true }).click();
+  await expect(page.getByTestId("plan-task").filter({ hasText: "Send the final menu" })).toContainText("From Caterer tasting");
   await expect(page.getByRole("region", { name: "Meetings" }).getByRole("link", { name: /Caterer tasting/ })).toBeVisible();
   if (shots) await page.screenshot({ path: `${shots}/plan-space.png`, fullPage: true });
   await open("Both families", "both");
   // the venue task, nothing from Ananya's family
   await expect(page.getByTestId("plan-task")).toHaveText([/Book the venue/]);
+  // the add box: type and press Enter
+  await page.getByLabel("New task").fill("Book the pandit");
+  await page.getByLabel("New task").press("Enter");
+  await expect(page.getByTestId("plan-task").filter({ hasText: "Book the pandit" })).toBeVisible();
+  await expect(page.getByLabel("New task")).toHaveValue("");
+  await expect(page.getByText("0 of 2 done")).toBeVisible();
+  if (shots) {
+    await page.screenshot({ path: `${shots}/plan-both-phone.png`, fullPage: true });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.screenshot({ path: `${shots}/plan-both-desktop.png` });
+    await page.goto(page.url().replace("space=both", "space=bride"));
+    await page.screenshot({ path: `${shots}/plan-family-desktop.png` });
+    await page.getByRole("region", { name: "Meetings" }).getByRole("link", { name: /Caterer tasting/ }).click();
+    await expect(page.getByText("What we decided").first()).toBeVisible();
+    await page.screenshot({ path: `${shots}/plan-meeting-desktop.png`, fullPage: true });
+    await page.goto(page.url().split("?")[0] + "?space=both");
+    await page.setViewportSize(phone);
+  }
   await expect(page.getByRole("region", { name: "Meetings" }).getByRole("listitem")).toHaveCount(0);
 
   // delete asks first
@@ -99,15 +117,13 @@ test("a committee member ticks a task done", async ({ page }) => {
   await page.setViewportSize(phone);
   await signIn(page, "committee@example.com");
   await page.goto("/committee/plan");
-  await page.getByRole("link", { name: "Add a task" }).click();
-  await page.getByLabel("What needs doing").fill("Call the mehendi artist");
-  await page.getByRole("button", { name: "Add task" }).click();
-  await expect(page.getByText("Task added")).toBeVisible();
+  await page.getByLabel("New task").fill("Call the mehendi artist");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
   const row = page.getByTestId("plan-task").filter({ hasText: "Call the mehendi artist" });
   await row.getByRole("checkbox").click();
-  await expect(page.getByText(/^Done · \d+$/)).toBeVisible();
+  await expect(page.getByText(/^Done \d+$/)).toBeVisible();
   await page.reload();
-  await page.getByText(/^Done · \d+$/).click();
+  await page.getByText(/^Done \d+$/).click();
   await expect(page.getByTestId("plan-task").filter({ hasText: "Call the mehendi artist" }).getByRole("checkbox")).toHaveAttribute("aria-checked", "true");
 });
 
@@ -135,7 +151,7 @@ test("the other family's helper gets 'not found' for a family's space and its me
   await signIn(theirs, helper);
   await theirs.getByRole("link", { name: "Plan", exact: true }).click();
   await expect(theirs).toHaveURL(/\/committee\/plan/);
-  await expect(theirs.getByRole("navigation", { name: "Spaces" }).getByRole("link")).toHaveText(["Both families", "Arjun's family"]);
+  await expect(theirs.getByRole("navigation", { name: "Spaces" }).getByRole("link")).toHaveText([/^Both families/, /^Arjun's family/]);
   for (const url of ["/committee/plan?space=bride", `/committee/plan?meeting=${meetingId}`, `/couple/plan?meeting=${meetingId}`]) {
     await theirs.goto(url);
     await expect(theirs.getByText("Private family talk")).toHaveCount(0);
