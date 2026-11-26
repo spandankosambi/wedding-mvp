@@ -61,7 +61,9 @@ export default async function CouplePage({
   const wid = staff.role === "admin" ? <input type="hidden" name="weddingId" value={weddingId} /> : null;
   const attending = all.guests.length;
   // Rishta Corner: the couple's (and admin's) door to it, once it's switched on
-  const rishta = staff.role !== "committee" && (await settingsFor(weddingId)).enabled ? await hostCounts(weddingId) : null;
+  // (admin always sees it, to switch it on during the pilot)
+  const rishtaOn = staff.role !== "committee" && (await settingsFor(weddingId)).enabled;
+  const rishta = rishtaOn || staff.role === "admin" ? { on: rishtaOn, ...(await hostCounts(weddingId)) } : null;
 
   return (
     <main className="portal-page">
@@ -138,7 +140,7 @@ export default async function CouplePage({
           <div>
             <h2 className="font-semibold">Rishta Corner</h2>
             <p className="mt-1 text-sm text-neutral-600">
-              {rishta.waiting ? `${rishta.waiting} profile${rishta.waiting === 1 ? "" : "s"} waiting for you to check` : "Nothing waiting for you"} · {rishta.live} live · {rishta.matches} match{rishta.matches === 1 ? "" : "es"}
+              {!rishta.on ? "Switched off for this wedding. Open it to switch it on." : <>{rishta.waiting ? `${rishta.waiting} profile${rishta.waiting === 1 ? "" : "s"} waiting for you to check` : "Nothing waiting for you"} · {rishta.live} live · {rishta.matches} match{rishta.matches === 1 ? "" : "es"}</>}
             </p>
           </div>
           <Link href={`/couple/rishta${adminQ}`} className="portal-button-secondary">Open Rishta Corner</Link>

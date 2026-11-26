@@ -54,6 +54,9 @@ export default async function AdminWeddingPage({
           <Link href={`/couple?wedding=${wedding.id}`} className="portal-button-secondary">
             Couple view
           </Link>
+          <Link href={`/couple/rishta?wedding=${wedding.id}`} className="portal-button-secondary">
+            Rishta Corner
+          </Link>
         </nav>
       </header>
 

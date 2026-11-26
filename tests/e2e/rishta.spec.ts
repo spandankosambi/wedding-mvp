@@ -110,6 +110,9 @@ test("Rishta Corner: draft, passcode, publish, approve, match, introduce", async
   await go(admin, "/admin");
   const manage = await admin.getByRole("row", { name: /Ananya & Arjun/ }).getByRole("link", { name: "manage" }).getAttribute("href");
   const wid = manage!.split("/").pop()!;
+  // the way in: All weddings → manage → Rishta Corner
+  await go(admin, manage!);
+  await expect(admin.getByRole("link", { name: "Rishta Corner" })).toHaveAttribute("href", `/couple/rishta?wedding=${wid}`);
   await go(admin, `/couple/rishta?wedding=${wid}`);
   if (await admin.getByRole("button", { name: "Switch on" }).count()) await admin.getByRole("button", { name: "Switch on" }).click();
   await expect(admin.getByRole("button", { name: "Switch off" })).toBeVisible();
